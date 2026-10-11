@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan WhatsApp Gateway - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Pengaturan WhatsApp Gateway</h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Cloud Gateway Fonnte &amp; Wablas (Ringan &bull; RAM &lt; 1 MB)</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="message-square" class="w-4 h-4 text-teal-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+
+    <!-- Card Konfigurasi Gateway -->
+    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+      <div>
+        <h2 class="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+          <i data-lucide="send" class="w-5 h-5 text-teal-600"></i>
+          Pilihan Cloud WhatsApp Gateway
+        </h2>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+          Pilih gateway cloud untuk mengirimkan notifikasi presensi otomatis saat <span data-term="studentSingular">santri</span> tap kartu di Kiosk. Menggunakan HTTP API sehingga sangat hemat RAM (&lt; 1 MB).
+        </p>
+      </div>
+
+      <form id="waSettingsForm" onsubmit="saveWaSettings(event)" class="space-y-5 text-xs">
+        
+        <!-- Pilihan Provider -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Fonnte -->
+          <label class="border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between" id="cardFonnte" onclick="selectProvider('fonnte')">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-4 h-4 text-purple-600"></i> Fonnte API
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">Rekomendasi Utama ⭐</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Cukup 1 token API. Stabil 24 jam dan sangat ringan.</p>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <input type="radio" name="providerRadio" id="radioFonnte" value="fonnte" class="text-purple-600">
+              <span class="font-semibold text-slate-800">Gunakan Fonnte</span>
+            </div>
+          </label>
+
+          <!-- Wablas -->
+          <label class="border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between" id="cardWablas" onclick="selectProvider('wablas')">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                  <i data-lucide="cloud" class="w-4 h-4 text-blue-600"></i> Wablas API
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">Cloud Gateway</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Gunakan token dan domain server akun Wablas Anda.</p>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+              <input type="radio" name="providerRadio" id="radioWablas" value="wablas" class="text-blue-600">
+              <span class="font-semibold text-slate-800">Gunakan Wablas</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Input Fonnte -->
+        <div id="fonnteInputs" class="bg-purple-50/60 border border-purple-100 rounded-2xl p-4 space-y-2">
+          <label class="block font-bold text-slate-800">API Token Fonnte:</label>
+          <input type="password" id="fonnteToken" placeholder="Masukkan token Fonnte akun Anda..." class="w-full p-2.5 bg-white border border-purple-200 rounded-xl font-mono focus:outline-none focus:border-purple-500 shadow-sm">
+          <p class="text-[11px] text-slate-600">
+            Daftar akun di <a href="https://fonnte.com" target="_blank" class="text-purple-700 underline font-bold">fonnte.com</a> &rarr; scan nomor WhatsApp &rarr; salin API Token di menu Device.
+          </p>
+        </div>
+
+        <!-- Input Wablas -->
+        <div id="wablasInputs" class="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-3 hidden">
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Domain Server Wablas:</label>
+            <input type="text" id="wablasDomain" placeholder="https://api.wablas.com" class="w-full p-2.5 bg-white border border-blue-200 rounded-xl font-mono focus:outline-none focus:border-blue-500 shadow-sm">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">API Token Wablas:</label>
+            <input type="password" id="wablasToken" placeholder="Masukkan token Wablas akun Anda..." class="w-full p-2.5 bg-white border border-blue-200 rounded-xl font-mono focus:outline-none focus:border-blue-500 shadow-sm">
+          </div>
+        </div>
+
+        <!-- Toggle Notifikasi -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <label class="inline-flex items-center gap-2 cursor-pointer font-semibold text-slate-700">
+            <input type="checkbox" id="waEnabled" value="1" class="rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
+            <span>Aktifkan notifikasi otomatis ke WhatsApp <span data-term="parentPlural">wali santri</span></span>
+          </label>
+
+          <button type="submit" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Simpan Pengaturan</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Card Uji Coba Kirim Pesan -->
+    <div class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="message-square" class="w-4 h-4 text-teal-600"></i>
+        Uji Coba Kirim Pesan WhatsApp
+      </h3>
+      <p class="text-xs text-slate-500">Kirimkan pesan tes ke nomor Anda untuk memastikan token gateway telah valid.</p>
+
+      <form onsubmit="testSendWa(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nomor WhatsApp Tujuan (Contoh: 081234567890):</label>
+          <input type="text" id="testPhone" required placeholder="081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Pesan Uji Coba:</label>
+          <textarea id="testMessage" rows="2" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500">Halo! Ini adalah pesan uji coba dari Sistem Presensi Smart School Mandiri.</textarea>
+        </div>
+        <div>
+          <button type="submit" id="btnTestSend" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center gap-1.5">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Kirim Pesan Tes</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    let currentProvider = 'fonnte';
+
+    function selectProvider(prov) {
+      currentProvider = prov;
+      const cardF = document.getElementById('cardFonnte');
+      const cardW = document.getElementById('cardWablas');
+      const inF = document.getElementById('fonnteInputs');
+      const inW = document.getElementById('wablasInputs');
+
+      if (prov === 'fonnte') {
+        document.getElementById('radioFonnte').checked = true;
+        cardF.className = 'border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between border-purple-600 bg-purple-50/40 shadow-sm';
+        cardW.className = 'border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between border-slate-200 hover:border-slate-300 bg-white';
+        inF.classList.remove('hidden');
+        inW.classList.add('hidden');
+      } else {
+        document.getElementById('radioWablas').checked = true;
+        cardW.className = 'border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between border-blue-600 bg-blue-50/40 shadow-sm';
+        cardF.className = 'border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between border-slate-200 hover:border-slate-300 bg-white';
+        inW.classList.remove('hidden');
+        inF.classList.add('hidden');
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const cfg = await res.json();
+        
+        currentProvider = cfg.wa_provider || 'fonnte';
+        selectProvider(currentProvider);
+
+        if (cfg.wa_fonnte_token) document.getElementById('fonnteToken').value = cfg.wa_fonnte_token;
+        if (cfg.wa_wablas_token) document.getElementById('wablasToken').value = cfg.wa_wablas_token;
+        if (cfg.wa_wablas_domain) document.getElementById('wablasDomain').value = cfg.wa_wablas_domain;
+        document.getElementById('waEnabled').checked = (cfg.wa_enabled !== '0');
+      } catch (e) {
+        console.error('Error loading settings:', e);
+      }
+    }
+
+    async function saveWaSettings(e) {
+      e.preventDefault();
+      const payload = {
+        wa_provider: currentProvider,
+        wa_fonnte_token: document.getElementById('fonnteToken').value.trim(),
+        wa_wablas_token: document.getElementById('wablasToken').value.trim(),
+        wa_wablas_domain: document.getElementById('wablasDomain').value.trim(),
+        wa_enabled: document.getElementById('waEnabled').checked ? '1' : '0'
+      };
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        alert(data.message || 'Pengaturan berhasil disimpan!');
+      } catch (err) {
+        alert('Gagal menyimpan: ' + err.message);
+      }
+    }
+
+    async function testSendWa(e) {
+      e.preventDefault();
+      const phone = document.getElementById('testPhone').value.trim();
+      const message = document.getElementById('testMessage').value.trim();
+      const btn = document.getElementById('btnTestSend');
+
+      btn.disabled = true;
+      btn.innerText = 'Mengirim...';
+
+      try {
+        const res = await fetch('/api/whatsapp/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, message })
+        });
+        const data = await res.json();
+        alert((data.success ? '✅ Berhasil: ' : '❌ Gagal: ') + data.message);
+      } catch (err) {
+        alert('Gagal koneksi tes: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Kirim Pesan Tes</span>';
+        lucide.createIcons();
+      }
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>

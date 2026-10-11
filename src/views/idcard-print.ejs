@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cetak Kartu Pelajar - <%= settings.school_name || 'Sekolah' %></title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Ekspor Gambar Canvas & ZIP -->
+  <script src="/public/js/html2canvas.min.js"></script>
+  <script>
+    if (typeof html2canvas === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>');
+    }
+  </script>
+  <script src="/public/js/jszip.min.js"></script>
+  <script>
+    if (typeof JSZip === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"><\/script>');
+    }
+  </script>
+
+  <style id="printPageStyle">
+    @page {
+      size: <%= (preset && preset.orientation === 'portrait') ? 'portrait' : 'landscape' %>;
+      margin: 6mm;
+    }
+  </style>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ====================================================
+       TOOLBAR KONTROL INTERAKTIF (TIDAK TERCETAK)
+       ==================================================== */
+    .no-print {
+      padding: 12px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 1240px;
+      margin: 0 auto 20px auto;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+    .toolbar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .toolbar-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .control-group label {
+      white-space: nowrap;
+    }
+    .select-control {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 11px;
+      font-weight: 700;
+      color: #0f172a;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .select-control:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+    .btn-toggle {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-toggle.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+    .btn-success {
+      background: #16a34a;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+    }
+    .btn-success:hover {
+      background: #15803d;
+    }
+    .btn-outline-info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .btn-outline-info:hover {
+      background: #dbeafe;
+    }
+
+    /* Card Unit Container (Preview Screen) */
+    .card-item-wrapper {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .card-item-wrapper:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    }
+    .card-unit-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 11px;
+    }
+    .card-unit-title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .student-name-tag {
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .student-class-tag {
+      font-size: 9px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #475569;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .phone-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .phone-badge.ready {
+      background: #ecfdf5;
+      color: #047857;
+      border: 0.5px solid #a7f3d0;
+    }
+    .phone-badge.empty {
+      background: #fffbeb;
+      color: #b45309;
+      border: 0.5px solid #fde68a;
+    }
+    .card-faces-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .card-unit-actions {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+    .download-btn-group {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-action {
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-png {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .btn-png:hover {
+      background: #dbeafe;
+    }
+    .btn-jpg {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-jpg:hover {
+      background: #f1f5f9;
+    }
+    .btn-whatsapp {
+      background: #16a34a;
+      color: #ffffff;
+      border: 1px solid #15803d;
+      box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
+    }
+    .btn-whatsapp:hover {
+      background: #15803d;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Sheet Grid Container */
+    .sheet-wrapper {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 16px 40px 16px;
+      display: flex;
+      justify-content: center;
+      transition: transform 0.2s ease;
+      transform-origin: top center;
+    }
+    .card-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* ====================================================
+       TEMA WARNA KARTU (CSS VARIABLES)
+       ==================================================== */
+    /* 1. Theme: Royal Navy & Sky (Default) */
+    .theme-navy {
+      --primary-grad: linear-gradient(135deg, #091a3c 0%, #0f2c69 50%, #1e40af 100%);
+      --accent-grad: linear-gradient(90deg, #38bdf8 0%, #818cf8 35%, #f59e0b 70%, #10b981 100%);
+      --header-title: #ffffff;
+      --sub-color: #38bdf8;
+      --accent-main: #2563eb;
+      --badge-bg: #eff6ff;
+      --badge-text: #1d4ed8;
+      --badge-border: #bfdbfe;
+      --text-highlight: #091a3c;
+      --scan-badge-bg: #091a3c;
+      --scan-badge-text: #38bdf8;
+      --pattern-color: rgba(59, 130, 246, 0.06);
+      --card-border: #cbd5e1;
+      --back-ribbon: #1e40af;
+    }
+    /* 2. Theme: Emerald Islamic & Gold (Madani) */
+    .theme-emerald {
+      --primary-grad: linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%);
+      --accent-grad: linear-gradient(90deg, #34d399 0%, #10b981 35%, #f59e0b 70%, #d97706 100%);
+      --header-title: #ffffff;
+      --sub-color: #6ee7b7;
+      --accent-main: #059669;
+      --badge-bg: #ecfdf5;
+      --badge-text: #047857;
+      --badge-border: #a7f3d0;
+      --text-highlight: #064e3b;
+      --scan-badge-bg: #064e3b;
+      --scan-badge-text: #34d399;
+      --pattern-color: rgba(16, 185, 129, 0.07);
+      --card-border: #a7f3d0;
+      --back-ribbon: #047857;
+    }
+    /* 3. Theme: Crimson Ruby & Amber */
+    .theme-ruby {
+      --primary-grad: linear-gradient(135deg, #881337 0%, #9f1239 50%, #be123c 100%);
+      --accent-grad: linear-gradient(90deg, #fb7185 0%, #f43f5e 35%, #f59e0b 70%, #fbbf24 100%);
+      --header-title: #ffffff;
+      --sub-color: #fecdd3;
+      --accent-main: #be123c;
+      --badge-bg: #fff1f2;
+      --badge-text: #be123c;
+      --badge-border: #fecdd3;
+      --text-highlight: #881337;
+      --scan-badge-bg: #881337;
+      --scan-badge-text: #fb7185;
+      --pattern-color: rgba(244, 63, 94, 0.06);
+      --card-border: #fecdd3;
+      --back-ribbon: #9f1239;
+    }
+    /* 4. Theme: Deep Purple & Indigo */
+    .theme-purple {
+      --primary-grad: linear-gradient(135deg, #4c1d95 0%, #5b21b6 50%, #6d28d9 100%);
+      --accent-grad: linear-gradient(90deg, #c084fc 0%, #a855f7 35%, #06b6d4 70%, #38bdf8 100%);
+      --header-title: #ffffff;
+      --sub-color: #e9d5ff;
+      --accent-main: #7c3aed;
+      --badge-bg: #faf5ff;
+      --badge-text: #6d28d9;
+      --badge-border: #ddd6fe;
+      --text-highlight: #4c1d95;
+      --scan-badge-bg: #4c1d95;
+      --scan-badge-text: #c084fc;
+      --pattern-color: rgba(147, 51, 234, 0.06);
+      --card-border: #ddd6fe;
+      --back-ribbon: #6d28d9;
+    }
+    /* 5. Theme: Slate Graphite & Titanium */
+    .theme-slate {
+      --primary-grad: linear-gradient(135deg, #090d16 0%, #1e293b 50%, #334155 100%);
+      --accent-grad: linear-gradient(90deg, #94a3b8 0%, #cbd5e1 35%, #f59e0b 70%, #e2e8f0 100%);
+      --header-title: #ffffff;
+      --sub-color: #cbd5e1;
+      --accent-main: #334155;
+      --badge-bg: #f1f5f9;
+      --badge-text: #1e293b;
+      --badge-border: #cbd5e1;
+      --text-highlight: #0f172a;
+      --scan-badge-bg: #0f172a;
+      --scan-badge-text: #e2e8f0;
+      --pattern-color: rgba(100, 116, 139, 0.06);
+      --card-border: #94a3b8;
+      --back-ribbon: #1e293b;
+      --sideribbon-bg: #090d16;
+      --sideribbon-body-bg: #ffffff;
+    }
+    /* 6. Theme: Sunny Amber & Navy Ribbon (Sesuai Contoh Gambar Kiri) */
+    .theme-amber {
+      --primary-grad: linear-gradient(135deg, #091a3c 0%, #0f2c69 50%, #1e40af 100%);
+      --accent-grad: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+      --header-title: #ffffff;
+      --sub-color: #fde68a;
+      --accent-main: #d97706;
+      --badge-bg: #fef3c7;
+      --badge-text: #b45309;
+      --badge-border: #fde68a;
+      --text-highlight: #091a3c;
+      --scan-badge-bg: #091a3c;
+      --scan-badge-text: #fde68a;
+      --pattern-color: rgba(245, 158, 11, 0.08);
+      --card-border: #fde68a;
+      --back-ribbon: #d97706;
+      --sideribbon-bg: #091a3c;
+      --sideribbon-body-bg: radial-gradient(rgba(245, 158, 11, 0.28) 0.75px, transparent 0.75px), linear-gradient(180deg, #fffdfa 0%, #fef3c7 45%, #fed7aa 100%);
+    }
+    /* 7. Theme: Minimalist White & Navy Ribbon (Sesuai Contoh Gambar Kanan) */
+    .theme-cleanwhite {
+      --primary-grad: linear-gradient(135deg, #091a3c 0%, #0f2c69 50%, #1e40af 100%);
+      --accent-grad: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #091a3c 100%);
+      --header-title: #ffffff;
+      --sub-color: #38bdf8;
+      --accent-main: #2563eb;
+      --badge-bg: #f1f5f9;
+      --badge-text: #0f172a;
+      --badge-border: #cbd5e1;
+      --text-highlight: #091a3c;
+      --scan-badge-bg: #091a3c;
+      --scan-badge-text: #38bdf8;
+      --pattern-color: rgba(15, 23, 42, 0.04);
+      --card-border: #cbd5e1;
+      --back-ribbon: #091a3c;
+      --sideribbon-bg: #091a3c;
+      --sideribbon-body-bg: #ffffff;
+    }
+
+    /* ====================================================
+       STRUKTUR DASAR KARTU CR80 (ISO/IEC 7810 ID-1)
+       ==================================================== */
+    .student-card {
+      border-radius: 3.5mm;
+      overflow: hidden;
+      position: relative;
+      background-color: #ffffff;
+      border: 1px solid var(--card-border, #cbd5e1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+      background-image: 
+        radial-gradient(circle at 100% 0%, var(--pattern-color, rgba(59, 130, 246, 0.06)) 0%, transparent 45%),
+        radial-gradient(circle at 0% 100%, var(--pattern-color, rgba(99, 102, 241, 0.05)) 0%, transparent 40%),
+        radial-gradient(#e2e8f0 0.75px, transparent 0.75px),
+        radial-gradient(#f8fafc 0.75px, #ffffff 0.75px);
+      background-size: 100% 100%, 100% 100%, 5px 5px, 5px 5px;
+      background-position: 0 0, 0 0, 0 0, 2.5px 2.5px;
+    }
+
+    /* DIMENSI LANDSCAPE (MENDATAR: 85.60 mm × 53.98 mm) */
+    .layout-landscape .student-card {
+      width: 85.6mm;
+      height: 53.98mm;
+    }
+
+    /* DIMENSI PORTRAIT (TEGAK: 53.98 mm × 85.60 mm) */
+    .layout-portrait .student-card {
+      width: 53.98mm;
+      height: 85.6mm;
+    }
+
+    /* GARIS POTONG / CUT MARKS */
+    .show-cutmarks .student-card {
+      outline: 0.5px dashed #64748b;
+      outline-offset: 1.5mm;
+    }
+
+    /* FILTER SISI KARTU (DEPAN / BELAKANG) */
+    .side-front .card-back {
+      display: none !important;
+    }
+    .side-back .card-front {
+      display: none !important;
+    }
+
+    /* ====================================================
+       LAYOUT SPESIFIK: LANDSCAPE
+       ==================================================== */
+    .layout-landscape .card-header-main {
+      position: relative;
+      background: var(--primary-grad);
+      padding: 5px 8px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      height: 13.8mm;
+      flex-shrink: 0;
+    }
+    .layout-landscape .card-accent-line {
+      height: 2.2px;
+      background: var(--accent-grad);
+      flex-shrink: 0;
+    }
+    .layout-landscape .card-body-main {
+      padding: 5px 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .layout-landscape .photo-box-wrap {
+      width: 22mm;
+      height: 27.5mm;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12), 0 0 0 1px #cbd5e1;
+      background: #f8fafc;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .layout-landscape .qr-box-wrap {
+      width: 23mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 2.5px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .layout-landscape .qr-box-wrap img {
+      width: 20mm;
+      height: 20mm;
+      display: block;
+      border-radius: 3px;
+    }
+    .layout-landscape .card-footer-main {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 2px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 4.8pt;
+      color: #64748b;
+      height: 5.5mm;
+      flex-shrink: 0;
+    }
+
+    /* ====================================================
+       LAYOUT SPESIFIK: PORTRAIT (TEGAK: 53.98 mm × 85.60 mm)
+       ==================================================== */
+    .layout-portrait .card-header-main {
+      position: relative;
+      background: var(--primary-grad);
+      padding: 3px 6px;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      height: 12.5mm;
+      flex-shrink: 0;
+    }
+    .layout-portrait .card-accent-line {
+      height: 1.8px;
+      background: var(--accent-grad);
+      flex-shrink: 0;
+    }
+    .layout-portrait .card-body-main {
+      padding: 2.5px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-evenly;
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      overflow: hidden;
+    }
+    .layout-portrait .photo-box-wrap {
+      width: 18mm;
+      height: 22.5mm;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 1.5px 5px rgba(15, 23, 42, 0.12), 0 0 0 1px #cbd5e1;
+      background: #f8fafc;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .layout-portrait .qr-box-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid var(--card-border, #cbd5e1);
+      border-radius: 4.5px;
+      padding: 1.5px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      flex-shrink: 0;
+      margin: 0 auto;
+    }
+    .layout-portrait .qr-box-wrap img {
+      width: 15.5mm;
+      height: 15.5mm;
+      display: block;
+      border-radius: 2px;
+    }
+    .layout-portrait .card-footer-main {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 1.5px 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 4pt;
+      color: #64748b;
+      height: 4.8mm;
+      flex-shrink: 0;
+    }
+
+    /* ====================================================
+       MODEL 2: EXECUTIVE RIBBON (FORMAL BADGE)
+       ==================================================== */
+    .model-ribbon .card-header-main {
+      background: var(--primary-grad);
+      border-bottom: 1.5px solid rgba(255, 255, 255, 0.2);
+    }
+    .model-ribbon .photo-box-wrap {
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 0 1px #b45309, 0 3px 8px rgba(0,0,0,0.15);
+    }
+    .model-ribbon .card-accent-line {
+      background: linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #f59e0b 100%);
+      height: 2px;
+    }
+
+    /* ====================================================
+       MODEL 3: MINIMALIST CYBER (CLEAN TECH)
+       ==================================================== */
+    .model-cyber .student-card {
+      border-radius: 2mm;
+      background-image: 
+        linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
+      background-size: 4mm 4mm;
+    }
+    .model-cyber .card-header-main {
+      background: var(--primary-grad);
+    }
+    .model-cyber .photo-box-wrap {
+      border-radius: 2px;
+      border: 1px solid var(--accent-main);
+    }
+    .model-cyber .qr-box-wrap {
+      border-radius: 3px;
+      border: 1px solid var(--accent-main);
+    }
+
+    /* ====================================================
+       MODEL 4: LANYARD SIDE RIBBON (CONTOH GAMBAR USER)
+       ==================================================== */
+    body.model-sideribbon .card-front .card-header-main,
+    body.model-sideribbon .card-front .card-accent-line,
+    body.model-sideribbon .card-front .layout-landscape-only,
+    body.model-sideribbon .card-front .layout-portrait-only,
+    body.model-sideribbon .card-front .card-footer-main {
+      display: none !important;
+    }
+
+    .layout-sideribbon-only {
+      display: none !important;
+    }
+    body.model-sideribbon .layout-sideribbon-only {
+      display: flex !important;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Bilah Pita Sisi Kiri (Vertical Ribbon) */
+    .sideribbon-left {
+      width: 11.2mm;
+      background: var(--sideribbon-bg, #091a3c);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 1px 0 4px rgba(0, 0, 0, 0.15);
+    }
+    .sideribbon-left .notch-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-top: 5mm solid #ffffff;
+      border-right: 5mm solid transparent;
+      opacity: 0.18;
+      z-index: 1;
+    }
+    .sideribbon-left .notch-corner {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 2.5px;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.12);
+      z-index: 1;
+    }
+    /* Logo di Pita Kiri Atas */
+    .sideribbon-logo-wrap {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+    .sideribbon-logo-box {
+      width: 9.5mm;
+      height: 9.5mm;
+      min-width: 9.5mm;
+      min-height: 9.5mm;
+      max-width: 9.5mm;
+      max-height: 9.5mm;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1.5px 4px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      overflow: hidden;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+    .sideribbon-logo-box img {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      border-radius: 50%;
+      display: block;
+      padding: 0.5mm;
+      box-sizing: border-box;
+    }
+    .sideribbon-logo-fallback {
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sideribbon-divider {
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+    .sideribbon-text-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+    }
+    .sideribbon-text {
+      transform: rotate(-90deg); /* Default: Bawah ke Atas (Standar Lanyard, tidak terbalik saat dibaca) */
+      transform-origin: center center;
+      font-size: 8.5pt;
+      font-weight: 900;
+      letter-spacing: 1.8px;
+      color: #ffffff;
+      text-transform: uppercase;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      display: inline-block;
+      transition: transform 0.2s ease;
+    }
+    body.ribbon-dir-top-down .sideribbon-text {
+      transform: rotate(90deg); /* Opsi: Atas ke Bawah */
+    }
+
+    /* Area Konten Kanan */
+    .sideribbon-right {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      background: var(--sideribbon-body-bg, #ffffff);
+      background-size: 4px 4px, 100% 100%;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Header Sisi Kanan */
+    .sideribbon-right-header {
+      padding: 2.5mm 3mm 0 3mm;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .sideribbon-right-header .logo-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: #ffffff;
+      padding: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      border: 0.5px solid #e2e8f0;
+    }
+    .sideribbon-right-header .logo-box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .sideribbon-right-header .title-box {
+      min-width: 0;
+      flex: 1;
+    }
+    .sideribbon-right-header .title-box h3 {
+      font-size: 6.5pt;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.15;
+    }
+    .sideribbon-right-header .title-box p {
+      font-size: 3.8pt;
+      font-weight: 800;
+      color: var(--accent-main, #2563eb);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.5px;
+    }
+
+    /* Body Grid & Item Bersama (Base Portrait) */
+    .sideribbon-body-grid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-evenly;
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+    }
+    .sideribbon-center-meta {
+      width: 100%;
+    }
+
+    /* Foto dengan Garis Aksen Vertikal */
+    .sideribbon-photo-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 1mm 0 0.5mm 0;
+      position: relative;
+    }
+    .sideribbon-photo-frame {
+      position: relative;
+      display: inline-block;
+      padding: 0 4px;
+    }
+    .sideribbon-photo-frame::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: -1.5px;
+      bottom: -1.5px;
+      width: 1px;
+      background: var(--sideribbon-bg, #091a3c);
+      opacity: 0.85;
+    }
+    .sideribbon-photo-frame::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: -1.5px;
+      bottom: -1.5px;
+      width: 1px;
+      background: var(--sideribbon-bg, #091a3c);
+      opacity: 0.85;
+    }
+    .sideribbon-photo-box {
+      width: 17.5mm;
+      height: 21.5mm;
+      border: 1.5px solid var(--sideribbon-bg, #091a3c);
+      box-shadow: 0 1.5px 5px rgba(0,0,0,0.12);
+      background: #ffffff;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sideribbon-photo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Blok Nama & Role Badge */
+    .sideribbon-name-wrap {
+      text-align: center;
+      padding: 0 3px;
+    }
+    .sideribbon-name-wrap h2 {
+      font-size: 7.8pt;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.15;
+    }
+    .sideribbon-role-pill {
+      display: inline-block;
+      background: var(--sideribbon-bg, #091a3c);
+      color: #ffffff;
+      font-size: 4.2pt;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 1px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    /* Rincian Identitas */
+    .sideribbon-info-table {
+      padding: 0 4mm;
+      margin: 1mm 0 0.5mm 0;
+      font-size: 4.4pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .sideribbon-info-row {
+      display: flex;
+      align-items: center;
+    }
+    .sideribbon-info-row .lbl {
+      width: 10mm;
+      font-weight: 700;
+      color: #475569;
+    }
+    .sideribbon-info-row .colon {
+      width: 2mm;
+      font-weight: 700;
+      text-align: center;
+    }
+    .sideribbon-info-row .val {
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* Barcode & QR Scanner */
+    .sideribbon-scanner-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      padding: 0.5mm 0;
+    }
+    .sideribbon-qr-img {
+      width: 13.5mm;
+      height: 13.5mm;
+      display: block;
+      background: #ffffff;
+      border: 0.8px solid #cbd5e1;
+      border-radius: 2.5px;
+      padding: 1px;
+    }
+    .sideribbon-barcode-text {
+      font-size: 3.8pt;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 0.6px;
+      margin-top: 0.5px;
+    }
+
+    /* Footer Bawah */
+    .sideribbon-footer-bar {
+      background: var(--sideribbon-bg, #091a3c);
+      color: #ffffff;
+      height: 3.5mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.8pt;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 2mm;
+      letter-spacing: 0.3px;
+    }
+
+    /* ====================================================
+       KHUSUS MODEL 4 MODE PORTRAIT (53.98mm x 85.6mm)
+       Pita Vertikal Elegan & Font Sekolah Lebih Besar & Jelas
+       ==================================================== */
+    .layout-portrait .sideribbon-left {
+      width: 11.2mm;
+      padding-top: 2.2mm;
+      padding-bottom: 2mm;
+      justify-content: flex-start;
+    }
+    .layout-portrait .sideribbon-logo-wrap {
+      display: flex !important;
+      margin-bottom: 1.2mm;
+    }
+    .layout-portrait .sideribbon-logo-box {
+      width: 9.2mm;
+      height: 9.2mm;
+      min-width: 9.2mm;
+      min-height: 9.2mm;
+      max-width: 9.2mm;
+      max-height: 9.2mm;
+      aspect-ratio: 1 / 1;
+      flex-shrink: 0;
+      padding: 0.5px;
+      box-sizing: border-box;
+      border-radius: 50%;
+    }
+    .layout-portrait .sideribbon-logo-fallback {
+      font-size: 5mm;
+    }
+    .layout-portrait .sideribbon-divider {
+      display: block !important;
+      width: 5.5mm;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.25);
+      margin: 0 auto 1.8mm auto;
+    }
+    .layout-portrait .sideribbon-text-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+      width: 100%;
+    }
+    .layout-portrait .sideribbon-text {
+      font-size: 8pt;
+      letter-spacing: 1.8px;
+      font-weight: 900;
+      white-space: nowrap;
+      padding: 0;
+    }
+    /* Pada Portrait: Logo sudah di ribbon samping kiri atas, logo-box di header kanan disembunyikan agar nama sekolah tampil utuh dan leluasa */
+    .layout-portrait .sideribbon-right-header {
+      padding: 2.5mm 3.2mm 0 3.2mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0;
+    }
+    .layout-portrait .sideribbon-right-header .sideribbon-landscape-logo {
+      display: none !important;
+    }
+    .layout-portrait .sideribbon-right-header .title-box {
+      width: 100%;
+    }
+    .layout-portrait .sideribbon-right-header .title-box h3 {
+      font-size: 7.2pt;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      white-space: normal;
+      line-height: 1.18;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .layout-portrait .sideribbon-right-header .title-box p {
+      font-size: 4pt;
+      font-weight: 800;
+      color: var(--accent-main, #2563eb);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 1.5px;
+    }
+
+    /* ====================================================
+       KHUSUS MODEL 4 MODE LANDSCAPE (85.6mm x 53.98mm)
+       Mencegah QR Code Terpotong dengan Tata Letak 3-Kolom
+       ==================================================== */
+    .layout-landscape .sideribbon-left {
+      width: 10mm;
+      justify-content: center;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .layout-landscape .sideribbon-logo-wrap {
+      display: none !important;
+    }
+    .layout-landscape .sideribbon-divider {
+      display: none !important;
+    }
+    .layout-landscape .sideribbon-text-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      width: 100%;
+    }
+    .layout-landscape .sideribbon-text {
+      font-size: 7.2pt;
+      letter-spacing: 1.2px;
+      font-weight: 900;
+      white-space: nowrap;
+      padding: 0;
+    }
+    .layout-landscape .sideribbon-right-header {
+      padding: 1.5mm 3.5mm 0 3.5mm;
+      height: 7.2mm;
+      gap: 5px;
+      display: flex;
+      align-items: center;
+    }
+    .layout-landscape .sideribbon-right-header .sideribbon-landscape-logo {
+      display: flex !important;
+      width: 19px;
+      height: 19px;
+      border-radius: 4px;
+      background: #ffffff;
+      padding: 1px;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      border: 0.5px solid #e2e8f0;
+    }
+    .layout-landscape .sideribbon-right-header .sideribbon-landscape-logo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .layout-landscape .sideribbon-right-header .title-box h3 {
+      font-size: 6.8pt;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .layout-landscape .sideribbon-right-header .title-box p {
+      font-size: 3.8pt;
+    }
+    .layout-landscape .sideribbon-body-grid {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      flex: 1;
+      min-height: 0;
+      padding: 0.8mm 3.5mm;
+      gap: 2.5mm;
+    }
+    .layout-landscape .sideribbon-photo-wrap {
+      margin: 0;
+      flex-shrink: 0;
+    }
+    .layout-landscape .sideribbon-photo-box {
+      width: 17mm;
+      height: 22mm;
+    }
+    .layout-landscape .sideribbon-center-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .layout-landscape .sideribbon-name-wrap {
+      text-align: left;
+      padding: 0;
+    }
+    .layout-landscape .sideribbon-name-wrap h2 {
+      font-size: 8pt;
+      line-height: 1.15;
+    }
+    .layout-landscape .sideribbon-role-pill {
+      font-size: 4.2pt;
+      padding: 1px 6px;
+      margin-top: 1px;
+    }
+    .layout-landscape .sideribbon-info-table {
+      padding: 0;
+      margin: 1.2mm 0 0 0;
+      font-size: 4.6pt;
+      line-height: 1.38;
+    }
+    .layout-landscape .sideribbon-info-row .lbl {
+      width: 9.5mm;
+    }
+    .layout-landscape .sideribbon-scanner-wrap {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+    }
+    .layout-landscape .sideribbon-qr-img {
+      width: 17mm;
+      height: 17mm;
+      border-radius: 3px;
+      padding: 1px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+    }
+    .layout-landscape .sideribbon-barcode-text {
+      font-size: 4.2pt;
+      margin-top: 0.8mm;
+      font-weight: 800;
+      color: #475569;
+    }
+    .layout-landscape .sideribbon-footer-bar {
+      height: 3.5mm;
+      padding: 0 3mm;
+      font-size: 3.8pt;
+    }
+
+    /* Sisi belakang kartu di mode landscape agar proporsional */
+    .layout-landscape .card-back-header {
+      height: 8.5mm;
+      padding: 2.5px 6px;
+    }
+    .layout-landscape .card-back-body {
+      padding: 3mm 6px;
+      font-size: 4.4pt;
+    }
+
+    /* ====================================================
+       SISI BELAKANG KARTU (CARD BACK)
+       ==================================================== */
+    .card-back {
+      background-color: #ffffff;
+    }
+    .card-back-header {
+      background: var(--primary-grad);
+      color: #ffffff;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 10mm;
+      flex-shrink: 0;
+    }
+    .card-back-body {
+      padding: 5px 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 5pt;
+      color: #334155;
+      line-height: 1.35;
+    }
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .rules-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 3px;
+    }
+    .rules-list li span.num {
+      font-weight: 800;
+      color: var(--accent-main, #2563eb);
+      min-width: 8px;
+    }
+    .signature-area {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding-top: 2.5px;
+      border-top: 0.5px dashed #cbd5e1;
+      gap: 3mm;
+      position: relative;
+    }
+    .card-meta-left {
+      min-width: 0;
+      flex: 1;
+    }
+    .card-meta-left .card-validity {
+      font-size: 4.5pt;
+      color: #64748b;
+    }
+    .card-meta-left .card-id-token {
+      margin-top: 1.5px;
+      font-size: 4.2pt;
+      color: #94a3b8;
+    }
+
+    /* Blok Legalisasi Tanda Tangan & Cap Stempel */
+    .legal-sign-block {
+      text-align: center;
+      min-width: 32mm;
+      max-width: 38mm;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .legal-date {
+      font-size: 4.2pt;
+      color: #64748b;
+      white-space: nowrap;
+      margin-bottom: 0.5px;
+      font-weight: 600;
+    }
+    .legal-role {
+      font-size: 4.5pt;
+      color: #334155;
+      line-height: 1.2;
+    }
+    .legal-role strong {
+      font-weight: 800;
+    }
+    .legal-stamp-wrap {
+      height: 8.5mm;
+      width: 32mm;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0.5mm 0;
+    }
+    .legal-stamp-container {
+      position: absolute;
+      left: 1.5mm;
+      top: -1mm;
+      width: 25px;
+      height: 25px;
+      color: #1e40af; /* Tinta stempel resmi biru */
+      opacity: 0.86;
+      transform: rotate(-9deg);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .legal-stamp-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .legal-stamp-vector {
+      width: 100%;
+      height: 100%;
+    }
+    .legal-sig-container {
+      position: relative;
+      width: 28mm;
+      height: 7.5mm;
+      color: #0f172a; /* Tinta pulpen tanda tangan */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    .legal-sig-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .legal-sig-vector {
+      width: 85%;
+      height: 100%;
+    }
+    .legal-manual-line {
+      display: none;
+      width: 26mm;
+      height: 1px;
+      border-bottom: 0.8px dashed #94a3b8;
+      margin-top: 5mm;
+    }
+    .legal-name {
+      font-size: 5pt;
+      font-weight: 800;
+      color: #0f172a;
+      text-decoration: underline;
+      white-space: nowrap;
+      line-height: 1.15;
+    }
+    .legal-nip {
+      font-size: 3.8pt;
+      color: #475569;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-top: 0.5px;
+    }
+
+    /* KONTROL MODE TANDA TANGAN: DIGITAL VS MANUAL */
+    .sig-manual .legal-stamp-container,
+    .sig-manual .legal-sig-container {
+      display: none !important;
+    }
+    .sig-manual .legal-manual-line {
+      display: block !important;
+    }
+    .sig-manual .legal-stamp-wrap {
+      height: 7mm;
+    }
+
+    /* ====================================================
+       CETAK / PRINT MEDIA RULES
+       ==================================================== */
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .sheet-wrapper {
+        padding: 0;
+        max-width: none;
+        transform: none !important;
+      }
+      .card-grid {
+        padding: 0;
+        gap: 5mm;
+      }
+      .card-item-wrapper, .card-faces-row {
+        display: contents !important;
+      }
+      .student-card {
+        box-shadow: none;
+        border: 0.5px solid #94a3b8;
+      }
+    }
+  </style>
+</head>
+<body class="theme-<%= (preset && preset.theme) || 'navy' %> layout-<%= (preset && preset.orientation) || 'landscape' %> model-<%= (preset && preset.model) || 'smart' %> side-<%= (preset && preset.side) || 'front' %> sig-<%= (preset && preset.sigType) || 'digital' %> <%= (preset && preset.cutMarks) ? 'show-cutmarks' : '' %>">
+
+  <!-- Controls Bar (No Print) -->
+  <div class="no-print">
+    <div class="toolbar-top">
+      <div>
+        <h2 style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+          <span>Pratinjau & Cetak Kartu Pelajar</span>
+          <span style="font-size: 10px; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
+            ● RESMI TERVERIFIKASI
+          </span>
+        </h2>
+        <p style="font-size: 11px; color: #64748b; margin-top: 3px;">
+          Standar CR80 &bull; Total: <strong><%= students.length %> Siswa</strong> &bull; Ubah model, orientasi, tema, dan tanda tangan secara real-time di bawah.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <!-- Status Gateway WhatsApp -->
+        <span id="waStatusBadge" style="font-size: 10.5px; font-weight: 700; padding: 5px 9px; border-radius: 7px; background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 5px;" title="Status koneksi gateway WhatsApp untuk pengiriman kartu">
+          <span style="width: 6.5px; height: 6.5px; border-radius: 50%; background: #94a3b8;"></span>
+          <span>Cek WA...</span>
+        </span>
+
+        <!-- Tombol Aksi Batch -->
+        <% if (students.length > 1) { %>
+          <button type="button" onclick="downloadAllZip('png')" class="btn btn-outline-info" title="Unduh seluruh kartu siswa ke dalam 1 file ZIP (PNG 300 DPI siap cetak)">
+            📦 Unduh Semua (ZIP)
+          </button>
+          <button type="button" onclick="openBatchWhatsAppModal()" class="btn btn-success" title="Kirim gambar kartu ke seluruh nomor WhatsApp orang tua siswa">
+            📲 Kirim WA Massal
+          </button>
+        <% } %>
+
+        <button onclick="window.print()" class="btn btn-primary" title="Cetak Kartu ke Printer atau PDF">
+          🖨️ Cetak / Simpan PDF
+        </button>
+        <button onclick="window.close()" class="btn btn-secondary" title="Tutup Jendela">
+          Tutup
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Customizer Controls Bar -->
+    <div class="toolbar-controls">
+      <!-- 1. Pilihan Orientasi -->
+      <div class="control-group">
+        <label>Orientasi:</label>
+        <select id="selectOrientation" class="select-control" onchange="updateCardPreset()">
+          <option value="landscape" <%= (!preset || preset.orientation === 'landscape') ? 'selected' : '' %>>🔲 Landscape (Mendatar)</option>
+          <option value="portrait" <%= (preset && preset.orientation === 'portrait') ? 'selected' : '' %>>📱 Portrait (Tegak)</option>
+        </select>
+      </div>
+
+      <!-- 2. Pilihan Model Desain -->
+      <div class="control-group">
+        <label>Model Desain:</label>
+        <select id="selectModel" class="select-control" onchange="updateCardPreset()">
+          <option value="smart" <%= (!preset || preset.model === 'smart') ? 'selected' : '' %>>Model 1: Smart Wave</option>
+          <option value="ribbon" <%= (preset && preset.model === 'ribbon') ? 'selected' : '' %>>Model 2: Executive Ribbon</option>
+          <option value="cyber" <%= (preset && preset.model === 'cyber') ? 'selected' : '' %>>Model 3: Minimalist Cyber</option>
+          <option value="sideribbon" <%= (preset && preset.model === 'sideribbon') ? 'selected' : '' %>>Model 4: Lanyard Side Ribbon (Foto)</option>
+        </select>
+      </div>
+
+      <!-- 2b. Arah Teks Ribbon (Khusus Model 4) -->
+      <div class="control-group model4-only" style="display: none;">
+        <label>Arah Pita:</label>
+        <select id="selectRibbonDir" class="select-control" onchange="updateCardPreset()">
+          <option value="bottom-up" selected>⬆️ Bawah ke Atas (Standar Lanyard / Tidak Terbalik)</option>
+          <option value="top-down">⬇️ Atas ke Bawah (Mulai Bawah Logo)</option>
+        </select>
+      </div>
+
+      <!-- 3. Pilihan Tema Warna -->
+      <div class="control-group">
+        <label>Tema Warna:</label>
+        <select id="selectTheme" class="select-control" onchange="updateCardPreset()">
+          <option value="navy" <%= (!preset || preset.theme === 'navy') ? 'selected' : '' %>>🔷 Royal Navy & Sky</option>
+          <option value="emerald" <%= (preset && preset.theme === 'emerald') ? 'selected' : '' %>>🟢 Emerald Islamic & Gold (Madani)</option>
+          <option value="ruby" <%= (preset && preset.theme === 'ruby') ? 'selected' : '' %>>🔴 Crimson Ruby & Amber</option>
+          <option value="purple" <%= (preset && preset.theme === 'purple') ? 'selected' : '' %>>🟣 Deep Purple & Indigo</option>
+          <option value="slate" <%= (preset && preset.theme === 'slate') ? 'selected' : '' %>>⚫ Slate Graphite & Titanium</option>
+          <option value="amber" <%= (preset && preset.theme === 'amber') ? 'selected' : '' %>>🟡 Sunny Amber & Navy (Contoh Kiri)</option>
+          <option value="cleanwhite" <%= (preset && preset.theme === 'cleanwhite') ? 'selected' : '' %>>⚪ Minimalist White & Navy (Contoh Kanan)</option>
+        </select>
+      </div>
+
+      <!-- 4. Pilihan Sisi Kartu -->
+      <div class="control-group">
+        <label>Sisi Kartu:</label>
+        <select id="selectSide" class="select-control" onchange="updateCardPreset()">
+          <option value="front" <%= (!preset || preset.side === 'front') ? 'selected' : '' %>>Depan Saja</option>
+          <option value="both" <%= (preset && preset.side === 'both') ? 'selected' : '' %>>Depan & Belakang</option>
+          <option value="back" <%= (preset && preset.side === 'back') ? 'selected' : '' %>>Belakang Saja</option>
+        </select>
+      </div>
+
+      <!-- 5. Pilihan Tanda Tangan & Stempel -->
+      <div class="control-group">
+        <label>Tanda Tangan:</label>
+        <select id="selectSigType" class="select-control" onchange="updateCardPreset()">
+          <option value="digital" <%= (!preset || preset.sigType !== 'manual') ? 'selected' : '' %>>✍️ Digital & Stempel Otomatis</option>
+          <option value="manual" <%= (preset && preset.sigType === 'manual') ? 'selected' : '' %>>🖊️ Tanda Tangan Basah (Manual)</option>
+        </select>
+      </div>
+
+      <!-- 5. Toggle Garis Potong (Batas Gunting) -->
+      <div class="control-group" style="margin-left: auto;">
+        <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="checkCutMarks" onchange="updateCardPreset()" <%= (preset && preset.cutMarks) ? 'checked' : '' %>>
+          <span>Garis Potong (Batas Gunting)</span>
+        </label>
+      </div>
+
+      <!-- 6. Zoom Kontrol -->
+      <div class="control-group">
+        <label>Zoom:</label>
+        <button type="button" class="btn-toggle" onclick="setZoom(0.85)">85%</button>
+        <button type="button" class="btn-toggle active" id="btnZoom100" onclick="setZoom(1.0)">100%</button>
+        <button type="button" class="btn-toggle" onclick="setZoom(1.15)">115%</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards Grid Wrapper -->
+  <div class="sheet-wrapper" id="sheetWrapper">
+    <div class="card-grid">
+      <% students.forEach(s => { %>
+        <div class="card-item-wrapper" id="card-unit-<%= s.id %>"
+             data-student-id="<%= s.id %>"
+             data-student-name="<%= s.name %>"
+             data-nis="<%= s.nis %>"
+             data-class-name="<%= s.class_name || '-' %>"
+             data-parent-name="<%= s.parent_name || '' %>"
+             data-parent-phone="<%= s.parent_phone || '' %>">
+
+          <!-- Mini Top Info (No Print) -->
+          <div class="card-unit-header no-print">
+            <div class="card-unit-title">
+              <span class="student-name-tag"><%= s.name %></span>
+              <span class="student-class-tag"><%= s.class_name || 'Tanpa Kelas' %></span>
+            </div>
+            <div class="card-unit-phone">
+              <% if (s.parent_phone) { %>
+                <span class="phone-badge ready" title="Nomor WhatsApp Orang Tua">📱 <%= s.parent_phone %></span>
+              <% } else { %>
+                <span class="phone-badge empty" title="Nomor WhatsApp belum terdaftar">⚠️ Tanpa WA</span>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Wadah Tampilan Kartu -->
+          <div class="card-faces-row">
+            <!-- ============================================== -->
+            <!-- SISI DEPAN KARTU (FRONT SIDE)                  -->
+            <!-- ============================================== -->
+            <div class="student-card card-front" id="card-front-<%= s.id %>">
+          
+          <!-- Header Kartu -->
+          <div class="card-header-main">
+            <!-- Ornamen Dekoratif Halus -->
+            <div style="position: absolute; right: -15px; top: -15px; width: 65px; height: 65px; background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+            
+            <!-- Logo & Nama Sekolah -->
+            <div class="header-content" style="display: flex; align-items: center; gap: 6px; min-width: 0; width: 100%; z-index: 1;">
+              <% if (settings.school_logo) { %>
+                <div style="width: 26px; height: 26px; border-radius: 5px; background: #ffffff; padding: 2px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 1.5px 4px rgba(0,0,0,0.25);">
+                  <img src="<%= settings.school_logo %>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                </div>
+              <% } else { %>
+                <div style="width: 26px; height: 26px; border-radius: 5px; background: rgba(255,255,255,0.2); color: #ffffff; font-weight: 800; font-size: 10pt; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.4);">
+                  <%= (settings.school_name || 'S').charAt(0) %>
+                </div>
+              <% } %>
+
+              <div style="min-width: 0; flex: 1;" class="header-text-block">
+                <h1 style="font-size: 8.2pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.15; color: var(--header-title, #ffffff);">
+                  <%= settings.school_name || 'SEKOLAH INDONESIA' %>
+                </h1>
+                <div style="font-size: 4.8pt; color: var(--sub-color, #38bdf8); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 1px;">
+                  KARTU IDENTITAS PELAJAR
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Garis Aksen Gradien -->
+          <div class="card-accent-line"></div>
+
+          <!-- Body Kartu: Landscape vs Portrait Template -->
+          
+          <!-- A. Konten Body Mode Landscape -->
+          <div class="card-body-main layout-landscape-only">
+            <!-- Foto Siswa -->
+            <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+              <div class="photo-box-wrap">
+                <% if (s.photo) { %>
+                  <img src="<%= s.photo %>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                <% } else { %>
+                  <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);">
+                    <svg width="40" height="40" viewBox="0 0 64 64" fill="none" style="margin-top: 4px;">
+                      <circle cx="32" cy="22" r="14" fill="#cbd5e1"/>
+                      <path d="M12 56C12 45 20.9543 38 32 38C43.0457 38 52 45 52 56" fill="#94a3b8"/>
+                      <path d="M26 38L32 46L38 38" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.65); color: #ffffff; font-size: 3.8pt; font-weight: 700; text-align: center; padding: 1px 0;">
+                      PASFOTO
+                    </span>
+                  </div>
+                <% } %>
+              </div>
+              <div style="margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 2.5px; background: var(--badge-bg, #ecfdf5); border: 0.5px solid var(--badge-border, #a7f3d0); border-radius: 9999px; padding: 0.8px 4px;">
+                <span style="width: 3.5px; height: 3.5px; border-radius: 50%; background: var(--accent-main, #10b981); display: inline-block;"></span>
+                <span style="font-size: 4.5pt; font-weight: 800; color: var(--badge-text, #047857); text-transform: uppercase;">
+                  SISWA AKTIF
+                </span>
+              </div>
+            </div>
+
+            <!-- Identitas Siswa -->
+            <div style="flex: 1; min-width: 0; padding-right: 2px;">
+              <div style="font-size: 9.2pt; font-weight: 800; color: var(--text-highlight, #091a3c); line-height: 1.15; letter-spacing: -0.2px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2.5px;">
+                <%= s.name %>
+              </div>
+
+              <!-- Badge Kelas -->
+              <div style="margin-bottom: 4px;">
+                <span style="display: inline-flex; align-items: center; font-size: 5.5pt; font-weight: 800; color: var(--badge-text, #1d4ed8); background: var(--badge-bg, #eff6ff); border: 0.8px solid var(--badge-border, #bfdbfe); border-radius: 4px; padding: 1px 6px; text-transform: uppercase;">
+                  KELAS <%= s.class_name || '-' %>
+                </span>
+              </div>
+
+              <!-- Baris Identitas -->
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="display: flex; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 4.5px;">
+                  <span style="width: 23px; font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">NIS</span>
+                  <span class="font-mono" style="font-size: 6.2pt; font-weight: 800; color: #0f172a;"><%= s.nis %></span>
+                </div>
+                <div style="display: flex; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 4.5px;">
+                  <span style="width: 23px; font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">NISN</span>
+                  <span class="font-mono" style="font-size: 5.8pt; font-weight: 700; color: #334155;"><%= s.nisn || '-' %></span>
+                </div>
+                <% if (s.rfid_uid) { %>
+                  <div style="display: flex; align-items: center; background: var(--badge-bg, #eff6ff); border: 0.5px solid var(--badge-border, #dbeafe); border-radius: 3px; padding: 1px 4.5px;">
+                    <span style="width: 23px; font-size: 5pt; font-weight: 700; color: var(--badge-text, #2563eb); text-transform: uppercase;">RFID</span>
+                    <span class="font-mono" style="font-size: 5.6pt; font-weight: 800; color: var(--badge-text, #1d4ed8);"><%= s.rfid_uid %></span>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- QR Code Scanner Box -->
+            <div class="qr-box-wrap">
+              <img src="<%= s.qr_data_url %>">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 1.5px; width: 100%; background: var(--scan-badge-bg, #0f172a); border-radius: 3px; padding: 1px 0;">
+                <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--scan-badge-text, #38bdf8)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                  <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                  <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                </svg>
+                <span style="font-size: 3.8pt; font-weight: 800; color: #ffffff; letter-spacing: 0.4px; text-transform: uppercase;">
+                  SCAN ABSEN
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- B. Konten Body Mode Portrait -->
+          <div class="card-body-main layout-portrait-only">
+            <!-- Foto Siswa Berbingkai -->
+            <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+              <div class="photo-box-wrap">
+                <% if (s.photo) { %>
+                  <img src="<%= s.photo %>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                <% } else { %>
+                  <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);">
+                    <svg width="32" height="32" viewBox="0 0 64 64" fill="none">
+                      <circle cx="32" cy="22" r="14" fill="#cbd5e1"/>
+                      <path d="M12 56C12 45 20.9543 38 32 38C43.0457 38 52 45 52 56" fill="#94a3b8"/>
+                    </svg>
+                  </div>
+                <% } %>
+              </div>
+              <div style="margin-top: 1.5px; display: flex; align-items: center; justify-content: center; gap: 2px; background: var(--badge-bg, #ecfdf5); border: 0.5px solid var(--badge-border, #a7f3d0); border-radius: 9999px; padding: 0.5px 4px;">
+                <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--accent-main, #10b981); display: inline-block;"></span>
+                <span style="font-size: 4pt; font-weight: 800; color: var(--badge-text, #047857); text-transform: uppercase;">
+                  SISWA AKTIF
+                </span>
+              </div>
+            </div>
+
+            <!-- Nama Siswa & Badge Kelas -->
+            <div style="width: 100%;">
+              <div style="font-size: 8.2pt; font-weight: 800; color: var(--text-highlight, #091a3c); line-height: 1.15; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <%= s.name %>
+              </div>
+              <div style="margin-top: 1px;">
+                <span style="display: inline-flex; align-items: center; font-size: 4.8pt; font-weight: 800; color: var(--badge-text, #1d4ed8); background: var(--badge-bg, #eff6ff); border: 0.8px solid var(--badge-border, #bfdbfe); border-radius: 3px; padding: 0.5px 4px; text-transform: uppercase;">
+                  KELAS <%= s.class_name || '-' %>
+                </span>
+              </div>
+            </div>
+
+            <!-- Identitas Siswa: 1 Baris Sejajar Rapi (Side-by-Side) -->
+            <div style="width: 100%; display: flex; gap: 4px; align-items: center;">
+              <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 3.5px;">
+                <span style="font-size: 4.5pt; font-weight: 700; color: #64748b;">NIS</span>
+                <span class="font-mono" style="font-size: 5.5pt; font-weight: 800; color: #0f172a;"><%= s.nis %></span>
+              </div>
+              <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 3.5px;">
+                <span style="font-size: 4.5pt; font-weight: 700; color: #64748b;">NISN</span>
+                <span class="font-mono" style="font-size: 5.2pt; font-weight: 700; color: #334155;"><%= s.nisn || '-' %></span>
+              </div>
+              <% if (s.rfid_uid) { %>
+                <div style="display: flex; align-items: center; gap: 2px; background: var(--badge-bg, #eff6ff); border: 0.5px solid var(--badge-border, #dbeafe); border-radius: 3px; padding: 1px 3px;">
+                  <span style="font-size: 4pt; font-weight: 700; color: var(--badge-text, #2563eb);">RFID</span>
+                  <span class="font-mono" style="font-size: 5pt; font-weight: 800; color: var(--badge-text, #1d4ed8);"><%= s.rfid_uid %></span>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- QR Code Scanner Box Portrait (Presisi Tengah & Utuh 100%) -->
+            <div style="width: 100%; display: flex; justify-content: center; align-items: center;">
+              <div class="qr-box-wrap">
+                <img src="<%= s.qr_data_url %>">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 2px; margin-top: 1px; width: 100%; background: var(--scan-badge-bg, #0f172a); border-radius: 2px; padding: 0.6px 4px;">
+                  <svg width="5" height="5" viewBox="0 0 24 24" fill="none" stroke="var(--scan-badge-text, #38bdf8)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+                  </svg>
+                  <span style="font-size: 3.5pt; font-weight: 800; color: #ffffff; letter-spacing: 0.3px; text-transform: uppercase;">
+                    SCAN ABSEN
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Kartu -->
+          <div class="card-footer-main">
+            <div style="display: flex; align-items: center; gap: 3px; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <svg width="6.5" height="6.5" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" style="flex-shrink: 0;">
+                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span style="font-weight: 600;">
+                <%= settings.school_address || settings.school_phone || 'Kartu Resmi Pelajar' %>
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 2.5px; font-weight: 800; color: #1e293b; text-transform: uppercase; white-space: nowrap;">
+              <svg width="6.5" height="6.5" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" style="flex-shrink: 0;">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <span>RESMI</span>
+            </div>
+          </div>
+
+          <!-- ============================================== -->
+          <!-- C. KONTEN BODY MODEL 4: LANYARD SIDE RIBBON    -->
+          <!-- ============================================== -->
+          <div class="layout-sideribbon-only">
+            <!-- Bilah Sisi Kiri (Vertical Ribbon) -->
+            <div class="sideribbon-left">
+              <div class="notch-top"></div>
+              <div class="notch-corner"></div>
+              <!-- Logo di Ribbon Sisi Kiri Atas -->
+              <div class="sideribbon-logo-wrap">
+                <div class="sideribbon-logo-box">
+                  <% if (settings.school_logo) { %>
+                    <img src="<%= settings.school_logo %>" alt="Logo">
+                  <% } else if (settings.school_name && (settings.school_name.toLowerCase().includes('musholla') || settings.school_name.toLowerCase().includes('masjid') || settings.school_name.toLowerCase().includes('santri') || settings.school_name.toLowerCase().includes('pesantren') || settings.school_name.toLowerCase().includes('tpq') || settings.school_name.toLowerCase().includes('diniyah'))) { %>
+                    <span class="sideribbon-logo-fallback">🕌</span>
+                  <% } else { %>
+                    <span class="sideribbon-logo-fallback">🏫</span>
+                  <% } %>
+                </div>
+              </div>
+              <div class="sideribbon-divider"></div>
+              <div class="sideribbon-text-wrap">
+                <div class="sideribbon-text">
+                  <%= settings.school_name || 'SEKOLAH INDONESIA' %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Area Konten Utama Kanan -->
+            <div class="sideribbon-right">
+              <!-- Header Kanan: Nama Lembaga / Sekolah -->
+              <div class="sideribbon-right-header">
+                <!-- Logo Box Landscape (Di Portrait disembunyikan karena logo sudah di ribbon samping kiri) -->
+                <div class="logo-box sideribbon-landscape-logo">
+                  <% if (settings.school_logo) { %>
+                    <img src="<%= settings.school_logo %>" alt="Logo">
+                  <% } else if (settings.school_name && (settings.school_name.toLowerCase().includes('musholla') || settings.school_name.toLowerCase().includes('masjid') || settings.school_name.toLowerCase().includes('santri') || settings.school_name.toLowerCase().includes('pesantren') || settings.school_name.toLowerCase().includes('tpq') || settings.school_name.toLowerCase().includes('diniyah'))) { %>
+                    <span style="font-size: 9.5pt;">🕌</span>
+                  <% } else { %>
+                    <span style="font-size: 9.5pt;">🏫</span>
+                  <% } %>
+                </div>
+                <div class="title-box">
+                  <h3><%= settings.school_name || 'SEKOLAH INDONESIA' %></h3>
+                  <p><%= (settings.school_name && (settings.school_name.toLowerCase().includes('musholla') || settings.school_name.toLowerCase().includes('masjid') || settings.school_name.toLowerCase().includes('santri') || settings.school_name.toLowerCase().includes('pesantren') || settings.school_name.toLowerCase().includes('tpq') || settings.school_name.toLowerCase().includes('diniyah'))) ? 'KARTU IDENTITAS SANTRI' : 'KARTU IDENTITAS PELAJAR' %></p>
+                </div>
+              </div>
+
+              <!-- Body Konten Grid (Responsif Portrait & Landscape) -->
+              <div class="sideribbon-body-grid">
+                <!-- Pasfoto Berbingkai Aksen Garis -->
+                <div class="sideribbon-photo-wrap">
+                  <div class="sideribbon-photo-frame">
+                    <div class="sideribbon-photo-box">
+                      <% if (s.photo) { %>
+                        <img src="<%= s.photo %>">
+                      <% } else { %>
+                        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);">
+                          <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+                            <circle cx="32" cy="22" r="14" fill="#cbd5e1"/>
+                            <path d="M12 56C12 45 20.9543 38 32 38C43.0457 38 52 45 52 56" fill="#94a3b8"/>
+                          </svg>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bagian Tengah: Nama Siswa & Rincian Identitas -->
+                <div class="sideribbon-center-meta">
+                  <!-- Nama Siswa & Role Badge -->
+                  <div class="sideribbon-name-wrap">
+                    <h2><%= s.name %></h2>
+                    <div class="sideribbon-role-pill">
+                      KELAS <%= s.class_name || '-' %>
+                    </div>
+                  </div>
+
+                  <!-- Rincian Identitas Tabular -->
+                  <div class="sideribbon-info-table">
+                    <div class="sideribbon-info-row">
+                      <span class="lbl">NIS</span>
+                      <span class="colon">:</span>
+                      <span class="val font-mono"><%= s.nis %></span>
+                    </div>
+                    <div class="sideribbon-info-row">
+                      <span class="lbl">NISN</span>
+                      <span class="colon">:</span>
+                      <span class="val font-mono"><%= s.nisn || '-' %></span>
+                    </div>
+                    <% if (s.rfid_uid) { %>
+                      <div class="sideribbon-info-row">
+                        <span class="lbl">RFID</span>
+                        <span class="colon">:</span>
+                        <span class="val font-mono"><%= s.rfid_uid %></span>
+                      </div>
+                    <% } %>
+                    <div class="sideribbon-info-row">
+                      <span class="lbl">Status</span>
+                      <span class="colon">:</span>
+                      <span class="val" style="color: #16a34a;">Siswa Aktif</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Scanner Barcode / QR Code Presisi -->
+                <div class="sideribbon-scanner-wrap">
+                  <img src="<%= s.qr_data_url %>" class="sideribbon-qr-img">
+                  <div class="sideribbon-barcode-text font-mono">
+                    * <%= s.nis %> *
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Bawah -->
+              <div class="sideribbon-footer-bar">
+                <%= settings.school_address || settings.school_phone || 'www.sekolah.sch.id' %>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- SISI BELAKANG KARTU (BACK SIDE)                -->
+        <!-- ============================================== -->
+        <div class="student-card card-back" id="card-back-<%= s.id %>">
+          <!-- Header Sisi Belakang -->
+          <div class="card-back-header">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span style="font-size: 6.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;">
+                TATA TERTIB PENGGUNAAN KARTU
+              </span>
+            </div>
+            <span style="font-size: 4.8pt; color: var(--sub-color, #38bdf8); font-weight: 700;">
+              <%= settings.school_name || 'SEKOLAH' %>
+            </span>
+          </div>
+
+          <div style="height: 1.5px; background: var(--accent-grad);"></div>
+
+          <!-- Body Sisi Belakang -->
+          <div class="card-back-body">
+            <ul class="rules-list">
+              <li>
+                <span class="num">1.</span>
+                <span>Kartu ini adalah identitas resmi peserta didik <%= settings.school_name || 'sekolah' %>.</span>
+              </li>
+              <li>
+                <span class="num">2.</span>
+                <span>Wajib dibawa setiap hari sekolah untuk presensi masuk/pulang di scanner gerbang.</span>
+              </li>
+              <li>
+                <span class="num">3.</span>
+                <span>Dilarang merusak, mencoret, atau meminjamkan kartu ini kepada orang lain.</span>
+              </li>
+              <li>
+                <span class="num">4.</span>
+                <span>Apabila kartu ini hilang atau rusak, segera melapor ke staf Tata Usaha sekolah.</span>
+              </li>
+              <li>
+                <span class="num">5.</span>
+                <span>Barang siapa menemukan kartu ini, mohon mengembalikan ke alamat resmi sekolah.</span>
+              </li>
+            </ul>
+
+            <!-- Area Tanda Tangan & Cap Sekolah -->
+            <div class="signature-area">
+              <div class="card-meta-left">
+                <div class="card-validity">Berlaku Selama Menjadi Siswa Aktif</div>
+                <div class="card-id-token font-mono">
+                  ID: <%= s.nis %>-<%= (s.class_name || 'STD').replace(/\s+/g, '') %>
+                </div>
+              </div>
+
+              <!-- Blok Legalisasi Tanda Tangan & Cap Stempel -->
+              <div class="legal-sign-block">
+                <div class="legal-date">
+                  <%= settings.card_issue_city || 'Cirebon' %>, <%= settings.card_issue_date || '15 Juli 2026' %>
+                </div>
+                <div class="legal-role">
+                  Mengetahui,<br><strong>Kepala Sekolah</strong>
+                </div>
+
+                <div class="legal-stamp-wrap">
+                  <!-- Cap Stempel Resmi -->
+                  <div class="legal-stamp-container">
+                    <% if (settings.school_principal_stamp) { %>
+                      <img src="<%= settings.school_principal_stamp %>" class="legal-stamp-img">
+                    <% } else { %>
+                      <svg class="legal-stamp-vector" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2.5" />
+                        <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3,1.5" />
+                        <path id="stampCurveTop_<%= s.id %>" d="M 18,50 A 32,32 0 1,1 82,50" fill="none"/>
+                        <text font-size="7.5" font-weight="900" letter-spacing="1.2" fill="currentColor">
+                          <textPath href="#stampCurveTop_<%= s.id %>" startOffset="50%" text-anchor="middle">
+                            <%= (settings.school_name || 'SEKOLAH INDONESIA').toUpperCase().slice(0, 24) %>
+                          </textPath>
+                        </text>
+                        <path id="stampCurveBtm_<%= s.id %>" d="M 82,50 A 32,32 0 0,1 18,50" fill="none"/>
+                        <text font-size="7" font-weight="800" letter-spacing="1" fill="currentColor">
+                          <textPath href="#stampCurveBtm_<%= s.id %>" startOffset="50%" text-anchor="middle">
+                            ★ RESMI &bull; TERVERIFIKASI ★
+                          </textPath>
+                        </text>
+                        <circle cx="50" cy="50" r="17" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                        <text x="50" y="47" font-size="6" font-weight="900" text-anchor="middle" fill="currentColor">SMART</text>
+                        <text x="50" y="55" font-size="5.5" font-weight="900" text-anchor="middle" fill="currentColor">SCHOOL</text>
+                      </svg>
+                    <% } %>
+                  </div>
+
+                  <!-- Tanda Tangan Digital -->
+                  <div class="legal-sig-container">
+                    <% if (settings.school_principal_signature) { %>
+                      <img src="<%= settings.school_principal_signature %>" class="legal-sig-img">
+                    <% } else { %>
+                      <svg class="legal-sig-vector" viewBox="0 0 120 45" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10,32 C18,12 25,6 30,16 C34,25 36,36 44,22 C50,11 58,15 62,25 C66,35 68,20 75,18 C82,16 92,26 102,15 M20,28 Q45,24 110,20 M70,18 C78,28 85,38 95,30" stroke-width="2.2"/>
+                      </svg>
+                    <% } %>
+                  </div>
+
+                  <!-- Garis Tanda Tangan Manual -->
+                  <div class="legal-manual-line"></div>
+                </div>
+
+                <div class="legal-name">
+                  <%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %>
+                </div>
+                <% if (settings.school_principal_nip && settings.school_principal_nip.trim() !== '' && settings.school_principal_nip.trim() !== '-') { %>
+                  <div class="legal-nip font-mono">
+                    NIP. <%= settings.school_principal_nip %>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Sisi Belakang -->
+          <div class="card-footer-main">
+            <div style="font-size: 4.2pt; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">
+              <%= settings.school_address || 'Website & Portal Resmi Absensi Sekolah' %>
+            </div>
+            <div style="font-size: 4.2pt; font-weight: 700; color: #0f172a;">
+              CR80 SECURE
+            </div>
+          </div>
+        </div>
+
+          </div> <!-- /.card-faces-row -->
+
+          <!-- Action Bar Per Siswa (No Print) -->
+          <div class="card-unit-actions no-print">
+            <div class="download-btn-group">
+              <button type="button" class="btn-action btn-png" onclick="downloadCard(<%= s.id %>, 'png')" title="Unduh gambar PNG 300 DPI (Sangat tajam untuk dicetak)">
+                💾 Unduh PNG
+              </button>
+              <button type="button" class="btn-action btn-jpg" onclick="downloadCard(<%= s.id %>, 'jpeg')" title="Unduh gambar JPG (Format standar foto/cetak)">
+                Unduh JPG
+              </button>
+            </div>
+            <button type="button" class="btn-action btn-whatsapp" onclick="openWhatsAppModal(<%= s.id %>)" title="Kirim gambar kartu ini langsung ke nomor WhatsApp orang tua siswa">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.586-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.634.077-1.785-.399-1.378-.57-2.28-1.954-2.35-2.046-.07-.092-.56-1.077-.56-2.053 0-.976.51-1.455.69-1.654.181-.199.395-.248.528-.248.132 0 .265.002.38.008.12.006.28-.046.438.334.16.386.547 1.332.595 1.43.048.098.08.213.016.34-.064.128-.096.208-.19.319-.095.111-.2.247-.286.332-.096.095-.196.198-.084.39.112.193.499.824 1.071 1.334.738.657 1.36.86 1.553.956.193.095.305.08.418-.049.112-.128.481-.561.61-.753.128-.193.256-.16.432-.096.177.064 1.12.528 1.313.624.193.096.321.144.369.225.048.08.048.465-.096.87z"/>
+              </svg>
+              <span>Kirim WA ke Ortu</span>
+            </button>
+          </div>
+
+        </div> <!-- /.card-item-wrapper -->
+
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- JavaScript Interaktif -->
+  <script>
+    // Inisialisasi dari LocalStorage jika ada
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const savedConfig = localStorage.getItem('smartschool_card_preset');
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          if (config.orientation) document.getElementById('selectOrientation').value = config.orientation;
+          if (config.model) document.getElementById('selectModel').value = config.model;
+          if (config.theme) document.getElementById('selectTheme').value = config.theme;
+          if (config.side) document.getElementById('selectSide').value = config.side;
+          if (config.sigType && document.getElementById('selectSigType')) document.getElementById('selectSigType').value = config.sigType;
+          if (typeof config.cutMarks === 'boolean') document.getElementById('checkCutMarks').checked = config.cutMarks;
+          if (config.ribbonDir && document.getElementById('selectRibbonDir')) document.getElementById('selectRibbonDir').value = config.ribbonDir;
+        }
+      } catch (e) {
+        console.warn('Gagal membaca cache preset kartu:', e);
+      }
+      applyPresetClasses();
+    });
+
+    function updateCardPreset() {
+      applyPresetClasses();
+      savePresetToStorage();
+    }
+
+    function applyPresetClasses() {
+      const orientation = document.getElementById('selectOrientation').value;
+      const model = document.getElementById('selectModel').value;
+      const theme = document.getElementById('selectTheme').value;
+      const side = document.getElementById('selectSide').value;
+      const sigType = document.getElementById('selectSigType')?.value || 'digital';
+      const cutMarks = document.getElementById('checkCutMarks').checked;
+      const ribbonDir = document.getElementById('selectRibbonDir')?.value || 'bottom-up';
+
+      // Bersihkan kelas lama di body
+      const body = document.body;
+      body.className = '';
+      body.classList.add(
+        'theme-' + theme,
+        'layout-' + orientation,
+        'model-' + model,
+        'side-' + side,
+        'sig-' + sigType
+      );
+      if (cutMarks) {
+        body.classList.add('show-cutmarks');
+      }
+      if (ribbonDir === 'top-down') {
+        body.classList.add('ribbon-dir-top-down');
+      }
+
+      // Tampilkan kontrol arah ribbon hanya jika model === 'sideribbon'
+      const model4Controls = document.querySelectorAll('.model4-only');
+      model4Controls.forEach(el => {
+        el.style.display = (model === 'sideribbon') ? 'flex' : 'none';
+      });
+
+      // Update @page CSS dynamically for print dialog
+      const printStyle = document.getElementById('printPageStyle');
+      if (printStyle) {
+        printStyle.innerHTML = `@page { size: ${orientation}; margin: 6mm; }`;
+      }
+
+      // Toggle display mode helper
+      const landscapeBlocks = document.querySelectorAll('.layout-landscape-only');
+      const portraitBlocks = document.querySelectorAll('.layout-portrait-only');
+
+      if (orientation === 'portrait') {
+        landscapeBlocks.forEach(el => el.style.display = 'none');
+        portraitBlocks.forEach(el => el.style.display = 'flex');
+      } else {
+        landscapeBlocks.forEach(el => el.style.display = 'flex');
+        portraitBlocks.forEach(el => el.style.display = 'none');
+      }
+    }
+
+    function savePresetToStorage() {
+      const config = {
+        orientation: document.getElementById('selectOrientation').value,
+        model: document.getElementById('selectModel').value,
+        theme: document.getElementById('selectTheme').value,
+        side: document.getElementById('selectSide').value,
+        sigType: document.getElementById('selectSigType')?.value || 'digital',
+        cutMarks: document.getElementById('checkCutMarks').checked,
+        ribbonDir: document.getElementById('selectRibbonDir')?.value || 'top-down'
+      };
+      try {
+        localStorage.setItem('smartschool_card_preset', JSON.stringify(config));
+      } catch (e) {}
+    }
+
+    function setZoom(scale) {
+      const wrapper = document.getElementById('sheetWrapper');
+      if (wrapper) {
+        wrapper.style.transform = `scale(${scale})`;
+      }
+      document.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // ====================================================
+    // CEK STATUS WHATSAPP GATEWAY
+    // ====================================================
+    async function checkWaStatus() {
+      const badge = document.getElementById('waStatusBadge');
+      if (!badge) return;
+      try {
+        const res = await fetch('/dashboard/students/cards/wa-status');
+        const data = await res.json();
+        if (data.connected) {
+          badge.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;"></span><span style="color:#047857;">WA Gateway Online</span>';
+          badge.style.borderColor = '#a7f3d0';
+          badge.style.background = '#ecfdf5';
+        } else {
+          badge.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;"></span><span style="color:#b91c1c;">WA Gateway Offline</span>';
+          badge.style.borderColor = '#fecaca';
+          badge.style.background = '#fef2f2';
+        }
+      } catch (e) {
+        badge.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;"></span><span style="color:#b45309;">WA Status Tidak Diketahui</span>';
+      }
+    }
+    document.addEventListener('DOMContentLoaded', checkWaStatus);
+
+    // ====================================================
+    // RENDER CARD KE CANVAS MENGGUNAKAN HTML2CANVAS
+    // ====================================================
+    async function renderCardToCanvas(el) {
+      if (!el) throw new Error('Elemen kartu tidak ditemukan');
+      if (typeof html2canvas === 'undefined') {
+        throw new Error('Pustaka html2canvas belum siap. Silakan muat ulang halaman.');
+      }
+
+      // Pastikan webfonts telah selesai di-load sebelum digambar ke canvas
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) {}
+      }
+
+      // Pastikan transformasi zoom tidak mengganggu kalkulasi posisi canvas
+      const wrapper = document.getElementById('sheetWrapper');
+      const oldTransform = wrapper ? wrapper.style.transform : '';
+      if (wrapper) wrapper.style.transform = 'none';
+
+      // Sembunyikan garis potong sementara agar hasil gambar bersih
+      const hadCutMarks = document.body.classList.contains('show-cutmarks');
+      if (hadCutMarks) document.body.classList.remove('show-cutmarks');
+
+      try {
+        const canvas = await html2canvas(el, {
+          scale: 3, // Skala 3x menghasilkan resolusi ~300 DPI, tajam untuk dicetak
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          imageTimeout: 15000
+        });
+        return canvas;
+      } finally {
+        if (wrapper) wrapper.style.transform = oldTransform;
+        if (hadCutMarks) document.body.classList.add('show-cutmarks');
+      }
+    }
+
+    // Render gabungan Depan & Belakang dalam 1 Canvas Berdampingan
+    async function renderCombinedCardsToCanvas(frontEl, backEl) {
+      if (!frontEl && !backEl) throw new Error('Elemen kartu tidak ditemukan');
+      if (frontEl && !backEl) return await renderCardToCanvas(frontEl);
+      if (!frontEl && backEl) return await renderCardToCanvas(backEl);
+
+      const canvasFront = await renderCardToCanvas(frontEl);
+      const canvasBack = await renderCardToCanvas(backEl);
+
+      const gap = 30; // Jarak antar kartu
+      const totalWidth = canvasFront.width + canvasBack.width + gap;
+      const maxHeight = Math.max(canvasFront.height, canvasBack.height);
+
+      const combinedCanvas = document.createElement('canvas');
+      combinedCanvas.width = totalWidth;
+      combinedCanvas.height = maxHeight;
+      const ctx = combinedCanvas.getContext('2d');
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, totalWidth, maxHeight);
+
+      ctx.drawImage(canvasFront, 0, (maxHeight - canvasFront.height) / 2);
+      ctx.drawImage(canvasBack, canvasFront.width + gap, (maxHeight - canvasBack.height) / 2);
+
+      return combinedCanvas;
+    }
+
+    // ====================================================
+    // UNDUH GAMBAR SATUAN (PNG / JPG)
+    // ====================================================
+    async function downloadCard(studentId, format = 'png', specificSide = null) {
+      const currentSide = specificSide || document.getElementById('selectSide').value;
+      const unit = document.getElementById(`card-unit-${studentId}`);
+      if (!unit) return;
+
+      const studentName = unit.dataset.studentName || 'Siswa';
+      const nis = unit.dataset.nis || studentId;
+      const cleanName = studentName.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+      showToast(`Sedang memproses kartu ${studentName} (${format.toUpperCase()})...`, 'info');
+
+      try {
+        let canvas;
+        if (currentSide === 'back') {
+          const el = document.getElementById(`card-back-${studentId}`);
+          canvas = await renderCardToCanvas(el);
+        } else if (currentSide === 'both') {
+          const frontEl = document.getElementById(`card-front-${studentId}`);
+          const backEl = document.getElementById(`card-back-${studentId}`);
+          canvas = await renderCombinedCardsToCanvas(frontEl, backEl);
+        } else {
+          const el = document.getElementById(`card-front-${studentId}`);
+          canvas = await renderCardToCanvas(el);
+        }
+
+        const ext = format === 'jpeg' ? 'jpg' : 'png';
+        const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const dataUrl = canvas.toDataURL(mime, 0.95);
+
+        const link = document.createElement('a');
+        link.download = `Kartu_${nis}_${cleanName}_${currentSide}.${ext}`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast(`✅ Kartu ${studentName} berhasil diunduh (${format.toUpperCase()})!`, 'success');
+      } catch (err) {
+        console.error('Download error:', err);
+        showToast(`❌ Gagal mengunduh kartu: ${err.message}`, 'error');
+      }
+    }
+
+    // ====================================================
+    // UNDUH SELURUH KARTU DALAM FILE ZIP
+    // ====================================================
+    async function downloadAllZip(format = 'png') {
+      if (typeof JSZip === 'undefined') {
+        alert('Pustaka JSZip belum siap. Silakan muat ulang halaman.');
+        return;
+      }
+
+      const units = document.querySelectorAll('.card-item-wrapper');
+      if (units.length === 0) {
+        alert('Tidak ada kartu siswa untuk diunduh.');
+        return;
+      }
+
+      const zip = new JSZip();
+      const folder = zip.folder("Kartu_Pelajar");
+      const ext = format === 'jpeg' ? 'jpg' : 'png';
+      const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+      const side = document.getElementById('selectSide').value;
+
+      showZipModal(`Menyiapkan ${units.length} kartu (${format.toUpperCase()})...`, units.length);
+
+      for (let i = 0; i < units.length; i++) {
+        const unit = units[i];
+        const studentId = unit.dataset.studentId;
+        const name = (unit.dataset.studentName || `Siswa_${studentId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const nis = unit.dataset.nis || studentId;
+
+        updateZipModal(i + 1, units.length, `Merender (${i+1}/${units.length}): ${unit.dataset.studentName}`);
+
+        try {
+          if (side === 'both') {
+            const frontCanvas = await renderCardToCanvas(document.getElementById(`card-front-${studentId}`));
+            folder.file(`Kartu_${nis}_${name}_Depan.${ext}`, frontCanvas.toDataURL(mime, 0.95).split(',')[1], { base64: true });
+
+            const backCanvas = await renderCardToCanvas(document.getElementById(`card-back-${studentId}`));
+            folder.file(`Kartu_${nis}_${name}_Belakang.${ext}`, backCanvas.toDataURL(mime, 0.95).split(',')[1], { base64: true });
+          } else if (side === 'back') {
+            const canvas = await renderCardToCanvas(document.getElementById(`card-back-${studentId}`));
+            folder.file(`Kartu_${nis}_${name}_Belakang.${ext}`, canvas.toDataURL(mime, 0.95).split(',')[1], { base64: true });
+          } else {
+            const canvas = await renderCardToCanvas(document.getElementById(`card-front-${studentId}`));
+            folder.file(`Kartu_${nis}_${name}_Depan.${ext}`, canvas.toDataURL(mime, 0.95).split(',')[1], { base64: true });
+          }
+        } catch (err) {
+          console.warn('Gagal merender siswa:', studentId, err);
+        }
+      }
+
+      updateZipModal(units.length, units.length, 'Mengompresi ke file ZIP...');
+      const content = await zip.generateAsync({ type: 'blob' });
+
+      const link = document.createElement('a');
+      link.download = `Kartu_Pelajar_${new Date().toISOString().slice(0,10)}.zip`;
+      link.href = URL.createObjectURL(content);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      closeZipModal();
+      showToast(`✅ Berhasil mengunduh ${units.length} kartu dalam file ZIP!`, 'success');
+    }
+
+    function showZipModal(title, total) {
+      document.getElementById('zipProgressTitle').textContent = title;
+      document.getElementById('zipProgressCount').textContent = `0 / ${total}`;
+      document.getElementById('zipProgressBar').style.width = '0%';
+      document.getElementById('zipModalBackdrop').style.display = 'flex';
+    }
+    function updateZipModal(current, total, sub) {
+      const pct = Math.round((current / total) * 100);
+      document.getElementById('zipProgressBar').style.width = `${pct}%`;
+      document.getElementById('zipProgressCount').textContent = `${current} / ${total} (${pct}%)`;
+      if (sub) document.getElementById('zipProgressSub').textContent = sub;
+    }
+    function closeZipModal() {
+      document.getElementById('zipModalBackdrop').style.display = 'none';
+    }
+
+    // ====================================================
+    // MODAL KIRIM WHATSAPP SATUAN
+    // ====================================================
+    let currentWaStudentId = null;
+
+    async function openWhatsAppModal(studentId) {
+      currentWaStudentId = studentId;
+      const unit = document.getElementById(`card-unit-${studentId}`);
+      if (!unit) return;
+
+      const studentName = unit.dataset.studentName || 'Siswa';
+      const nis = unit.dataset.nis || '';
+      const className = unit.dataset.className || '-';
+      const parentName = unit.dataset.parentName || '';
+      const parentPhone = unit.dataset.parentPhone || '';
+      const schoolName = "<%= settings.school_name || 'Sekolah' %>";
+
+      document.getElementById('waModalStudentName').textContent = studentName;
+      document.getElementById('waModalMeta').textContent = `NIS: ${nis} • Kelas: ${className}`;
+      document.getElementById('waModalPhone').value = parentPhone;
+
+      const isIslamic = (schoolName.toLowerCase().includes('musholla') || schoolName.toLowerCase().includes('tpq') || schoolName.toLowerCase().includes('masjid') || schoolName.toLowerCase().includes('santri') || schoolName.toLowerCase().includes('pesantren'));
+      const greeting = isIslamic ? "Assalamu'alaikum Wr. Wb." : "Yth.";
+      const titleType = isIslamic ? "Kartu Identitas Santri" : "Kartu Identitas Pelajar";
+      const parentGreet = parentName ? `Bapak/Ibu ${parentName}, wali dari ` : `Bapak/Ibu Wali dari `;
+
+      const defaultText = `${greeting}\nKepada ${parentGreet}*${studentName}* (${className})\n\n` +
+        `Berikut kami lampirkan *${titleType}* resmi atas nama *${studentName}* (NIS: ${nis}) dari *${schoolName}*.\n\n` +
+        `Kartu ini dilengkapi QR Code untuk presensi/kehadiran dan identitas resmi santri/siswa. Silakan simpan kartu ini di galeri handphone Bapak/Ibu.\n\n` +
+        `Terima kasih.`;
+
+      document.getElementById('waModalCaption').value = defaultText;
+
+      // Sinkronkan pilihan radio dengan orientasi/sisi saat ini
+      const activeSide = document.getElementById('selectSide').value;
+      const radioInput = document.querySelector(`input[name="waCardSide"][value="${activeSide}"]`);
+      if (radioInput) radioInput.checked = true;
+
+      // Tampilkan modal
+      document.getElementById('waModalBackdrop').style.display = 'flex';
+
+      // Muat pratinjau thumbnail
+      const previewContainer = document.getElementById('waModalPreview');
+      previewContainer.innerHTML = '<span style="font-size:11px;color:#64748b;">Memuat pratinjau kartu...</span>';
+
+      try {
+        const frontEl = document.getElementById(`card-front-${studentId}`);
+        const canvas = await renderCardToCanvas(frontEl);
+        const thumbDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        previewContainer.innerHTML = `<img src="${thumbDataUrl}" style="max-height: 120px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">`;
+      } catch (e) {
+        previewContainer.innerHTML = '<span style="font-size:11px;color:#ef4444;">Pratinjau siap saat pengiriman</span>';
+      }
+    }
+
+    function closeWhatsAppModal() {
+      document.getElementById('waModalBackdrop').style.display = 'none';
+      currentWaStudentId = null;
+    }
+
+    async function sendWhatsAppFromModal() {
+      if (!currentWaStudentId) return;
+      const phone = document.getElementById('waModalPhone').value.trim();
+      const caption = document.getElementById('waModalCaption').value.trim();
+      const sideChoice = document.querySelector('input[name="waCardSide"]:checked')?.value || 'front';
+      const savePhone = document.getElementById('waModalSavePhone')?.checked || false;
+
+      if (!phone) {
+        alert('Silakan masukkan nomor WhatsApp tujuan terlebih dahulu.');
+        document.getElementById('waModalPhone').focus();
+        return;
+      }
+
+      const sendBtn = document.getElementById('waModalSendBtn');
+      const origBtnText = sendBtn.innerHTML;
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span>⏳ Merender & Mengirim...</span>';
+
+      try {
+        // 1. Render kartu ke canvas
+        let canvas;
+        if (sideChoice === 'back') {
+          const el = document.getElementById(`card-back-${currentWaStudentId}`);
+          canvas = await renderCardToCanvas(el);
+        } else if (sideChoice === 'both') {
+          const frontEl = document.getElementById(`card-front-${currentWaStudentId}`);
+          const backEl = document.getElementById(`card-back-${currentWaStudentId}`);
+          canvas = await renderCombinedCardsToCanvas(frontEl, backEl);
+        } else {
+          const el = document.getElementById(`card-front-${currentWaStudentId}`);
+          canvas = await renderCardToCanvas(el);
+        }
+
+        // 2. Konversi ke JPEG base64 (resolusi tinggi & hemat kuota)
+        const base64Image = canvas.toDataURL('image/jpeg', 0.92);
+
+        // 3. Kirim ke backend endpoint
+        const res = await fetch('/dashboard/students/cards/send-wa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: currentWaStudentId,
+            phone: phone,
+            image_base64: base64Image,
+            caption: caption,
+            save_phone: savePhone,
+            side: sideChoice
+          })
+        });
+
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          throw new Error(result.message || 'Gagal mengirim WhatsApp');
+        }
+
+        closeWhatsAppModal();
+        showToast(`✅ ${result.message}`, 'success');
+
+        // Update nomor di badge kartu
+        const unit = document.getElementById(`card-unit-${currentWaStudentId}`);
+        if (unit) {
+          unit.dataset.parentPhone = phone;
+          const phoneBadge = unit.querySelector('.phone-badge');
+          if (phoneBadge) {
+            phoneBadge.className = 'phone-badge ready';
+            phoneBadge.innerHTML = `📱 ${phone}`;
+          }
+        }
+      } catch (err) {
+        console.error('Send WA error:', err);
+        alert('Gagal mengirim via WhatsApp:\n' + err.message);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = origBtnText;
+      }
+    }
+
+    // ====================================================
+    // MODAL & FUNGSI KIRIM WHATSAPP MASSAL
+    // ====================================================
+    function openBatchWhatsAppModal() {
+      const units = document.querySelectorAll('.card-item-wrapper');
+      let withPhone = 0;
+      let withoutPhone = 0;
+
+      units.forEach(u => {
+        if (u.dataset.parentPhone && u.dataset.parentPhone.trim().length > 4) {
+          withPhone++;
+        } else {
+          withoutPhone++;
+        }
+      });
+
+      document.getElementById('batchWaTotal').textContent = units.length;
+      document.getElementById('batchWaReady').textContent = withPhone;
+      document.getElementById('batchWaEmpty').textContent = withoutPhone;
+
+      document.getElementById('batchWaFormSection').style.display = 'flex';
+      document.getElementById('batchWaProgressSection').style.display = 'none';
+      document.getElementById('batchWaCloseBtn').style.display = 'none';
+
+      document.getElementById('batchWaModalBackdrop').style.display = 'flex';
+    }
+
+    function closeBatchWhatsAppModal() {
+      document.getElementById('batchWaModalBackdrop').style.display = 'none';
+    }
+
+    async function startBatchWhatsAppSend() {
+      const units = document.querySelectorAll('.card-item-wrapper');
+      const targets = Array.from(units).filter(u => u.dataset.parentPhone && u.dataset.parentPhone.trim().length > 4);
+
+      if (targets.length === 0) {
+        alert('Tidak ada siswa dengan nomor WhatsApp orang tua yang terdaftar.');
+        return;
+      }
+
+      document.getElementById('batchWaFormSection').style.display = 'none';
+      document.getElementById('batchWaProgressSection').style.display = 'block';
+
+      const sideChoice = document.querySelector('input[name="batchWaSide"]:checked')?.value || 'front';
+      const customCaption = document.getElementById('batchWaCaption').value.trim();
+      const logContainer = document.getElementById('batchWaLogContainer');
+      logContainer.innerHTML = '';
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < targets.length; i++) {
+        const unit = targets[i];
+        const studentId = unit.dataset.studentId;
+        const name = unit.dataset.studentName;
+        const phone = unit.dataset.parentPhone;
+
+        const percent = Math.round(((i + 1) / targets.length) * 100);
+        document.getElementById('batchWaProgressBar').style.width = `${percent}%`;
+        document.getElementById('batchWaProgressPercent').textContent = `${percent}%`;
+        document.getElementById('batchWaProgressLabel').textContent = `Mengirim (${i+1}/${targets.length}): ${name}`;
+
+        try {
+          let canvas;
+          if (sideChoice === 'back') {
+            canvas = await renderCardToCanvas(document.getElementById(`card-back-${studentId}`));
+          } else if (sideChoice === 'both') {
+            canvas = await renderCombinedCardsToCanvas(
+              document.getElementById(`card-front-${studentId}`),
+              document.getElementById(`card-back-${studentId}`)
+            );
+          } else {
+            canvas = await renderCardToCanvas(document.getElementById(`card-front-${studentId}`));
+          }
+
+          const base64Image = canvas.toDataURL('image/jpeg', 0.92);
+
+          const res = await fetch('/dashboard/students/cards/send-wa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              student_id: studentId,
+              phone: phone,
+              image_base64: base64Image,
+              caption: customCaption,
+              side: sideChoice
+            })
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            successCount++;
+            appendBatchLog(`✅ [${i+1}] ${name} (${phone}): Terkirim`, '#16a34a');
+          } else {
+            failCount++;
+            appendBatchLog(`❌ [${i+1}] ${name} (${phone}): ${data.message}`, '#dc2626');
+          }
+        } catch (err) {
+          failCount++;
+          appendBatchLog(`❌ [${i+1}] ${name} (${phone}): ${err.message}`, '#dc2626');
+        }
+
+        // Jeda 1.5 detik antar pesan agar aman dari rate limit WhatsApp
+        if (i < targets.length - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      document.getElementById('batchWaProgressLabel').textContent = `Selesai! Berhasil: ${successCount}, Gagal: ${failCount}`;
+      document.getElementById('batchWaCloseBtn').style.display = 'inline-flex';
+      showToast(`Pengiriman massal selesai: ${successCount} berhasil, ${failCount} gagal`, successCount > 0 ? 'success' : 'error');
+    }
+
+    function appendBatchLog(msg, color) {
+      const container = document.getElementById('batchWaLogContainer');
+      const item = document.createElement('div');
+      item.style.color = color;
+      item.textContent = msg;
+      container.appendChild(item);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ====================================================
+    // TOAST NOTIFIKASI
+    // ====================================================
+    let toastTimeout = null;
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toastNotification');
+      if (!toast) return;
+
+      toast.textContent = message;
+      if (type === 'success') {
+        toast.style.background = '#10b981';
+        toast.style.color = '#ffffff';
+      } else if (type === 'error') {
+        toast.style.background = '#ef4444';
+        toast.style.color = '#ffffff';
+      } else {
+        toast.style.background = '#0f172a';
+        toast.style.color = '#ffffff';
+      }
+
+      toast.style.display = 'flex';
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+  </script>
+
+  <!-- ============================================== -->
+  <!-- MODALS CONTAINER (NO PRINT)                   -->
+  <!-- ============================================== -->
+
+  <!-- 1. Modal Kirim WhatsApp Satuan -->
+  <div id="waModalBackdrop" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: #ffffff; width: 100%; max-width: 480px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column; animation: modalFadeIn 0.2s ease;">
+      <!-- Header Modal -->
+      <div style="background: linear-gradient(135deg, #091a3c 0%, #1e3a8a 100%); color: #ffffff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 28px; height: 28px; border-radius: 8px; background: #22c55e; display: flex; align-items: center; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.586-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.634.077-1.785-.399-1.378-.57-2.28-1.954-2.35-2.046-.07-.092-.56-1.077-.56-2.053 0-.976.51-1.455.69-1.654.181-.199.395-.248.528-.248.132 0 .265.002.38.008.12.006.28-.046.438.334.16.386.547 1.332.595 1.43.048.098.08.213.016.34-.064.128-.096.208-.19.319-.095.111-.2.247-.286.332-.096.095-.196.198-.084.39.112.193.499.824 1.071 1.334.738.657 1.36.86 1.553.956.193.095.305.08.418-.049.112-.128.481-.561.61-.753.128-.193.256-.16.432-.096.177.064 1.12.528 1.313.624.193.096.321.144.369.225.048.08.048.465-.096.87z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 style="font-size: 13px; font-weight: 800; margin: 0;">Kirim Kartu via WhatsApp</h3>
+            <p style="font-size: 10px; color: #93c5fd; margin: 0;" id="waModalStudentName">Nama Siswa</p>
+          </div>
+        </div>
+        <button onclick="closeWhatsAppModal()" style="background: none; border: none; color: #cbd5e1; font-size: 18px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Body Modal -->
+      <div style="padding: 16px; overflow-y: auto; max-height: calc(85vh - 120px); display: flex; flex-direction: column; gap: 12px;">
+        <!-- Pratinjau Mini Kartu -->
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px;">
+          <div id="waModalPreview"></div>
+          <span style="font-size: 10px; color: #64748b; margin-top: 6px;" id="waModalMeta">NIS: - • Kelas: -</span>
+        </div>
+
+        <!-- Pilihan Sisi Kartu -->
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Sisi Kartu yang Dikirim:</label>
+          <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600; color: #475569; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="waCardSide" value="front" checked> Sisi Depan
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="waCardSide" value="back"> Sisi Belakang
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="waCardSide" value="both"> Kedua Sisi (Gabungan)
+            </label>
+          </div>
+        </div>
+
+        <!-- Nomor Telepon Orang Tua -->
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Nomor WhatsApp Orang Tua: <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="tel" id="waModalPhone" placeholder="Contoh: 081234567890 atau 62812..." style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #0f172a; outline: none;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #64748b; margin-top: 4px; cursor: pointer;">
+            <input type="checkbox" id="waModalSavePhone" checked>
+            <span>Simpan nomor ini ke profil data siswa</span>
+          </label>
+        </div>
+
+        <!-- Pesan Pengantar / Caption -->
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">
+            Pesan Pengantar (Caption):
+          </label>
+          <textarea id="waModalCaption" rows="4" style="width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 11px; color: #0f172a; resize: vertical; outline: none; font-family: inherit; line-height: 1.4;"></textarea>
+        </div>
+      </div>
+
+      <!-- Footer Modal -->
+      <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" onclick="closeWhatsAppModal()" class="btn btn-secondary">Batal</button>
+        <button type="button" id="waModalSendBtn" onclick="sendWhatsAppFromModal()" class="btn btn-primary" style="background: #16a34a; border-color: #15803d;">
+          <span>Kirim Sekarang 🚀</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal Kirim WhatsApp Massal -->
+  <div id="batchWaModalBackdrop" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: #ffffff; width: 100%; max-width: 520px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden; display: flex; flex-direction: column;">
+      <div style="background: linear-gradient(135deg, #091a3c 0%, #1e3a8a 100%); color: #ffffff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">📲</span>
+          <h3 style="font-size: 13px; font-weight: 800; margin: 0;">Kirim Kartu Massal ke Semua Orang Tua</h3>
+        </div>
+        <button onclick="closeBatchWhatsAppModal()" style="background: none; border: none; color: #cbd5e1; font-size: 18px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Form Section -->
+      <div id="batchWaFormSection" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 14px; font-weight: 900; color: #0f172a;" id="batchWaTotal">0</div>
+            <div style="font-size: 9.5px; color: #64748b; font-weight: 700;">Total Siswa</div>
+          </div>
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 14px; font-weight: 900; color: #047857;" id="batchWaReady">0</div>
+            <div style="font-size: 9.5px; color: #065f46; font-weight: 700;">Ada Nomor WA</div>
+          </div>
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 14px; font-weight: 900; color: #b45309;" id="batchWaEmpty">0</div>
+            <div style="font-size: 9.5px; color: #92400e; font-weight: 700;">Tanpa WA (Skip)</div>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Sisi Kartu:</label>
+          <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600; color: #475569; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="batchWaSide" value="front" checked> Sisi Depan
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="batchWaSide" value="back"> Sisi Belakang
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="batchWaSide" value="both"> Kedua Sisi (Gabungan)
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Format Pesan Pengantar:</label>
+          <textarea id="batchWaCaption" rows="3" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 11px; line-height: 1.4; outline: none; font-family: inherit;">Assalamu'alaikum Wr. Wb. / Yth. Bapak/Ibu Wali Santri. Berikut kami kirimkan Kartu Identitas resmi santri/siswa. Silakan simpan kartu ini di galeri handphone. Terima kasih.</textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <button type="button" onclick="closeBatchWhatsAppModal()" class="btn btn-secondary">Batal</button>
+          <button type="button" onclick="startBatchWhatsAppSend()" class="btn btn-primary" style="background: #16a34a; border-color: #15803d;">
+            Mulai Kirim Massal 🚀
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Section -->
+      <div id="batchWaProgressSection" style="display: none; padding: 16px;">
+        <div style="margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+            <span id="batchWaProgressLabel">Sedang memproses...</span>
+            <span id="batchWaProgressPercent">0%</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 9999px; overflow: hidden;">
+            <div id="batchWaProgressBar" style="width: 0%; height: 100%; background: #16a34a; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+        <div id="batchWaLogContainer" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; max-height: 160px; overflow-y: auto; font-size: 10.5px; font-family: monospace; display: flex; flex-direction: column; gap: 3px;"></div>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+          <button type="button" id="batchWaCloseBtn" onclick="closeBatchWhatsAppModal()" class="btn btn-secondary" style="display: none;">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal Progress ZIP -->
+  <div id="zipModalBackdrop" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: #ffffff; width: 100%; max-width: 380px; border-radius: 14px; padding: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+      <h3 style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 4px;" id="zipProgressTitle">Menyiapkan Berkas ZIP...</h3>
+      <p style="font-size: 11px; color: #64748b; margin-bottom: 12px;" id="zipProgressSub">Merender gambar kartu beresolusi tinggi...</p>
+      <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 9999px; overflow: hidden; margin-bottom: 8px;">
+        <div id="zipProgressBar" style="width: 0%; height: 100%; background: #2563eb; transition: width 0.2s ease;"></div>
+      </div>
+      <span style="font-size: 10.5px; font-weight: 700; color: #94a3b8;" id="zipProgressCount">0 / 0</span>
+    </div>
+  </div>
+
+  <!-- 4. Floating Toast Notification -->
+  <div id="toastNotification" class="no-print" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; padding: 10px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.2); display: none; align-items: center; gap: 8px; transition: all 0.2s ease;"></div>
+</body>
+</html>

@@ -1,0 +1,227 @@
+const express = require('express');
+const router = express.Router();
+const { isAuthenticated } = require('../middlewares/auth');
+const idcardService = require('../services/idcard');
+const whatsapp = require('../services/whatsapp');
+const db = require('../database/db');
+
+function getPresetOptions(req) {
+  return {
+    orientation: req.query.orientation || req.body?.orientation || 'landscape',
+    model: req.query.model || req.body?.model || 'smart',
+    theme: req.query.theme || req.body?.theme || 'navy',
+    side: req.query.side || req.body?.side || 'front',
+    sigType: req.query.sig_type || req.body?.sig_type || 'digital',
+    cutMarks: req.query.cut_marks === '1' || req.body?.cut_marks === '1' || false
+  };
+}
+
+// Cetak Semua Kartu Pelajar (dengan filter opsional class_id, q, wa_status)
+router.get('/dashboard/students/cards/all', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.session.user;
+    let targetClassId = (user.role === 'guru' && user.class_id) ? user.class_id : req.query.class_id;
+
+    if (user.role === 'guru' && !user.class_id) {
+      return res.status(403).send('Akun Anda belum memiliki kelas binaan.');
+    }
+
+    const filters = {
+      class_id: targetClassId,
+      q: req.query.q,
+      wa_status: req.query.wa_status
+    };
+
+    const students = await idcardService.getAllCardData(filters);
+    if (students.length === 0) {
+      return res.status(404).send('Tidak ada data siswa untuk dicetak.');
+    }
+
+    res.render('idcard-print', {
+      students,
+      isBatch: true,
+      preset: getPresetOptions(req)
+    });
+  } catch (err) {
+    console.error('Error print all ID cards:', err);
+    res.status(500).send('Gagal mencetak semua kartu: ' + err.message);
+  }
+});
+
+// Cetak Kartu Pelajar Terpilih via GET (query string ?ids=1,2,3)
+router.get('/dashboard/students/cards/selected', isAuthenticated, async (req, res) => {
+  try {
+    const idsParam = req.query.ids || '';
+    const studentIds = idsParam.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (studentIds.length === 0) {
+      return res.status(400).send('Tidak ada siswa yang dipilih.');
+    }
+
+    const students = await idcardService.getCardDataForStudents(studentIds);
+    if (students.length === 0) {
+      return res.status(404).send('Data siswa yang dipilih tidak ditemukan.');
+    }
+
+    res.render('idcard-print', {
+      students,
+      isBatch: true,
+      preset: getPresetOptions(req)
+    });
+  } catch (err) {
+    console.error('Error GET print selected ID cards:', err);
+    res.status(500).send('Gagal mencetak kartu terpilih: ' + err.message);
+  }
+});
+
+// Cetak Kartu Pelajar Terpilih via POST (form submission dari checkbox)
+router.post('/dashboard/students/cards/selected', isAuthenticated, async (req, res) => {
+  try {
+    let studentIds = req.body.student_ids;
+    if (!studentIds) {
+      return res.status(400).send('Tidak ada siswa yang dipilih.');
+    }
+    if (!Array.isArray(studentIds)) {
+      studentIds = [studentIds];
+    }
+
+    const students = await idcardService.getCardDataForStudents(studentIds);
+    if (students.length === 0) {
+      return res.status(404).send('Data siswa yang dipilih tidak ditemukan.');
+    }
+
+    res.render('idcard-print', {
+      students,
+      isBatch: true,
+      preset: getPresetOptions(req)
+    });
+  } catch (err) {
+    console.error('Error POST print selected ID cards:', err);
+    res.status(500).send('Gagal mencetak kartu terpilih: ' + err.message);
+  }
+});
+
+// Cetak Kartu Pelajar Satuan
+router.get('/dashboard/students/:id/card', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.session.user;
+    const student = await idcardService.getCardDataForStudent(req.params.id);
+    if (!student) {
+      return res.status(404).send('Data siswa tidak ditemukan.');
+    }
+
+    if (user.role === 'guru' && user.class_id && Number(student.class_id) !== Number(user.class_id)) {
+      return res.status(403).send('Akses Ditolak: Anda hanya berhak mencetak kartu untuk siswa di kelas binaan Anda.');
+    }
+
+    res.render('idcard-print', {
+      students: [student],
+      isBatch: false,
+      preset: getPresetOptions(req)
+    });
+  } catch (err) {
+    console.error('Error generate ID card:', err);
+    res.status(500).send('Gagal membuat kartu pelajar: ' + err.message);
+  }
+});
+
+// Cetak Kartu Pelajar Massal Per Kelas
+router.get('/dashboard/classes/:id/cards', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.session.user;
+    if (user.role === 'guru' && user.class_id && Number(req.params.id) !== Number(user.class_id)) {
+      return res.status(403).send('Akses Ditolak: Anda hanya berhak mencetak kartu untuk kelas binaan Anda.');
+    }
+
+    const students = await idcardService.getCardDataForClass(req.params.id);
+    if (students.length === 0) {
+      return res.status(404).send('Tidak ada siswa pada kelas ini.');
+    }
+
+    res.render('idcard-print', {
+      students,
+      isBatch: true,
+      preset: getPresetOptions(req)
+    });
+  } catch (err) {
+    console.error('Error batch ID cards:', err);
+    res.status(500).send('Gagal membuat kartu kelas: ' + err.message);
+  }
+});
+
+// Cek status koneksi WhatsApp Gateway
+router.get('/dashboard/students/cards/wa-status', isAuthenticated, (req, res) => {
+  res.json({
+    connected: whatsapp.status === 'connected' && !!whatsapp.sock,
+    status: whatsapp.status
+  });
+});
+
+// Kirim Gambar Kartu Pelajar ke WhatsApp Orang Tua Siswa
+router.post('/dashboard/students/cards/send-wa', isAuthenticated, async (req, res) => {
+  try {
+    const { student_id, phone, image_base64, caption, save_phone } = req.body;
+
+    if (!image_base64) {
+      return res.status(400).json({ success: false, message: 'Data gambar kartu tidak ditemukan.' });
+    }
+
+    const student = await idcardService.getCardDataForStudent(student_id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Data siswa tidak ditemukan.' });
+    }
+
+    const targetPhone = (phone || student.parent_phone || '').trim();
+    if (!targetPhone) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nomor WhatsApp orang tua tidak ditemukan. Silakan isi nomor WhatsApp penerima.' 
+      });
+    }
+
+    // Cek status koneksi WhatsApp
+    if (whatsapp.status !== 'connected' || !whatsapp.sock) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'WhatsApp Gateway sedang tidak terhubung (Offline). Silakan hubungkan WhatsApp di menu Pengaturan.' 
+      });
+    }
+
+    // Simpan nomor jika diminta atau jika sebelumnya kosong
+    if (save_phone && phone && phone !== student.parent_phone) {
+      try {
+        db.prepare('UPDATE students SET parent_phone = ? WHERE id = ?').run(phone, student.id);
+      } catch (e) {
+        console.error('Gagal update parent_phone:', e);
+      }
+    }
+
+    // Konversi base64 ke buffer gambar
+    const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    const defaultCaption = `*KARTU IDENTITAS RESMI*\n\n` +
+      `Kepada Yth. Bapak/Ibu Wali dari *${student.name}* (Kelas: ${student.class_name || '-'})\n\n` +
+      `Berikut kami kirimkan Kartu Identitas resmi atas nama *${student.name}* (NIS: ${student.nis}).\n` +
+      `Kartu ini dapat digunakan sebagai identitas resmi dan presensi santri/siswa.\n\n` +
+      `Terima kasih.`;
+
+    const finalCaption = caption && caption.trim().length > 0 ? caption : defaultCaption;
+
+    await whatsapp.sendImageMessage(targetPhone, imageBuffer, finalCaption);
+
+    return res.json({
+      success: true,
+      message: `Kartu berhasil dikirim ke nomor WhatsApp (${targetPhone})!`
+    });
+  } catch (err) {
+    console.error('Error sending ID card via WA:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal mengirim kartu via WhatsApp: ' + (err.message || 'Terjadi kesalahan sistem')
+    });
+  }
+});
+
+module.exports = router;
+

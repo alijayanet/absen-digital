@@ -1,0 +1,31 @@
+# Node.js dependencies
+node_modules/
+
+# Environment Variables
+.env
+
+# SQLite Database & Session files (Privacy & Fresh install)
+data/database.sqlite*
+data/baileys_auth/
+data/uploads/
+data/*.sqlite*
+
+# Android build outputs & caches
+android-app/.gradle/
+android-app/app/build/
+smartschool-tv/.gradle/
+smartschool-tv/app/build/
+.gradle/
+build/
+local.properties
+*.hprof
+
+# Backup / Large zip archives
+*.zip
+
+# OS / Editor temporary files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

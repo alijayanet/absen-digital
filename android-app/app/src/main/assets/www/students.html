@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Pengguna - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Data <span data-term="plural">Santri &amp; Siswa</span></h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Kelola Identitas, TTL, Foto, Kartu RFID, dan Kontak</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="users" class="w-4 h-4 text-teal-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- Header & Action Buttons -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Daftar <span data-term="plural">Santri</span> Terdaftar</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola identitas, TTL, foto, dan kartu RFID untuk presensi di Kiosk</p>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+        <input 
+          type="text" 
+          id="searchStudentInput" 
+          placeholder="Cari nama, nomor induk, atau RFID..." 
+          oninput="filterStudents()"
+          class="p-2.5 bg-white border border-slate-300 rounded-xl text-xs w-full sm:w-56 focus:outline-none focus:border-teal-500 shadow-sm"
+        >
+        <button onclick="exportStudentsCsv()" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 shrink-0" title="Unduh CSV untuk dibuka di Microsoft Excel">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Unduh CSV</span>
+        </button>
+        <button onclick="openImportModal()" class="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 shrink-0" title="Impor data dari file CSV/Excel">
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span>Impor CSV</span>
+        </button>
+        <button onclick="openStudentModal()" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 shrink-0">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah <span data-term="singular">Santri</span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabel Santri -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+              <th class="px-4 py-3.5 text-center w-14">Foto</th>
+              <th class="px-4 py-3.5" data-term="idLabel">NIS</th>
+              <th class="px-4 py-3.5">Nama &amp; TTL</th>
+              <th class="px-4 py-3.5"><span data-term="groupLabel">Kelas</span> &amp; <span data-term="groupLeader">Wali</span></th>
+              <th class="px-4 py-3.5">UID Kartu RFID</th>
+              <th class="px-4 py-3.5" data-term="guardianPhone">No. WA Kontak</th>
+              <th class="px-4 py-3.5 text-center w-24">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="studentTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="px-5 py-8 text-center text-slate-400 italic">
+                Memuat data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Tambah / Edit Santri (Lengkap dengan Unggah Foto & TTL) -->
+  <div id="studentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modalTitle" class="font-bold text-slate-900 text-base">Tambah Data <span data-term="singular">Santri</span></h3>
+        <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="studentForm" onsubmit="saveStudent(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="studentId" value="">
+        <input type="hidden" id="studentPhotoBase64" value="">
+
+        <!-- Unggah Foto -->
+        <div class="flex flex-col items-center justify-center p-3 bg-slate-50 border border-dashed border-slate-300 rounded-2xl">
+          <div class="relative w-20 h-20 mb-2">
+            <img id="photoPreviewImg" src="" class="w-full h-full rounded-2xl object-cover border-2 border-white shadow-md hidden">
+            <div id="photoPlaceholder" class="w-full h-full rounded-2xl bg-teal-600 text-white font-extrabold text-2xl flex items-center justify-center shadow-md">
+              ?
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] rounded-xl cursor-pointer shadow transition flex items-center gap-1">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+              <span>Pilih / Foto</span>
+              <input type="file" id="photoFileInput" accept="image/*" onchange="handlePhotoSelected(event)" class="hidden">
+            </label>
+            <button type="button" onclick="removePhoto()" id="btnRemovePhoto" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-[11px] rounded-xl transition hidden">
+              Hapus
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Foto akan dikompresi otomatis agar hemat memori penyimpanan.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1"><span data-term="idFull">Nomor Induk</span> *:</label>
+            <input type="text" id="studentNis" required placeholder="Contoh: 1001" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500 font-bold">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin:</label>
+            <select id="studentGender" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-semibold">
+              <option value="L" id="optGenderL">Laki-laki</option>
+              <option value="P" id="optGenderP">Perempuan</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap *:</label>
+          <input type="text" id="studentName" required placeholder="Nama lengkap..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-bold">
+        </div>
+
+        <!-- Tempat dan Tanggal Lahir (TTL) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Tempat Lahir:</label>
+            <input type="text" id="studentPob" placeholder="Contoh: Jakarta" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Tanggal Lahir:</label>
+            <input type="date" id="studentDob" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Pilih <span data-term="groupFull">Kelas / Jenjang</span>:</label>
+          <select id="studentClass" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-semibold">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">UID Kartu RFID USB (Opsional):</label>
+          <input type="text" id="studentRfid" placeholder="Tempel kartu di reader atau samakan dengan nomor induk" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
+          <p class="text-[10px] text-slate-500 mt-1">Jika dikosongkan, kartu RFID akan otomatis disamakan dengan nomor induk.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1" data-term="guardianName">Nama Wali / Kontak:</label>
+            <input type="text" id="studentParentName" placeholder="Nama ayah / ibu / kontak..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1" data-term="guardianPhone">No. WhatsApp Kontak:</label>
+            <input type="text" id="studentPhone" placeholder="Contoh: 081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeStudentModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition">Simpan Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Impor Santri dari CSV -->
+  <div id="importModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 text-base">Impor Data <span data-term="plural">Santri</span> Massal</h3>
+        </div>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <p class="text-slate-600">
+          Gunakan fitur impor untuk memasukkan data secara massal sekaligus dari berkas <strong>CSV / Excel</strong> lengkap dengan Tempat dan Tanggal Lahir.
+        </p>
+
+        <!-- Download Template Link -->
+        <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
+          <div>
+            <div class="font-bold text-indigo-900">Format Berkas CSV</div>
+            <div class="text-[11px] text-indigo-700">Unduh berkas contoh agar susunan kolom sesuai.</div>
+          </div>
+          <a href="/api/students/template/csv" download="Template_Import_Data.csv" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-xl transition flex items-center gap-1">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Unduh Contoh</span>
+          </a>
+        </div>
+
+        <!-- File Upload Area -->
+        <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-teal-500 transition cursor-pointer" onclick="document.getElementById('csvFileInput').click()">
+          <i data-lucide="file-spreadsheet" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
+          <p class="font-bold text-slate-800" id="importFileName">Pilih berkas CSV (.csv)</p>
+          <p class="text-[10px] text-slate-400 mt-1">Klik di sini untuk memilih file dari komputer / HP Anda</p>
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" onchange="handleCsvSelected(event)" class="hidden">
+        </div>
+
+        <!-- Preview Impor -->
+        <div id="importPreviewBox" class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 font-bold text-center">
+          <span id="importCountText">0</span> data siap diimpor.
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeImportModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition">Batal</button>
+          <button type="button" id="btnExecuteImport" onclick="executeImport()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition disabled:opacity-50" disabled>
+            Mulai Impor
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500">
+    Smart School All-in-One Standalone &bull; Didukung oleh SQLite Native &amp; WhatsApp Cloud Gateway
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let allStudents = [];
+    let allClasses = [];
+    let parsedImportData = [];
+
+    function updateGenderSelectLabels() {
+      if (window.AppTerms) {
+        document.getElementById('optGenderL').innerText = AppTerms.get('male', 'Laki-laki');
+        document.getElementById('optGenderP').innerText = AppTerms.get('female', 'Perempuan');
+      }
+    }
+
+    window.addEventListener('termsChanged', () => {
+      updateGenderSelectLabels();
+      renderStudents(allStudents);
+    });
+
+    async function loadInitialData() {
+      try {
+        const [studentsRes, classesRes] = await Promise.all([
+          fetch('/api/students'),
+          fetch('/api/classes')
+        ]);
+        allStudents = await studentsRes.json();
+        allClasses = await classesRes.json();
+
+        // Populate dropdown kelas
+        const classSelect = document.getElementById('studentClass');
+        classSelect.innerHTML = allClasses.map(c => `
+          <option value="${c.id}">${c.name}</option>
+        `).join('');
+
+        updateGenderSelectLabels();
+        renderStudents(allStudents);
+      } catch (e) {
+        console.error('Error loading students:', e);
+      }
+    }
+
+    function renderStudents(list) {
+      const tbody = document.getElementById('studentTableBody');
+      const emptyMsg = window.AppTerms ? AppTerms.get('emptyStudents', 'Tidak ada data yang ditemukan.') : 'Tidak ada data yang ditemukan.';
+      
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400 italic">${emptyMsg}</td></tr>`;
+        return;
+      }
+
+      const shortMale = window.AppTerms ? AppTerms.get('shortMale', 'Santri') : 'Santri';
+      const shortFemale = window.AppTerms ? AppTerms.get('shortFemale', 'Santriwati') : 'Santriwati';
+      const leaderTitle = window.AppTerms ? AppTerms.get('groupLeader', 'Wali') : 'Wali';
+
+      tbody.innerHTML = list.map(s => {
+        const avatarHtml = s.photo 
+          ? `<img src="${s.photo}" class="w-9 h-9 rounded-full object-cover border border-slate-200 mx-auto">`
+          : `<div class="w-9 h-9 rounded-full bg-teal-600/20 text-teal-800 font-black flex items-center justify-center text-xs mx-auto">${s.name.charAt(0)}</div>`;
+
+        const ttlText = (s.pob || s.dob) 
+          ? `${s.pob || ''}${s.pob && s.dob ? ', ' : ''}${s.dob || ''}` 
+          : '-';
+
+        const genderLabel = s.gender === 'P' ? shortFemale : shortMale;
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-3 py-3 text-center">${avatarHtml}</td>
+            <td class="px-4 py-3 font-mono font-bold text-slate-700">${s.nis}</td>
+            <td class="px-4 py-3">
+              <div class="font-extrabold text-slate-900">${s.name}</div>
+              <div class="text-[10px] text-slate-500 font-medium mt-0.5">
+                <span class="font-semibold text-slate-600">${genderLabel}</span>
+                ${ttlText !== '-' ? `&bull; <span class="text-slate-500 font-mono">${ttlText}</span>` : ''}
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="text-slate-800 font-bold">${s.class_name || '-'}</div>
+              ${s.teacher_name && s.teacher_name !== '-' ? `<div class="text-[10px] text-teal-700 font-medium flex items-center gap-1"><i data-lucide="user-check" class="w-3 h-3 text-teal-600"></i> ${leaderTitle}: ${s.teacher_name}</div>` : ''}
+            </td>
+            <td class="px-4 py-3 font-mono text-slate-500">${s.rfid_uid || s.nis}</td>
+            <td class="px-4 py-3 font-mono text-teal-700 font-semibold">${s.parent_phone || '-'}</td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="editStudent(${s.id})" class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition" title="Edit Data">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteStudent(${s.id})" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition" title="Hapus Data">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function filterStudents() {
+      const query = document.getElementById('searchStudentInput').value.toLowerCase().trim();
+      const filtered = allStudents.filter(s => 
+        s.name.toLowerCase().includes(query) || 
+        s.nis.toLowerCase().includes(query) ||
+        (s.pob && s.pob.toLowerCase().includes(query)) ||
+        (s.rfid_uid && s.rfid_uid.toLowerCase().includes(query)) ||
+        (s.parent_phone && s.parent_phone.includes(query))
+      );
+      renderStudents(filtered);
+    }
+
+    // --- Penanganan Foto ---
+    function handlePhotoSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 320;
+
+          if (width > height && width > maxDim) {
+            height = Math.round(height * (maxDim / width));
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round(width * (maxDim / height));
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const base64 = canvas.toDataURL('image/jpeg', 0.82);
+          setPhotoPreview(base64);
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setPhotoPreview(base64) {
+      document.getElementById('studentPhotoBase64').value = base64;
+      const img = document.getElementById('photoPreviewImg');
+      const placeholder = document.getElementById('photoPlaceholder');
+      const btnRemove = document.getElementById('btnRemovePhoto');
+
+      if (base64) {
+        img.src = base64;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        btnRemove.classList.remove('hidden');
+      } else {
+        img.src = '';
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        btnRemove.classList.add('hidden');
+      }
+    }
+
+    function removePhoto() {
+      setPhotoPreview('');
+      document.getElementById('photoFileInput').value = '';
+    }
+
+    // --- Modal Tambah / Edit ---
+    function openStudentModal() {
+      const singular = window.AppTerms ? AppTerms.get('singular', 'Santri') : 'Santri';
+      document.getElementById('modalTitle').innerHTML = `Tambah Data ${singular}`;
+      document.getElementById('studentId').value = '';
+      document.getElementById('studentNis').value = '';
+      document.getElementById('studentName').value = '';
+      document.getElementById('studentPob').value = '';
+      document.getElementById('studentDob').value = '';
+      document.getElementById('studentRfid').value = '';
+      document.getElementById('studentParentName').value = '';
+      document.getElementById('studentPhone').value = '';
+      document.getElementById('studentGender').value = 'L';
+      setPhotoPreview('');
+      document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function editStudent(target) {
+      const s = typeof target === 'object' && target !== null ? target : allStudents.find(item => item.id == target);
+      if (!s) return;
+      const singular = window.AppTerms ? AppTerms.get('singular', 'Santri') : 'Santri';
+      document.getElementById('modalTitle').innerHTML = `Edit Data ${singular}: ${s.name}`;
+      document.getElementById('studentId').value = s.id;
+      document.getElementById('studentNis').value = s.nis;
+      document.getElementById('studentName').value = s.name;
+      document.getElementById('studentPob').value = s.pob || '';
+      document.getElementById('studentDob').value = s.dob || '';
+      document.getElementById('studentClass').value = s.class_id;
+      document.getElementById('studentRfid').value = s.rfid_uid || '';
+      document.getElementById('studentParentName').value = s.parent_name || '';
+      document.getElementById('studentPhone').value = s.parent_phone || '';
+      document.getElementById('studentGender').value = s.gender || 'L';
+      setPhotoPreview(s.photo || '');
+      document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function closeStudentModal() {
+      document.getElementById('studentModal').classList.add('hidden');
+    }
+
+    async function saveStudent(e) {
+      e.preventDefault();
+      const id = document.getElementById('studentId').value;
+      const nis = document.getElementById('studentNis').value.trim();
+      const name = document.getElementById('studentName').value.trim();
+      const pob = document.getElementById('studentPob').value.trim();
+      const dob = document.getElementById('studentDob').value.trim();
+      const classId = document.getElementById('studentClass').value;
+      const rfid = document.getElementById('studentRfid').value.trim();
+      const parentName = document.getElementById('studentParentName').value.trim();
+      const phone = document.getElementById('studentPhone').value.trim();
+      const gender = document.getElementById('studentGender').value;
+      const photo = document.getElementById('studentPhotoBase64').value;
+
+      try {
+        const res = await fetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id ? parseInt(id) : null,
+            nis, name, pob, dob, class_id: parseInt(classId),
+            rfid_uid: rfid, parent_name: parentName, parent_phone: phone,
+            gender, photo
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeStudentModal();
+          loadInitialData();
+        } else {
+          alert('Gagal menyimpan: ' + data.message);
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan jaringan: ' + err.message);
+      }
+    }
+
+    async function deleteStudent(target) {
+      const s = typeof target === 'object' && target !== null ? target : allStudents.find(item => item.id == target);
+      if (!s) return;
+      const id = s.id;
+      const name = s.name;
+      if (!confirm(`Hapus data "${name}"?`)) return;
+      try {
+        const res = await fetch('/api/students/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadInitialData();
+        } else {
+          alert('Gagal menghapus: ' + data.message);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // --- Export & Import CSV ---
+    function exportStudentsCsv() {
+      window.location.href = '/api/students/export/csv';
+    }
+
+    function openImportModal() {
+      parsedImportData = [];
+      document.getElementById('csvFileInput').value = '';
+      document.getElementById('importFileName').innerText = 'Pilih berkas CSV (.csv)';
+      document.getElementById('importPreviewBox').classList.add('hidden');
+      document.getElementById('btnExecuteImport').disabled = true;
+      document.getElementById('importModal').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('importModal').classList.add('hidden');
+    }
+
+    function handleCsvSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById('importFileName').innerText = file.name;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const text = evt.target.result;
+        parseCsvText(text);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCsvText(csvText) {
+      const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
+      if (lines.length < 2) {
+        alert('Berkas CSV kosong atau tidak memiliki baris data.');
+        return;
+      }
+
+      const firstLine = lines[0];
+      const delim = firstLine.includes(';') ? ';' : ',';
+      const headers = firstLine.split(delim).map(h => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+      const students = [];
+
+      let idxNis = headers.findIndex(h => h === 'nis' || h === 'nik' || h === 'nip');
+      let idxName = headers.findIndex(h => h === 'nama' || h === 'name');
+      let idxPob = headers.findIndex(h => h.includes('tempat lahir') || h === 'pob');
+      let idxDob = headers.findIndex(h => h.includes('tanggal lahir') || h === 'dob');
+      let idxClass = headers.findIndex(h => h === 'kelas' || h === 'divisi' || h === 'unit' || h === 'class');
+      let idxGender = headers.findIndex(h => h.includes('kelamin') || h === 'gender');
+      let idxRfid = headers.findIndex(h => h.includes('rfid') || h.includes('uid'));
+      let idxParent = headers.findIndex(h => h.includes('wali') || h.includes('orang tua') || h.includes('kontak') || h.includes('parent'));
+      let idxPhone = headers.findIndex(h => h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp'));
+
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(delim).map(p => p.trim().replace(/^["']|["']$/g, ''));
+        if (parts.length < 2) continue;
+
+        let nis = '', name = '', pob = '', dob = '', className = '', gender = 'L', rfidUid = '', parentName = '', parentPhone = '';
+
+        if (idxNis >= 0 && idxName >= 0) {
+          nis = parts[idxNis] || '';
+          name = parts[idxName] || '';
+          pob = idxPob >= 0 ? (parts[idxPob] || '') : '';
+          dob = idxDob >= 0 ? (parts[idxDob] || '') : '';
+          className = idxClass >= 0 ? (parts[idxClass] || '') : '';
+          gender = idxGender >= 0 ? (parts[idxGender] || 'L') : 'L';
+          rfidUid = idxRfid >= 0 ? (parts[idxRfid] || nis) : nis;
+          parentName = idxParent >= 0 ? (parts[idxParent] || '') : '';
+          parentPhone = idxPhone >= 0 ? (parts[idxPhone] || '') : '';
+        } else if (parts.length >= 9) {
+          nis = parts[0] || '';
+          name = parts[1] || '';
+          pob = parts[2] || '';
+          dob = parts[3] || '';
+          className = parts[4] || '';
+          gender = parts[5] || 'L';
+          rfidUid = parts[6] || nis;
+          parentName = parts[7] || '';
+          parentPhone = parts[8] || '';
+        } else {
+          nis = parts[0] || '';
+          name = parts[1] || '';
+          className = parts[2] || '';
+          gender = parts[3] || 'L';
+          rfidUid = parts[4] || nis;
+          parentName = parts[5] || '';
+          parentPhone = parts[6] || '';
+        }
+
+        if (nis && name) {
+          students.push({
+            nis, name, pob, dob,
+            class_name: className,
+            gender: gender.toUpperCase().startsWith('P') ? 'P' : 'L',
+            rfid_uid: rfidUid || nis,
+            parent_name: parentName,
+            parent_phone: parentPhone
+          });
+        }
+      }
+
+      parsedImportData = students;
+      const previewBox = document.getElementById('importPreviewBox');
+      const btn = document.getElementById('btnExecuteImport');
+
+      if (students.length > 0) {
+        document.getElementById('importCountText').innerText = students.length;
+        previewBox.classList.remove('hidden');
+        btn.disabled = false;
+      } else {
+        alert('Tidak ada baris data yang valid di dalam file CSV.');
+        previewBox.classList.add('hidden');
+        btn.disabled = true;
+      }
+    }
+
+    async function executeImport() {
+      if (parsedImportData.length === 0) return;
+
+      const btn = document.getElementById('btnExecuteImport');
+      const oldText = btn.innerText;
+      btn.innerText = 'Mengimpor...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/students/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ students: parsedImportData })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          closeImportModal();
+          loadInitialData();
+        } else {
+          alert('Gagal impor: ' + data.message);
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan jaringan: ' + err.message);
+      } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+      }
+    }
+
+    loadInitialData();
+  </script>
+</body>
+</html>

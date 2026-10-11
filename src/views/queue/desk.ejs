@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Panel Meja Ustadz' %> - <%= settings.school_name || 'Sekolah' %></title>
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="h-full flex text-slate-100 antialiased overflow-hidden">
+
+  <!-- Sidebar Navigasi -->
+  <%- include('../dashboard/sidebar', { currentPath: currentPath }) %>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col min-w-0 bg-slate-900 overflow-y-auto">
+    
+    <!-- Top Bar -->
+    <header class="bg-slate-900/80 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-widest">
+            Sistem Antrian Mengaji
+          </span>
+          <% if (isGuru && currentUser) { %>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase">
+              Ustadz: <%= currentUser.name %>
+            </span>
+          <% } %>
+        </div>
+        <h1 class="text-xl lg:text-2xl font-black text-white mt-1">
+          <% if (isGuru && deskData) { %>
+            Meja <%= deskData.classInfo.name %>
+          <% } else { %>
+            Panel Panggilan Meja Ustadz
+          <% } %>
+        </h1>
+        <p class="text-xs text-slate-400">
+          <% if (isGuru && deskData) { %>
+            Memanggil antrian santri kelas <strong><%= deskData.classInfo.name %></strong> berdasarkan urutan kedatangan tap presensi
+          <% } else { %>
+            Panggil giliran mengaji santri sesuai urutan kedatangan tap presensi hari ini
+          <% } %>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Tombol Buka Display TV -->
+        <a href="/queue/display" target="_blank" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-2 border border-slate-700 shadow-sm" title="Buka Layar Display TV di Tab Baru">
+          <i data-lucide="tv" class="w-4 h-4 text-emerald-400"></i>
+          <span class="hidden sm:inline">Buka Layar TV ↗</span>
+        </a>
+
+        <% if (isGuru && deskData) { %>
+          <!-- Label Meja Terkunci Khusus Guru / Wali Kelas -->
+          <div class="flex items-center gap-2.5 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-xl">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+            <div class="text-right">
+              <span class="text-[10px] uppercase tracking-wider font-extrabold text-emerald-400 block">Meja Binaan</span>
+              <span class="text-xs font-black text-white"><%= deskData.classInfo.name %></span>
+            </div>
+          </div>
+        <% } else if (!isGuru && classes && classes.length > 0) { %>
+          <!-- Dropdown Pilihan Rombel Kelas / Meja untuk Admin -->
+          <form method="GET" action="/dashboard/queue/desk" class="flex items-center gap-2">
+            <label class="text-[11px] font-bold text-slate-400 hidden md:inline">Pilih Meja:</label>
+            <select name="classId" onchange="this.form.submit()" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>" <%= (selectedClassId === c.id) ? 'selected' : '' %>>
+                  Meja / <%= c.name %>
+                </option>
+              <% }) %>
+            </select>
+          </form>
+        <% } %>
+      </div>
+    </header>
+
+    <!-- Content Body -->
+    <main class="p-4 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+      <!-- Toast Feedback Panggilan -->
+      <div id="actionToast" class="hidden p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all duration-300 shadow-xl">
+        <div class="flex items-center gap-2.5">
+          <span id="toastIcon">📢</span>
+          <span id="toastMessage">Panggilan diproses...</span>
+        </div>
+        <button onclick="hideToast()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <% if (deskData) { %>
+        <!-- Baris Ringkasan Statistik Meja Ini -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+              👥
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Antrian</p>
+              <h4 class="text-xl font-black text-white font-mono"><%= deskData.stats.total %></h4>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+              ⏳
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Menunggu</p>
+              <h4 class="text-xl font-black text-amber-400 font-mono"><%= deskData.stats.waiting %></h4>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+              📖
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sedang Mengaji</p>
+              <h4 class="text-xl font-black text-emerald-400 font-mono"><%= deskData.stats.serving %></h4>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold text-lg">
+              ✅
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selesai</p>
+              <h4 class="text-xl font-black text-teal-400 font-mono"><%= deskData.stats.completed %></h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Utama: Santri yang Sedang Di Hadapan Ustadz & Tombol Panggilan -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Kiri: Kartu Santri Aktif (Calling / Serving) -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-700/80 mb-4">
+                <span class="text-xs font-bold text-slate-400 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 <%= deskData.current ? 'animate-ping' : '' %>"></span>
+                  SANTRI SAAT INI (SEDANG MENGAJI):
+                </span>
+                <span class="text-xs font-extrabold text-emerald-400 uppercase tracking-wider">
+                  <%= deskData.classInfo.name %>
+                </span>
+              </div>
+
+              <% if (deskData.current) { %>
+                <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                  <!-- Foto Santri -->
+                  <div class="w-28 h-28 rounded-2xl bg-slate-900 border-2 border-emerald-500/80 overflow-hidden flex-shrink-0 shadow-lg flex items-center justify-center text-white font-bold text-3xl">
+                    <% if (deskData.current.photo) { %>
+                      <img src="<%= deskData.current.photo %>" class="w-full h-full object-cover">
+                    <% } else { %>
+                      <%= deskData.current.student_name.charAt(0) %>
+                    <% } %>
+                  </div>
+
+                  <!-- Identitas Santri & Nomor Antrian -->
+                  <div class="flex-1 text-center sm:text-left min-w-0">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold text-xs mb-1">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      DIPANGGIL KE MEJA
+                    </div>
+                    
+                    <div class="text-4xl lg:text-5xl font-black text-emerald-400 font-mono my-1">
+                      #<%= String(deskData.current.queue_number).padStart(2, '0') %>
+                    </div>
+
+                    <h2 class="text-xl lg:text-2xl font-black text-white truncate">
+                      <%= deskData.current.student_name %>
+                    </h2>
+
+                    <div class="text-xs text-slate-400 font-mono mt-1 space-x-2">
+                      <span>NIS: <%= deskData.current.nis || '-' %></span>
+                      <span>&bull;</span>
+                      <span>Panggilan Ke-<%= deskData.current.call_count || 1 %></span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 4 Tombol Aksi Utama -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-700/80">
+                  <!-- 1. Panggil Ulang (Recall) -->
+                  <button onclick="doAction('RECALL', <%= deskData.current.id %>)" class="px-3 py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow cursor-pointer">
+                    <i data-lucide="volume-2" class="w-5 h-5 text-amber-400"></i>
+                    <span>Panggil Ulang</span>
+                  </button>
+
+                  <!-- 2. Lewati (Skip) -->
+                  <button onclick="doAction('SKIP', <%= deskData.current.id %>)" class="px-3 py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow cursor-pointer">
+                    <i data-lucide="skip-forward" class="w-5 h-5 text-rose-400"></i>
+                    <span>Lewati (Tunda)</span>
+                  </button>
+
+                  <!-- 3. Selesai ("Selesai saja" tanpa form rumit) -->
+                  <button onclick="doAction('FINISH', <%= deskData.current.id %>)" class="px-3 py-3 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow cursor-pointer">
+                    <i data-lucide="check-circle-2" class="w-5 h-5 text-white"></i>
+                    <span>Selesai</span>
+                  </button>
+
+                  <!-- 4. Panggil Berikutnya -->
+                  <button onclick="doAction('NEXT')" class="px-3 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1.5 transition active:scale-95 shadow-lg shadow-emerald-900/40 cursor-pointer">
+                    <i data-lucide="arrow-right-circle" class="w-5 h-5 text-white animate-pulse"></i>
+                    <span>Berikutnya &rarr;</span>
+                  </button>
+                </div>
+
+              <% } else { %>
+                <!-- State Kosong: Belum ada yang dipanggil -->
+                <div class="py-12 text-center text-slate-400">
+                  <div class="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mx-auto mb-3 text-3xl">
+                    ⏳
+                  </div>
+                  <h3 class="text-lg font-bold text-white">Belum Ada Santri yang Dipanggil</h3>
+                  <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                    Silakan tekan tombol di bawah untuk memanggil santri urutan kedatangan pertama di kelas ini.
+                  </p>
+                  
+                  <div class="mt-6">
+                    <button onclick="doAction('NEXT')" class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm inline-flex items-center gap-2.5 transition active:scale-95 shadow-xl shadow-emerald-900/50 cursor-pointer">
+                      <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                      <span>PANGGIL SANTRI PERTAMA (#01)</span>
+                    </button>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Petunjuk Penggunaan Cepat -->
+            <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 text-xs text-slate-400 flex items-start gap-3">
+              <i data-lucide="help-circle" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-slate-200">Tips Ustadz:</strong>
+                Nomor antrian santri otomatis dibuat saat santri melakukan tap kartu RFID / QR di Kiosk gerbang sesuai jam kedatangan. Santri yang datang lebih pagi akan otomatis berada di urutan teratas.
+              </div>
+            </div>
+          </div>
+
+          <!-- Kanan: Daftar Antrian Santri (Tabs: Menunggu, Dilewati, Selesai) -->
+          <div class="lg:col-span-5 bg-slate-800/90 border border-slate-700 rounded-3xl p-5 shadow-xl space-y-4">
+            <!-- Tab Headers -->
+            <div class="flex items-center gap-1.5 p-1 bg-slate-900 rounded-2xl">
+              <button onclick="switchTab('waiting')" id="tabBtnWaiting" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-emerald-600 text-white shadow">
+                Menunggu (<%= deskData.stats.waiting %>)
+              </button>
+              <button onclick="switchTab('skipped')" id="tabBtnSkipped" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white">
+                Dilewati (<%= deskData.stats.skipped %>)
+              </button>
+              <button onclick="switchTab('completed')" id="tabBtnCompleted" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white">
+                Selesai (<%= deskData.stats.completed %>)
+              </button>
+            </div>
+
+            <!-- Tab 1: Menunggu -->
+            <div id="tabWaiting" class="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              <% if (deskData.waitingList.length === 0) { %>
+                <div class="text-center py-12 text-slate-500 text-xs italic">
+                  Tidak ada santri yang sedang menunggu di antrian.
+                </div>
+              <% } else { %>
+                <% deskData.waitingList.forEach((w, idx) => { %>
+                  <div class="p-3 bg-slate-900/80 hover:bg-slate-900 border border-slate-700/80 rounded-2xl flex items-center justify-between gap-3 transition">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="text-emerald-400 font-mono font-black text-base lg:text-lg shrink-0">
+                        #<%= String(w.queue_number).padStart(2, '0') %>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-sm font-bold text-white truncate"><%= w.student_name %></div>
+                        <div class="text-[10px] text-slate-400 font-mono">NIS: <%= w.nis || '-' %> &bull; <%= w.created_at ? w.created_at.slice(11, 16) : '' %> WIB</div>
+                      </div>
+                    </div>
+
+                    <button onclick="doAction('SPECIFIC', <%= w.id %>)" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 shrink-0 border border-slate-700 hover:border-emerald-500 cursor-pointer">
+                      <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+                      <span>Panggil</span>
+                    </button>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+
+            <!-- Tab 2: Dilewati / Tunda -->
+            <div id="tabSkipped" class="hidden space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              <% if (deskData.skippedList.length === 0) { %>
+                <div class="text-center py-12 text-slate-500 text-xs italic">
+                  Belum ada santri yang dilewati hari ini.
+                </div>
+              <% } else { %>
+                <% deskData.skippedList.forEach(s => { %>
+                  <div class="p-3 bg-slate-900/80 border border-rose-900/30 rounded-2xl flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="text-rose-400 font-mono font-black text-base shrink-0">
+                        #<%= String(s.queue_number).padStart(2, '0') %>
+                      </div>
+                      <div class="min-w-0">
+                        <div class="text-sm font-bold text-slate-200 truncate"><%= s.student_name %></div>
+                        <div class="text-[10px] text-rose-400 font-mono">Status: Ditunda/Toilet/Wudhu</div>
+                      </div>
+                    </div>
+
+                    <button onclick="doAction('SPECIFIC', <%= s.id %>)" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 shrink-0 border border-slate-700 cursor-pointer">
+                      <span>Panggil Sekarang</span>
+                    </button>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+
+            <!-- Tab 3: Selesai -->
+            <div id="tabCompleted" class="hidden space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              <% if (deskData.completedList.length === 0) { %>
+                <div class="text-center py-12 text-slate-500 text-xs italic">
+                  Belum ada santri yang selesai mengaji hari ini.
+                </div>
+              <% } else { %>
+                <% deskData.completedList.forEach(c => { %>
+                  <div class="p-2.5 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center justify-between text-xs text-slate-400">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="text-teal-400 font-mono font-bold">#<%= String(c.queue_number).padStart(2, '0') %></span>
+                      <span class="font-medium text-slate-300 truncate"><%= c.student_name %></span>
+                    </div>
+                    <span class="text-[10px] text-teal-400 font-mono shrink-0">✓ Selesai <%= c.completed_at ? c.completed_at.slice(11, 16) : '' %></span>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+
+          </div>
+
+        </div>
+
+      <% } else if (locals.unassignedGuru) { %>
+        <!-- Guru Belum Memiliki Kelas Binaan -->
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-10 text-center text-slate-300 max-w-xl mx-auto my-12 shadow-xl">
+          <div class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4 text-3xl">
+            ⚠️
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Akun Ustadz Belum Memiliki Kelas Binaan</h3>
+          <p class="text-xs text-slate-400 leading-relaxed mb-6">
+            Akun Anda (<strong><%= currentUser ? currentUser.name : 'Guru' %></strong>) berstatus Guru / Ustadz, namun belum ditautkan ke rombel kelas / meja mengaji manapun di sistem. Silakan hubungi Administrator untuk menghubungkan akun Anda dengan kelas binaan.
+          </p>
+          <a href="/dashboard" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-2 border border-slate-700">
+            &larr; Kembali ke Dashboard
+          </a>
+        </div>
+      <% } else { %>
+        <!-- Belum ada rombel kelas -->
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-12 text-center text-slate-400">
+          <p class="text-base font-bold">Data kelas atau meja tidak ditemukan.</p>
+        </div>
+      <% } %>
+
+    </main>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const selectedClassId = <%= selectedClassId || 'null' %>;
+
+    // Switch Tabs List Antrian
+    function switchTab(tab) {
+      document.getElementById('tabWaiting').classList.add('hidden');
+      document.getElementById('tabSkipped').classList.add('hidden');
+      document.getElementById('tabCompleted').classList.add('hidden');
+
+      document.getElementById('tabBtnWaiting').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white';
+      document.getElementById('tabBtnSkipped').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white';
+      document.getElementById('tabBtnCompleted').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white';
+
+      if (tab === 'waiting') {
+        document.getElementById('tabWaiting').classList.remove('hidden');
+        document.getElementById('tabBtnWaiting').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-emerald-600 text-white shadow';
+      } else if (tab === 'skipped') {
+        document.getElementById('tabSkipped').classList.remove('hidden');
+        document.getElementById('tabBtnSkipped').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-emerald-600 text-white shadow';
+      } else if (tab === 'completed') {
+        document.getElementById('tabCompleted').classList.remove('hidden');
+        document.getElementById('tabBtnCompleted').className = 'flex-1 py-2 text-xs font-bold rounded-xl transition bg-emerald-600 text-white shadow';
+      }
+    }
+
+    // Eksekusi Aksi Panggilan
+    async function doAction(action, queueId = null) {
+      try {
+        const body = {
+          action,
+          classId: selectedClassId,
+          queueId
+        };
+
+        const res = await fetch('/api/queue/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showToast(action, data);
+          // Refresh halaman agar state terupdate seketika
+          setTimeout(() => {
+            window.location.reload();
+          }, 350);
+        } else {
+          alert(data.message || 'Gagal menjalankan aksi antrian.');
+        }
+      } catch (err) {
+        alert('Terjadi kendala jaringan: ' + err.message);
+      }
+    }
+
+    function showToast(action, data) {
+      const toast = document.getElementById('actionToast');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMessage');
+      if (!toast || !msg) return;
+
+      if (action === 'NEXT' || action === 'SPECIFIC') {
+        toast.className = 'p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all duration-300 shadow-xl bg-emerald-600 text-white';
+        icon.innerText = '📢';
+        msg.innerText = `Memanggil antrian santri...`;
+      } else if (action === 'RECALL') {
+        toast.className = 'p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all duration-300 shadow-xl bg-amber-600 text-white';
+        icon.innerText = '🔊';
+        msg.innerText = 'Panggilan ulang dikirim ke Layar TV!';
+      } else if (action === 'SKIP') {
+        toast.className = 'p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all duration-300 shadow-xl bg-rose-600 text-white';
+        icon.innerText = '⏭️';
+        msg.innerText = 'Santri dilewati sementara.';
+      } else if (action === 'FINISH') {
+        toast.className = 'p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between transition-all duration-300 shadow-xl bg-teal-600 text-white';
+        icon.innerText = '✅';
+        msg.innerText = 'Santri selesai mengaji.';
+      }
+
+      toast.classList.remove('hidden');
+      clearTimeout(window.tTimer);
+      window.tTimer = setTimeout(hideToast, 4000);
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('actionToast');
+      if (toast) toast.classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

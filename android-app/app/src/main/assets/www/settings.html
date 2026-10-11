@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan Sekolah - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Pengaturan Sistem</h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Identitas Lembaga, Tipe Pengguna &amp; Waktu Presensi</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="settings" class="w-4 h-4 text-teal-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+
+    <!-- Header Judul -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Pengaturan Instansi &amp; Presensi</h2>
+        <p class="text-xs text-slate-500">Sesuaikan tipe instansi, sebutan pengguna, nama lembaga, serta aturan jam masuk.</p>
+      </div>
+      <button onclick="saveAllSettings()" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-teal-900/20 transition flex items-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        <span>Simpan Pengaturan</span>
+      </button>
+    </div>
+
+    <!-- Alert Notifikasi -->
+    <div id="alertBox" class="hidden p-4 rounded-2xl text-xs font-bold border"></div>
+
+    <!-- KARTU 1: Pilihan Sasaran Instansi / Tipe Pengguna (Dinamis Santri / Murid / Karyawan) -->
+    <div class="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+        <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+          <i data-lucide="users" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Tipe Sasaran &amp; Istilah Instansi</h3>
+          <p class="text-[11px] text-slate-400">Pilih istilah yang sesuai. Seluruh teks aplikasi, kartu, laporan, dan Kiosk TV akan otomatis menyesuaikan.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+        <!-- Opsi 1: Santri -->
+        <label class="border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between relative hover:border-teal-400" id="cardTypeSantri" onclick="selectEntityType('santri')">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-black text-sm text-slate-900 flex items-center gap-1.5">
+                🕌 Santri
+              </span>
+              <input type="radio" name="entityTypeRadio" value="santri" id="rbSantri" checked class="w-4 h-4 text-teal-600">
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed">Pesantren, TPQ, Rumah Tahfidz, Madrasah Diniyah.</p>
+          </div>
+          <div class="mt-3.5 pt-2.5 border-t border-slate-100 text-[10px] font-bold text-teal-700 flex items-center gap-1">
+            <span>Istilah:</span> <strong class="text-slate-800">Santri, Wali Santri, Ustadz</strong>
+          </div>
+        </label>
+
+        <!-- Opsi 2: Murid / Siswa -->
+        <label class="border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between relative hover:border-teal-400" id="cardTypeMurid" onclick="selectEntityType('murid')">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-black text-sm text-slate-900 flex items-center gap-1.5">
+                🎒 Murid / Siswa
+              </span>
+              <input type="radio" name="entityTypeRadio" value="murid" id="rbMurid" class="w-4 h-4 text-teal-600">
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed">Sekolah Formal: PAUD, TK, SD, SMP, SMA, SMK.</p>
+          </div>
+          <div class="mt-3.5 pt-2.5 border-t border-slate-100 text-[10px] font-bold text-blue-700 flex items-center gap-1">
+            <span>Istilah:</span> <strong class="text-slate-800">Murid (Siswa), Orang Tua, Guru</strong>
+          </div>
+        </label>
+
+        <!-- Opsi 3: Karyawan / Pegawai -->
+        <label class="border-2 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between relative hover:border-teal-400" id="cardTypeKaryawan" onclick="selectEntityType('karyawan')">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-black text-sm text-slate-900 flex items-center gap-1.5">
+                💼 Karyawan / Pegawai
+              </span>
+              <input type="radio" name="entityTypeRadio" value="karyawan" id="rbKaryawan" class="w-4 h-4 text-teal-600">
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed">Perusahaan, Kantor, Lembaga, Pabrik, Yayasan.</p>
+          </div>
+          <div class="mt-3.5 pt-2.5 border-t border-slate-100 text-[10px] font-bold text-amber-700 flex items-center gap-1">
+            <span>Istilah:</span> <strong class="text-slate-800">Karyawan, Divisi, Pimpinan/HRD</strong>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <!-- Kartu 2: Identitas Lembaga / Sekolah -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+            <i data-lucide="landmark" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Identitas Lembaga / Sekolah</h3>
+            <p class="text-[11px] text-slate-400">Tampil di layar TV Kiosk, ID Card, dan Laporan.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Logo Instansi / Sekolah (PNG / JPG / SVG) -->
+          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center gap-3.5">
+            <div class="relative w-20 h-20 rounded-2xl bg-white border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+              <img id="logoPreviewImg" src="" class="w-full h-full object-contain p-1.5 hidden">
+              <div id="logoPlaceholder" class="text-slate-400 text-center p-2">
+                <i data-lucide="image-plus" class="w-6 h-6 mx-auto text-slate-300"></i>
+                <span class="text-[9px] font-bold block mt-1">Belum Ada Logo</span>
+              </div>
+            </div>
+            <div class="flex-1 text-center sm:text-left space-y-1.5">
+              <div>
+                <h4 class="text-xs font-bold text-slate-900">Logo Resmi Lembaga / Sekolah</h4>
+                <p class="text-[10px] text-slate-500">Format: PNG transparan, JPG, atau SVG (Rekomendasi rasio 1:1).</p>
+              </div>
+              <div class="flex items-center gap-2 justify-center sm:justify-start pt-1">
+                <input type="file" id="logoFileInput" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" class="hidden" onchange="handleLogoFileSelect(event)">
+                <button type="button" onclick="document.getElementById('logoFileInput').click()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 shadow-sm">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                  <span>Unggah Logo (PNG/JPG/SVG)</span>
+                </button>
+                <button type="button" id="btnRemoveLogo" onclick="removeLogo()" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-[11px] font-bold transition hidden flex items-center gap-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Hapus</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblSchoolName">Nama Lembaga / Sekolah *</label>
+            <input type="text" id="school_name" placeholder="Contoh: MUSHOLLA AL MUHAJIRIN" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Lembaga</label>
+            <textarea id="school_address" rows="2" placeholder="Contoh: Jl. KH. Ahmad Dahlan No. 12" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Telepon / Kontak</label>
+            <input type="text" id="school_phone" placeholder="Contoh: 081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1" id="lblPrincipal">Nama Pimpinan / Kepala Sekolah</label>
+            <input type="text" id="school_principal_name" placeholder="Contoh: Ust. H. Abdullah, Lc." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu 3: Pengaturan Waktu Presensi -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Jadwal Jam Masuk &amp; Toleransi</h3>
+            <p class="text-[11px] text-slate-400">Aturan perhitungan status Hadir vs Terlambat.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Jam Masuk (Pintu Gerbang)</label>
+            <input type="time" id="jam_masuk" value="07:00" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+            <p class="text-[10px] text-slate-400 mt-1">Waktu dimulainya jam presensi.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Batas Toleransi Keterlambatan *</label>
+            <input type="time" id="toleransi_telat" value="07:15" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+            <p class="text-[10px] text-slate-400 mt-1">Tap kartu setelah jam ini akan otomatis berstatus <strong>TERLAMBAT</strong>.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Jam Pulang / Selesai (Opsional)</label>
+            <input type="time" id="jam_pulang" value="14:00" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+          </div>
+        </div>
+      <!-- Kartu 4: Keamanan Akun Admin Web Remote -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Keamanan Akun Admin Web Remote</h3>
+            <p class="text-[11px] text-slate-400">Username &amp; kata sandi untuk mengakses web dashboard.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Username Admin *</label>
+            <input type="text" id="admin_username" value="admin" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+            <p class="text-[10px] text-slate-400 mt-1">Nama pengguna untuk login admin web.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi / PIN Admin *</label>
+            <input type="text" id="admin_password" value="admin" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+            <p class="text-[10px] text-slate-400 mt-1">Gunakan kata sandi yang mudah diingat oleh pengurus.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500">
+    Smart School All-in-One Standalone &bull; Didukung oleh SQLite Native &amp; WhatsApp Cloud Gateway
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let selectedEntityType = 'santri';
+    let currentLogoBase64 = '';
+
+    const fields = [
+      'school_name',
+      'school_address',
+      'school_phone',
+      'school_principal_name',
+      'jam_masuk',
+      'toleransi_telat',
+      'jam_pulang',
+      'admin_username',
+      'admin_password'
+    ];
+
+    function handleLogoFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const isSvg = file.name.toLowerCase().endsWith('.svg') || file.type === 'image/svg+xml';
+      const isRaster = file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg' || file.name.toLowerCase().match(/\.(png|jpg|jpeg)$/);
+
+      if (!isSvg && !isRaster) {
+        showAlert('Format file tidak didukung. Harap pilih gambar PNG, JPG, atau SVG.', 'error');
+        return;
+      }
+
+      if (file.size > 3 * 1024 * 1024) {
+        showAlert('Ukuran file logo terlalu besar (maksimal 3 MB).', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      if (isSvg) {
+        reader.onload = function(evt) {
+          let content = evt.target.result;
+          if (!content.startsWith('data:image/svg+xml')) {
+            content = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(content)));
+          }
+          setLogoPreview(content);
+        };
+        reader.readAsText(file);
+      } else {
+        reader.onload = function(evt) {
+          const img = new Image();
+          img.onload = function() {
+            const maxDim = 400;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+            const compressed = canvas.toDataURL(mime, 0.9);
+            setLogoPreview(compressed);
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function setLogoPreview(dataUrl) {
+      currentLogoBase64 = dataUrl || '';
+      const img = document.getElementById('logoPreviewImg');
+      const ph = document.getElementById('logoPlaceholder');
+      const btnRemove = document.getElementById('btnRemoveLogo');
+
+      if (currentLogoBase64) {
+        img.src = currentLogoBase64;
+        img.classList.remove('hidden');
+        ph.classList.add('hidden');
+        btnRemove.classList.remove('hidden');
+      } else {
+        img.src = '';
+        img.classList.add('hidden');
+        ph.classList.remove('hidden');
+        btnRemove.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function removeLogo() {
+      setLogoPreview('');
+      document.getElementById('logoFileInput').value = '';
+    }
+
+    function selectEntityType(type) {
+      selectedEntityType = type;
+      document.getElementById('rbSantri').checked = (type === 'santri');
+      document.getElementById('rbMurid').checked = (type === 'murid');
+      document.getElementById('rbKaryawan').checked = (type === 'karyawan');
+
+      updateTypeCardsUI();
+      updateLabelsPreview();
+    }
+
+    function updateTypeCardsUI() {
+      const cards = [
+        { id: 'cardTypeSantri', type: 'santri' },
+        { id: 'cardTypeMurid', type: 'murid' },
+        { id: 'cardTypeKaryawan', type: 'karyawan' }
+      ];
+
+      cards.forEach(c => {
+        const el = document.getElementById(c.id);
+        if (c.type === selectedEntityType) {
+          el.className = 'border-2 border-teal-600 bg-teal-50/40 rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between relative shadow-sm';
+        } else {
+          el.className = 'border-2 border-slate-200 bg-white rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between relative hover:border-slate-300';
+        }
+      });
+    }
+
+    function updateLabelsPreview() {
+      if (selectedEntityType === 'murid') {
+        document.getElementById('lblSchoolName').innerText = 'Nama Sekolah / Madrasah *';
+        document.getElementById('lblPrincipal').innerText = 'Nama Kepala Sekolah';
+      } else if (selectedEntityType === 'karyawan') {
+        document.getElementById('lblSchoolName').innerText = 'Nama Perusahaan / Lembaga *';
+        document.getElementById('lblPrincipal').innerText = 'Nama Direktur / Pimpinan';
+      } else {
+        document.getElementById('lblSchoolName').innerText = 'Nama Pesantren / Musholla *';
+        document.getElementById('lblPrincipal').innerText = 'Nama Pimpinan / Pengasuh';
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        for (const f of fields) {
+          if (data[f] !== undefined) {
+            const el = document.getElementById(f);
+            if (el) el.value = data[f];
+          }
+        }
+        if (data.entity_type) {
+          selectEntityType(data.entity_type);
+        } else {
+          selectEntityType('santri');
+        }
+
+        if (data.school_logo) {
+          setLogoPreview(data.school_logo);
+        } else {
+          setLogoPreview('');
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    }
+
+    async function saveAllSettings() {
+      const payload = {
+        entity_type: selectedEntityType,
+        school_logo: currentLogoBase64
+      };
+      for (const f of fields) {
+        const el = document.getElementById(f);
+        if (el) payload[f] = el.value.trim();
+      }
+
+      if (!payload.school_name) {
+        showAlert('Nama lembaga/sekolah tidak boleh kosong.', 'error');
+        return;
+      }
+      if (!payload.toleransi_telat) {
+        showAlert('Batas jam toleransi keterlambatan wajib diisi.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (window.AppTerms) {
+            window.AppTerms.setEntityType(selectedEntityType);
+            window.AppTerms.setLogo(currentLogoBase64);
+          }
+          showAlert('✅ Pengaturan & Logo berhasil disimpan! Istilah sistem telah disesuaikan ke mode: ' + selectedEntityType.toUpperCase(), 'success');
+        } else {
+          showAlert('❌ Gagal menyimpan pengaturan: ' + (data.message || 'Terjadi kesalahan'), 'error');
+        }
+      } catch (err) {
+        showAlert('❌ Gagal menghubungi server: ' + err.message, 'error');
+      }
+    }
+
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-rose-50', 'text-rose-800', 'border-rose-200');
+      if (type === 'success') {
+        box.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+      } else {
+        box.classList.add('bg-rose-50', 'text-rose-800', 'border-rose-200');
+      }
+      box.innerText = msg;
+      box.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>

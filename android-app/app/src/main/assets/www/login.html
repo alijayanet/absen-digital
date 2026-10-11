@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Admin - Smart School All-in-One</title>
+  <!-- Google Fonts & Tailwind CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-hidden select-none">
+
+  <!-- Background Ornaments Glowing -->
+  <div class="absolute -top-32 -left-32 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <div class="w-full max-w-md bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur relative z-10">
+    
+    <!-- Logo & Header -->
+    <div class="text-center mb-6">
+      <div id="loginLogoBox" class="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-3xl shadow-lg shadow-teal-900/50 mx-auto mb-3 overflow-hidden">
+        🏫
+      </div>
+      <h1 id="loginSchoolName" class="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight">
+        MUSHOLLA AL MUHAJIRIN
+      </h1>
+      <p class="text-xs text-teal-400 font-semibold mt-1 flex items-center justify-center gap-1.5">
+        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+        <span>Panel Keamanan Admin Web Remote</span>
+      </p>
+    </div>
+
+    <!-- Alert Box Pesan Error -->
+    <div id="errorAlert" class="hidden mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2">
+      <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+      <span id="errorMessage">Username atau kata sandi tidak cocok.</span>
+    </div>
+
+    <!-- Form Login -->
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+      <div>
+        <label class="block font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-teal-400"></i>
+          <span>Nama Pengguna (Username)</span>
+        </label>
+        <input 
+          type="text" 
+          id="usernameInput" 
+          required 
+          autocomplete="username"
+          placeholder="Masukkan username admin..." 
+          value="admin"
+          class="w-full p-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition"
+        >
+      </div>
+
+      <div>
+        <label class="block font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+          <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Kata Sandi / PIN Keamanan</span>
+        </label>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="passwordInput" 
+            required 
+            autocomplete="current-password"
+            placeholder="Masukkan kata sandi..." 
+            class="w-full p-3 pr-10 rounded-xl bg-slate-900/90 border border-slate-700 text-white font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition"
+          >
+          <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3 text-slate-400 hover:text-white transition">
+            <i id="eyeIcon" data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1 italic">Default bawaan pabrik: admin / admin</p>
+      </div>
+
+      <button 
+        type="submit" 
+        id="btnLoginSubmit"
+        class="w-full py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold rounded-xl shadow-lg shadow-teal-900/40 transition flex items-center justify-center gap-2 mt-2"
+      >
+        <i data-lucide="log-in" class="w-4 h-4"></i>
+        <span>Masuk ke Dashboard</span>
+      </button>
+    </form>
+
+    <!-- Tombol Kembali ke Kiosk -->
+    <div class="mt-6 pt-4 border-t border-slate-700/80 text-center">
+      <a href="/kiosk" class="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-teal-300 transition font-semibold">
+        <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+        <span>Kembali ke Layar Kios Presensi</span>
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Muat Identitas Lembaga & Logo
+    async function loadSchoolIdentity() {
+      try {
+        const res = await fetch('/api/settings');
+        const cfg = await res.json();
+        if (cfg.school_name) {
+          document.getElementById('loginSchoolName').innerText = cfg.school_name;
+        }
+        if (cfg.school_logo) {
+          document.getElementById('loginLogoBox').innerHTML = `<img src="${cfg.school_logo}" class="w-full h-full object-cover">`;
+        }
+      } catch (e) {}
+    }
+    loadSchoolIdentity();
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('passwordInput');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('usernameInput').value.trim();
+      const pass = document.getElementById('passwordInput').value;
+      const alertBox = document.getElementById('errorAlert');
+      const errorMsg = document.getElementById('errorMessage');
+      const btn = document.getElementById('btnLoginSubmit');
+
+      alertBox.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin mr-1">⌛</span> Memverifikasi...`;
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // Simpan token sesi
+          localStorage.setItem('admin_token', data.token || 'admin_session_auth_ok');
+          document.cookie = `admin_token=${data.token || 'admin_session_auth_ok'}; path=/; max-age=86400`;
+          window.location.href = '/dashboard';
+        } else {
+          errorMsg.innerText = data.message || 'Username atau kata sandi tidak valid.';
+          alertBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errorMsg.innerText = 'Gagal terhubung ke server mandiri.';
+        alertBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4"></i><span>Masuk ke Dashboard</span>`;
+        lucide.createIcons();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart School - Web Remote</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="login" class="center hidden">
+  <form class="card login" onsubmit="doLogin(event)">
+    <h1 id="schoolName">Smart School</h1>
+    <p class="muted">Web Remote Guru &amp; Admin</p>
+    <label>Username<input id="lu" required autocomplete="username"></label>
+    <label>Password<input id="lp" type="password" required autocomplete="current-password"></label>
+    <p id="lerr" class="err"></p>
+    <button class="btn primary w100">Masuk</button>
+  </form>
+</div>
+
+<div id="shell" class="hidden">
+  <aside id="side">
+    <div class="brand">Smart School</div>
+    <div id="who" class="muted small"></div>
+    <nav id="nav"></nav>
+    <a href="#" onclick="logout()" class="navlink">⎋ Keluar</a>
+  </aside>
+  <header class="topbar"><button class="btn" onclick="document.body.classList.toggle('open')">☰</button><b id="ptitle"></b></header>
+  <main id="page"></main>
+</div>
+
+<div id="modal" class="modal hidden"><div class="card mbox"><h2 id="mtitle"></h2><div id="mbody"></div>
+  <p id="merr" class="err"></p>
+  <div class="row end"><button class="btn" onclick="closeModal()">Batal</button><button id="msave" class="btn primary">Simpan</button></div>
+</div></div>
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

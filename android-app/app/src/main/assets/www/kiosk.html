@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layar Kiosk Absensi Mandiri - Smart School</title>
+  <!-- Fonts & Tailwind CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(0.98); }
+    }
+    .animate-pulse-soft { animation: pulseSoft 2.5s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white h-screen flex flex-col justify-between select-none overflow-hidden">
+
+  <!-- Header Layar TV Kiosk -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 px-4 py-2 sm:px-6 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      <div data-brand-logo class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-extrabold text-lg sm:text-xl shadow-lg shadow-teal-900/50 overflow-hidden">
+        🏫
+      </div>
+      <div>
+        <h1 id="schoolNameHeader" class="text-sm sm:text-lg font-extrabold tracking-tight text-white leading-tight">
+          MUSHOLLA AL MUHAJIRIN
+        </h1>
+        <p class="text-[11px] sm:text-xs text-teal-400 font-medium flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span data-term="kioskSubtitle">Presensi Mandiri Digital (RFID &amp; QR Code)</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Jam Digital Realtime & Status Sesi -->
+    <div class="flex items-center gap-3 sm:gap-5">
+      <div class="text-right">
+        <div id="liveClock" class="font-mono text-xl sm:text-2xl font-black text-emerald-400 tracking-wider">00:00:00</div>
+        <div id="liveDate" class="text-[11px] sm:text-xs text-slate-400 font-medium">Memuat tanggal...</div>
+      </div>
+      <div class="hidden md:flex items-center gap-2 bg-slate-700/60 px-3 py-1 rounded-xl border border-slate-600 text-xs text-slate-300">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>Batas Masuk: <strong id="toleransiBadge" class="text-white font-mono">07:15</strong></span>
+      </div>
+      <a href="/login" class="p-2 rounded-xl bg-slate-700/80 hover:bg-slate-600 text-slate-200 transition shadow" title="Login Admin Web Remote">
+        <i data-lucide="lock" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- SECTION JADWAL SHOLAT DIGITAL SIGNAGE TV ELEGAN -->
+  <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-teal-900/40 px-3 sm:px-6 py-1.5 shadow-md shrink-0">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2 sm:gap-3">
+      
+      <!-- Kiri: Info Sholat & Countdown Menuju Waktu Berikutnya -->
+      <div class="flex items-center justify-between w-full lg:w-auto gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-sm shrink-0">
+            <i data-lucide="compass" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div>
+            <div class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <span>Jadwal Sholat</span>
+              <span class="text-[9px] text-teal-500 font-mono font-normal">&bull; Auto-Falak Kemenag</span>
+            </div>
+            <div id="nextPrayerCountdownText" class="text-[11px] sm:text-xs font-black text-emerald-400 font-mono flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="nextPrayerBadgeLabel">Menghitung waktu...</span>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="testPrayerAlertModal()" class="text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 shadow-sm" title="Uji Coba Tampilan Waktu Sholat Tiba">
+          <i data-lucide="bell" class="w-3 h-3 text-amber-400"></i>
+          <span>Tes Notif Adzan</span>
+        </button>
+      </div>
+
+      <!-- Kanan: 6 Kartu Jadwal Sholat (Subuh, Syuruq, Dzuhur, Ashar, Maghrib, Isya) -->
+      <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full lg:w-auto overflow-x-auto text-center py-0.5">
+        <!-- Subuh -->
+        <div id="cardPrayerSubuh" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Subuh</span>
+          <strong id="ptSubuh" class="text-xs sm:text-sm font-black text-white font-mono mt-0.5">04:30</strong>
+        </div>
+
+        <!-- Syuruq -->
+        <div id="cardPrayerSyuruq" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-amber-400/80 uppercase tracking-tight">Syuruq</span>
+          <strong id="ptSyuruq" class="text-xs sm:text-sm font-black text-amber-300 font-mono mt-0.5">05:45</strong>
+        </div>
+
+        <!-- Dzuhur -->
+        <div id="cardPrayerDzuhur" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Dzuhur</span>
+          <strong id="ptDzuhur" class="text-xs sm:text-sm font-black text-white font-mono mt-0.5">11:55</strong>
+        </div>
+
+        <!-- Ashar -->
+        <div id="cardPrayerAshar" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Ashar</span>
+          <strong id="ptAshar" class="text-xs sm:text-sm font-black text-white font-mono mt-0.5">15:10</strong>
+        </div>
+
+        <!-- Maghrib -->
+        <div id="cardPrayerMaghrib" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Maghrib</span>
+          <strong id="ptMaghrib" class="text-xs sm:text-sm font-black text-white font-mono mt-0.5">17:58</strong>
+        </div>
+
+        <!-- Isya -->
+        <div id="cardPrayerIsya" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]">
+          <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tight">Isya</span>
+          <strong id="ptIsya" class="text-xs sm:text-sm font-black text-white font-mono mt-0.5">19:07</strong>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Konten Utama Kiosk (Flex 1, Pas di layar tanpa scroll) -->
+  <main class="flex-1 min-h-0 flex flex-col md:flex-row items-center justify-center p-3 sm:p-5 gap-4 md:gap-8 max-w-6xl mx-auto w-full overflow-hidden">
+    
+    <!-- Kolom Kiri: Ilustrasi Tap Kartu & Status Standby -->
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-center">
+      <div class="w-full max-w-sm bg-slate-800/90 border border-slate-700 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden text-center flex flex-col items-center justify-center">
+        
+        <!-- Gelombang Animasi Tap Reader -->
+        <div class="relative w-20 h-20 sm:w-24 sm:h-24 mb-3 flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full bg-teal-500/10 animate-ping"></div>
+          <div class="absolute inset-2 rounded-full bg-teal-500/20 animate-pulse"></div>
+          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-xl shadow-teal-900/60 z-10">
+            <i data-lucide="credit-card" class="w-8 h-8 sm:w-10 sm:h-10"></i>
+          </div>
+        </div>
+
+        <h2 class="text-base sm:text-xl font-black text-white tracking-tight mb-1">
+          TEMPELKAN KARTU DISINI
+        </h2>
+        <p class="text-xs text-slate-400 max-w-xs mb-3" data-term="kioskTapPrompt">
+          Tap Kartu RFID Santri atau scan QR Code pada mesin scanner USB.
+        </p>
+
+        <!-- Input Tersembunyi (Auto-focus untuk USB RFID Reader Wedge) -->
+        <div class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2.5 flex items-center gap-2.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+          <input 
+            type="text" 
+            id="rfidInput" 
+            placeholder="Reader USB Standby (Siap Tap)..." 
+            autocomplete="off"
+            autofocus
+            class="bg-transparent border-none text-xs text-emerald-400 font-mono focus:outline-none w-full"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom Kanan: Feed Presensi Terkini Hari Ini -->
+    <div class="w-full md:w-1/2 flex flex-col max-w-md h-full max-h-[300px] sm:max-h-[340px]">
+      <div class="bg-slate-800/70 border border-slate-700 rounded-3xl p-4 sm:p-5 shadow-xl w-full h-full flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-700 shrink-0">
+          <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i data-lucide="history" class="w-4 h-4 text-teal-400"></i>
+            Presensi Terkini Hari Ini
+          </h3>
+          <span id="statHadirBadge" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+            0 Hadir
+          </span>
+        </div>
+
+        <!-- Daftar 5 Scan Terakhir (Internal scrollable jika banyak, layar tetap diam) -->
+        <div id="recentList" class="space-y-2 overflow-y-auto flex-1 pr-1 min-h-0">
+          <div class="text-xs text-slate-500 italic text-center py-8">
+            Belum ada santri yang melakukan presensi hari ini.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Pop-Up Hasil Presensi Siswa -->
+  <div id="resultModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="resultCard" class="bg-slate-800 border-2 border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center transform scale-95 transition-transform duration-300">
+      
+      <!-- Avatar & Foto Siswa Asli -->
+      <div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-3">
+        <img id="resPhoto" src="" class="w-full h-full rounded-2xl object-cover border-2 border-white shadow-xl hidden">
+        <div id="resAvatar" class="w-full h-full rounded-2xl bg-teal-600 text-white flex items-center justify-center font-extrabold text-3xl sm:text-4xl shadow-lg">
+          ?
+        </div>
+      </div>
+
+      <!-- Badge Status (Hadir / Terlambat) -->
+      <div id="resBadge" class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider mb-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+        ✓ HADIR TEPAT WAKTU
+      </div>
+
+      <!-- Nama Siswa & Kelas -->
+      <h3 id="resName" class="text-xl sm:text-2xl font-black text-white leading-tight">Nama Santri</h3>
+      <p id="resMeta" class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Kelas - &bull; NIS: -</p>
+
+      <!-- Pesan Keterangan & Jam -->
+      <div id="resMessage" class="mt-3 p-2.5 rounded-xl bg-slate-900/90 text-xs text-slate-300 font-medium">
+        Presensi berhasil dicatat.
+      </div>
+
+      <div class="mt-4 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="kioskParentWaNotice">Notifikasi WhatsApp terkirim ke wali santri via Cloud Gateway</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pop-Up Notifikasi Waktu Sholat Tiba (Adzan / Panggilan Sholat) -->
+  <div id="prayerAlertModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 z-50 transition-all duration-500 opacity-0 pointer-events-none">
+    <div id="prayerAlertCard" class="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-950 border-2 border-emerald-500/50 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl text-center transform scale-90 transition-all duration-500 relative overflow-hidden">
+      
+      <!-- Ornamen Latar Belakang Glowing -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Icon Masjid & Animasi Gelombang Suara Adzan -->
+      <div class="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
+        <div class="absolute inset-2 rounded-full bg-emerald-500/30 animate-pulse"></div>
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-2xl sm:text-3xl shadow-xl shadow-emerald-900/60 z-10">
+          🕌
+        </div>
+      </div>
+
+      <!-- Kaligrafi & Panggilan Sholat -->
+      <div class="text-emerald-400 font-extrabold text-xs tracking-widest uppercase mb-1">
+        حَيَّ عَلَى الصَّلَاةِ &bull; PANGGILAN SHOLAT
+      </div>
+      <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight" id="alertPrayerTitle">
+        WAKTU SHOLAT DZUHUR TELAH TIBA
+      </h2>
+      <p class="text-xs text-slate-300 mt-1.5 max-w-md mx-auto" id="alertPrayerSubtitle">
+        Saatnya menghentikan aktivitas sejenak dan menyegerakan sholat fardhu berjamaah.
+      </p>
+
+      <!-- Kotak Hitung Waktu Menjelang Iqomah -->
+      <div class="my-4 p-3 rounded-2xl bg-slate-950/80 border border-slate-700/80 flex items-center justify-around gap-4 font-mono">
+        <div>
+          <div class="text-[9px] text-slate-400 font-bold uppercase">Jam Masuk Waktu</div>
+          <div class="text-base sm:text-xl font-black text-amber-400" id="alertPrayerTime">11:55</div>
+        </div>
+        <div class="h-7 w-px bg-slate-700"></div>
+        <div>
+          <div class="text-[9px] text-slate-400 font-bold uppercase">Menuju Iqomah</div>
+          <div class="text-base sm:text-xl font-black text-emerald-400 animate-pulse" id="alertIqomahCountdown">10:00</div>
+        </div>
+      </div>
+
+      <!-- Kutipan Ayat Al-Qur'an -->
+      <p class="text-[10px] sm:text-[11px] text-slate-400 italic max-w-md mx-auto">
+        "Sesungguhnya sholat itu adalah fardhu yang ditentukan waktunya atas orang-orang yang beriman."
+        <br><span class="font-bold text-slate-300 not-italic">(QS. An-Nisa: 103)</span>
+      </p>
+
+      <!-- Tombol Aksi -->
+      <div class="mt-5 flex items-center justify-center gap-3">
+        <button onclick="dismissPrayerAlert()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-900/40 transition flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Lanjutkan ke Kios Presensi</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer Kiosk Aman (Tanpa Mengekspos URL/IP Publik) -->
+  <footer class="bg-slate-950/90 border-t border-slate-800 px-4 sm:px-6 py-2 flex items-center justify-between text-xs text-slate-400 shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span class="text-slate-300 font-bold">Sistem Presensi Mandiri Digital Aktif</span>
+      <span class="text-slate-600 hidden sm:inline">&bull; Kios Standby</span>
+    </div>
+    <div class="text-[11px] text-slate-400 font-medium hidden sm:flex items-center gap-1.5">
+      <i data-lucide="shield-check" class="w-3.5 h-3.5 text-teal-400"></i>
+      <span>Presensi Terverifikasi &amp; Aman</span>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    // 1. Digital Clock & Date
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('liveClock').innerText = `${h}:${m}:${s}`;
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('liveDate').innerText = now.toLocaleDateString('id-ID', options);
+      if (typeof updatePrayerSchedule === 'function') {
+        updatePrayerSchedule(now);
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. Web Audio API Synthesizer (Chime D5/A5 tanpa dependensi file eksternal)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'SUCCESS') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } else if (type === 'WARNING') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(330, now + 0.15);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, now);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        }
+      } catch (e) {}
+    }
+
+    // 3. Text-to-Speech (Panggil Nama Santri dalam Bahasa Indonesia)
+    function speakName(name, status) {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const text = status === 'HADIR' ? `Selamat datang, ${name}.` : `Perhatian, ${name}, terlambat.`;
+        const ut = new SpeechSynthesisUtterance(text);
+        ut.lang = 'id-ID';
+        ut.rate = 1.0;
+        window.speechSynthesis.speak(ut);
+      } catch (e) {}
+    }
+
+    // 4. Hitung Jadwal Sholat Kemenag Falakiyah Offline (Standar Indonesia)
+    let currentPrayerTimes = null;
+    let nextPrayerInfo = null;
+    let lastAlertedPrayer = null;
+    let iqomahInterval = null;
+
+    function calculateFalakPrayerTimes(date, lat = -6.2088, lng = 106.8456, timezone = 7) {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+
+      const a = Math.floor((14 - month) / 12);
+      const y = year + 4800 - a;
+      const m = month + 12 * a - 3;
+      const jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+      const d = jd - 2451545.0;
+
+      const g = (357.529 + 0.98560028 * d) % 360;
+      const q = (280.459 + 0.98564736 * d) % 360;
+      const L = (q + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180)) % 360;
+
+      const e = 23.439 - 0.00000036 * d;
+      const sinDec = Math.sin(e * Math.PI / 180) * Math.sin(L * Math.PI / 180);
+      const dec = Math.asin(sinDec);
+      const decDeg = dec * 180 / Math.PI;
+
+      const RA = Math.atan2(Math.cos(e * Math.PI / 180) * Math.sin(L * Math.PI / 180), Math.cos(L * Math.PI / 180)) * 180 / Math.PI;
+      let EqT = (q / 15 - RA / 15) * 60;
+      while (EqT > 20) EqT -= 24 * 60;
+      while (EqT < -20) EqT += 24 * 60;
+
+      // Dzuhur + 2 menit ihtiyat
+      const dzuhurDec = 12 + timezone - (lng / 15) - (EqT / 60) + (2 / 60);
+
+      const rad = Math.PI / 180;
+      const latRad = lat * rad;
+
+      function getHourAngle(altDeg) {
+        const altRad = altDeg * rad;
+        const cosHA = (Math.sin(altRad) - Math.sin(latRad) * Math.sin(dec)) / (Math.cos(latRad) * Math.cos(dec));
+        if (cosHA > 1 || cosHA < -1) return null;
+        return (Math.acos(cosHA) * 180 / Math.PI) / 15;
+      }
+
+      // Subuh: -20° (+2m)
+      const haSubuh = getHourAngle(-20);
+      const subuhDec = haSubuh ? dzuhurDec - haSubuh : dzuhurDec - 1.75;
+
+      // Syuruq: -1°
+      const haSyuruq = getHourAngle(-1.0);
+      const syuruqDec = haSyuruq ? dzuhurDec - haSyuruq : dzuhurDec - 1.0;
+
+      // Ashar: bayangan = 1 + tan(|lat - dec|)
+      const deltaLat = Math.abs(lat - decDeg);
+      const asharAltRad = Math.atan(1 / (1 + Math.tan(deltaLat * rad)));
+      const asharAltDeg = asharAltRad * 180 / Math.PI;
+      const haAshar = getHourAngle(asharAltDeg);
+      const asharDec = haAshar ? dzuhurDec + haAshar : dzuhurDec + 3.25;
+
+      // Maghrib: -1° (+2m)
+      const haMaghrib = getHourAngle(-1.0);
+      const maghribDec = haMaghrib ? dzuhurDec + haMaghrib : dzuhurDec + 6.0;
+
+      // Isya: -18° (+2m)
+      const haIsya = getHourAngle(-18.0);
+      const isyaDec = haIsya ? dzuhurDec + haIsya : dzuhurDec + 7.2;
+
+      function formatTime(decHours) {
+        let totalMinutes = Math.round(decHours * 60);
+        let h = Math.floor(totalMinutes / 60) % 24;
+        let m = totalMinutes % 60;
+        if (h < 0) h += 24;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+
+      function toDate(decHours, targetDate) {
+        let totalSeconds = Math.round(decHours * 3600);
+        let h = Math.floor(totalSeconds / 3600) % 24;
+        let rem = totalSeconds % 3600;
+        let m = Math.floor(rem / 60);
+        let s = rem % 60;
+        const d = new Date(targetDate);
+        d.setHours(h, m, s, 0);
+        return d;
+      }
+
+      return {
+        subuh: formatTime(subuhDec),
+        syuruq: formatTime(syuruqDec),
+        dzuhur: formatTime(dzuhurDec),
+        ashar: formatTime(asharDec),
+        maghrib: formatTime(maghribDec),
+        isya: formatTime(isyaDec),
+        dates: {
+          Subuh: toDate(subuhDec, date),
+          Syuruq: toDate(syuruqDec, date),
+          Dzuhur: toDate(dzuhurDec, date),
+          Ashar: toDate(asharDec, date),
+          Maghrib: toDate(maghribDec, date),
+          Isya: toDate(isyaDec, date)
+        }
+      };
+    }
+
+    function updatePrayerSchedule(now) {
+      currentPrayerTimes = calculateFalakPrayerTimes(now);
+      
+      document.getElementById('ptSubuh').innerText = currentPrayerTimes.subuh;
+      document.getElementById('ptSyuruq').innerText = currentPrayerTimes.syuruq;
+      document.getElementById('ptDzuhur').innerText = currentPrayerTimes.dzuhur;
+      document.getElementById('ptAshar').innerText = currentPrayerTimes.ashar;
+      document.getElementById('ptMaghrib').innerText = currentPrayerTimes.maghrib;
+      document.getElementById('ptIsya').innerText = currentPrayerTimes.isya;
+
+      // Cari sholat berikutnya
+      const prayers = [
+        { name: 'Subuh', key: 'Subuh', date: currentPrayerTimes.dates.Subuh, time: currentPrayerTimes.subuh, isFardhu: true },
+        { name: 'Syuruq', key: 'Syuruq', date: currentPrayerTimes.dates.Syuruq, time: currentPrayerTimes.syuruq, isFardhu: false },
+        { name: 'Dzuhur', key: 'Dzuhur', date: currentPrayerTimes.dates.Dzuhur, time: currentPrayerTimes.dzuhur, isFardhu: true },
+        { name: 'Ashar', key: 'Ashar', date: currentPrayerTimes.dates.Ashar, time: currentPrayerTimes.ashar, isFardhu: true },
+        { name: 'Maghrib', key: 'Maghrib', date: currentPrayerTimes.dates.Maghrib, time: currentPrayerTimes.maghrib, isFardhu: true },
+        { name: 'Isya', key: 'Isya', date: currentPrayerTimes.dates.Isya, time: currentPrayerTimes.isya, isFardhu: true }
+      ];
+
+      let nextP = null;
+      for (const p of prayers) {
+        if (p.date > now) {
+          nextP = p;
+          break;
+        }
+      }
+
+      // Jika semua sudah lewat hari ini, targetkan Subuh esok hari
+      if (!nextP) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomTimes = calculateFalakPrayerTimes(tomorrow);
+        nextP = {
+          name: 'Subuh (Besok)',
+          key: 'Subuh',
+          date: tomTimes.dates.Subuh,
+          time: tomTimes.subuh,
+          isFardhu: true
+        };
+      }
+
+      nextPrayerInfo = nextP;
+
+      // Reset style kartu
+      const allCards = ['cardPrayerSubuh', 'cardPrayerSyuruq', 'cardPrayerDzuhur', 'cardPrayerAshar', 'cardPrayerMaghrib', 'cardPrayerIsya'];
+      allCards.forEach(cid => {
+        const el = document.getElementById(cid);
+        if (el) {
+          el.className = 'px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[58px] sm:min-w-[72px]';
+        }
+      });
+
+      // Highlight kartu sholat berikutnya
+      const activeCardId = 'cardPrayer' + nextP.key;
+      const activeCard = document.getElementById(activeCardId);
+      if (activeCard) {
+        activeCard.className = 'px-2.5 py-1.5 rounded-xl bg-emerald-950/70 border-2 border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-900/50 transition-all duration-300 flex flex-col items-center min-w-[58px] sm:min-w-[72px] scale-105';
+      }
+
+      // Hitung selisih waktu
+      const diffMs = nextP.date - now;
+      if (diffMs > 0) {
+        const diffSec = Math.floor(diffMs / 1000);
+        const hh = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+        const mm = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+        const ss = String(diffSec % 60).padStart(2, '0');
+        document.getElementById('nextPrayerBadgeLabel').innerText = `Menuju ${nextP.name}: -${hh}:${mm}:${ss}`;
+      } else {
+        document.getElementById('nextPrayerBadgeLabel').innerText = `Waktu ${nextP.name} Tiba`;
+      }
+
+      // Periksa apakah waktu sholat fardhu tiba detik ini
+      checkPrayerArrival(now, prayers);
+    }
+
+    function checkPrayerArrival(now, prayers) {
+      const nowH = String(now.getHours()).padStart(2, '0');
+      const nowM = String(now.getMinutes()).padStart(2, '0');
+      const nowHM = `${nowH}:${nowM}`;
+      const nowSec = now.getSeconds();
+
+      for (const p of prayers) {
+        if (!p.isFardhu) continue; // Notifikasi adzan khusus sholat fardhu
+        if (p.time === nowHM && nowSec <= 2) {
+          const alertKey = `${now.toDateString()}_${p.name}`;
+          if (lastAlertedPrayer !== alertKey) {
+            lastAlertedPrayer = alertKey;
+            showPrayerAlert(p.name, p.time);
+          }
+        }
+      }
+    }
+
+    // Nada Adzan Islami Syahdu (Web Audio Harmonic Chime 100% Offline)
+    function playAdzanChime() {
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const notes = [
+          { freq: 293.66, time: 0.0, dur: 0.8 },  // D4
+          { freq: 349.23, time: 0.7, dur: 0.8 },  // F4
+          { freq: 392.00, time: 1.4, dur: 1.0 },  // G4
+          { freq: 440.00, time: 2.3, dur: 1.2 },  // A4
+          { freq: 523.25, time: 3.4, dur: 1.0 },  // C5
+          { freq: 587.33, time: 4.3, dur: 2.2 }   // D5
+        ];
+
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.time);
+          
+          gain.gain.setValueAtTime(0.001, audioCtx.currentTime + n.time);
+          gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + n.time + 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + n.time + n.dur);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(audioCtx.currentTime + n.time);
+          osc.stop(audioCtx.currentTime + n.time + n.dur);
+        });
+      } catch (e) {}
+    }
+
+    // Modal Peringatan Waktu Sholat Tiba
+    function showPrayerAlert(prayerName, prayerTime) {
+      const modal = document.getElementById('prayerAlertModal');
+      const card = document.getElementById('prayerAlertCard');
+      const title = document.getElementById('alertPrayerTitle');
+      const sub = document.getElementById('alertPrayerSubtitle');
+      const timeEl = document.getElementById('alertPrayerTime');
+      const iqomahEl = document.getElementById('alertIqomahCountdown');
+
+      if (!modal || !card) return;
+
+      title.innerText = `WAKTU SHOLAT ${prayerName.toUpperCase()} TELAH TIBA`;
+      sub.innerText = `Saatnya menghentikan aktivitas sejenak dan bersiap menunaikan sholat fardhu ${prayerName} berjamaah.`;
+      timeEl.innerText = prayerTime;
+
+      // Bunyikan Nada Adzan & TTS
+      playAdzanChime();
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const text = `Telah masuk waktu sholat ${prayerName} untuk wilayah sekitar. Mari bersama-sama tunaikan sholat fardhu berjamaah.`;
+          const ut = new SpeechSynthesisUtterance(text);
+          ut.lang = 'id-ID';
+          ut.rate = 0.95;
+          setTimeout(() => window.speechSynthesis.speak(ut), 800);
+        } catch (e) {}
+      }
+
+      // Animasi Tampil Modal
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      card.classList.remove('scale-95');
+      card.classList.add('scale-100');
+
+      // Countdown Iqomah (10 menit)
+      let remainSec = 10 * 60;
+      clearInterval(iqomahInterval);
+      iqomahInterval = setInterval(() => {
+        remainSec--;
+        if (remainSec <= 0) {
+          clearInterval(iqomahInterval);
+          dismissPrayerAlert();
+          return;
+        }
+        const m = String(Math.floor(remainSec / 60)).padStart(2, '0');
+        const s = String(remainSec % 60).padStart(2, '0');
+        iqomahEl.innerText = `${m}:${s}`;
+      }, 1000);
+    }
+
+    function dismissPrayerAlert() {
+      const modal = document.getElementById('prayerAlertModal');
+      const card = document.getElementById('prayerAlertCard');
+      clearInterval(iqomahInterval);
+      if (modal && card) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        card.classList.add('scale-95');
+        card.classList.remove('scale-100');
+      }
+    }
+
+    // Tombol Uji Coba Cepat untuk Admin/User
+    function testPrayerAlertModal() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      showPrayerAlert('Dzuhur', `${h}:${m}`);
+    }
+
+    // 5. Muat Data Settings & Remote URL
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const cfg = await res.json();
+        if (cfg.school_name) {
+          document.getElementById('schoolNameHeader').innerText = cfg.school_name;
+        }
+        if (cfg.toleransi_telat) {
+          document.getElementById('toleransiBadge').innerText = cfg.toleransi_telat;
+        }
+      } catch (e) {}
+    }
+    loadSettings();
+
+    // 6. Muat Scan Terkini
+    async function loadRecentScans() {
+      try {
+        const res = await fetch('/api/attendance/recent');
+        const items = await res.json();
+        const list = document.getElementById('recentList');
+        if (!items || items.length === 0) {
+          list.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-10">Belum ada ${(AppTerms.get('studentPlural') || 'santri').toLowerCase()} yang melakukan presensi hari ini.</div>`;
+          document.getElementById('statHadirBadge').innerText = '0 Hadir';
+          return;
+        }
+
+        document.getElementById('statHadirBadge').innerText = `${items.length} Hadir`;
+
+        list.innerHTML = items.slice(0, 5).map(item => {
+          const avatar = item.photo 
+            ? `<img src="${item.photo}" class="w-9 h-9 rounded-xl object-cover border border-slate-700">`
+            : `<div class="w-9 h-9 rounded-xl bg-teal-600/30 text-teal-300 font-extrabold flex items-center justify-center">${item.name.charAt(0)}</div>`;
+
+          return `
+            <div class="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between text-xs transition">
+              <div class="flex items-center gap-3">
+                ${avatar}
+                <div>
+                  <p class="font-bold text-white leading-tight">${item.name}</p>
+                  <p class="text-[11px] text-slate-400">${AppTerms.get('classLabel') || 'Kelas'} ${item.class_name || '-'}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="font-mono text-xs text-slate-300 font-semibold">${item.time_in}</span>
+                <div>
+                  <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
+                    ${item.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {}
+    }
+    loadRecentScans();
+
+    // 7. Penanganan Tap Kartu RFID / Barcode Scanner
+    const rfidInput = document.getElementById('rfidInput');
+    let isProcessing = false;
+    let modalTimer = null;
+
+    // Pastikan kursor selalu fokus di input RFID
+    window.addEventListener('click', () => rfidInput.focus());
+
+    rfidInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const code = rfidInput.value.trim();
+        rfidInput.value = '';
+        if (code.length >= 3 && !isProcessing) {
+          processAttendance(code);
+        }
+      }
+    });
+
+    // Bridge fungsi global untuk Android MainActivity dispatchKeyEvent
+    window.processAttendance = processAttendance;
+    window.handleRfidCard = processAttendance;
+
+    async function processAttendance(code) {
+      isProcessing = true;
+      try {
+        const res = await fetch('/api/attendance/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        showResultModal(data);
+        loadRecentScans();
+      } catch (e) {
+        showResultModal({
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: 'Gagal terhubung ke database server mandiri.'
+        });
+      } finally {
+        setTimeout(() => {
+          isProcessing = false;
+          rfidInput.focus();
+        }, 1200);
+      }
+    }
+
+    function showResultModal(data) {
+      clearTimeout(modalTimer);
+      const modal = document.getElementById('resultModal');
+      const card = document.getElementById('resultCard');
+      const resName = document.getElementById('resName');
+      const resMeta = document.getElementById('resMeta');
+      const resBadge = document.getElementById('resBadge');
+      const resPhoto = document.getElementById('resPhoto');
+      const resAvatar = document.getElementById('resAvatar');
+      const waNotice = document.getElementById('kioskParentWaNotice');
+
+      if (waNotice) {
+        waNotice.innerText = `Notifikasi WhatsApp terkirim ke ${(AppTerms.get('parentPlural') || 'wali santri').toLowerCase()} via Cloud Gateway`;
+      }
+
+      if (data.student) {
+        resName.innerText = data.student.name;
+        resMeta.innerText = `${AppTerms.get('classLabel') || 'Kelas'} ${data.student.class_name || '-'} • ${AppTerms.get('nisLabel') || 'NIS'}: ${data.student.nis}`;
+        if (data.student.photo) {
+          resPhoto.src = data.student.photo;
+          resPhoto.classList.remove('hidden');
+          resAvatar.classList.add('hidden');
+        } else {
+          resPhoto.src = '';
+          resPhoto.classList.add('hidden');
+          resAvatar.classList.remove('hidden');
+          resAvatar.innerText = data.student.name.charAt(0);
+        }
+      } else {
+        resPhoto.src = '';
+        resPhoto.classList.add('hidden');
+        resAvatar.classList.remove('hidden');
+        resName.innerText = 'Kartu Tidak Dikenal';
+        resMeta.innerText = `${AppTerms.get('nisLabel') || 'NIS'} / UID Belum Terdaftar`;
+        resAvatar.innerText = '✕';
+      }
+
+      resMessage.innerText = data.message || 'Presensi berhasil dicatat.';
+
+      if (data.code === 'SUCCESS') {
+        if (data.status === 'HADIR') {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+          resBadge.innerText = '✓ HADIR TEPAT WAKTU';
+          playSound('SUCCESS');
+          speakName(data.student.name, 'HADIR');
+        } else {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-3 bg-amber-500/20 text-amber-400 border border-amber-500/40';
+          resBadge.innerText = `⚠ TERLAMBAT (${data.lateMinutes} MENIT)`;
+          playSound('WARNING');
+          speakName(data.student.name, 'TERLAMBAT');
+        }
+      } else if (data.code === 'ALREADY_ATTENDED') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-3 bg-blue-500/20 text-blue-400 border border-blue-500/40';
+        resBadge.innerText = 'ℹ SUDAH ABSEN HARI INI';
+        playSound('WARNING');
+      } else {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider mb-3 bg-rose-500/20 text-rose-400 border border-rose-500/40';
+        resBadge.innerText = '✕ DATA TIDAK DITEMUKAN';
+        playSound('ERROR');
+      }
+
+      // Animasi Buka Modal
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      card.classList.remove('scale-95');
+      card.classList.add('scale-100');
+
+      modalTimer = setTimeout(() => {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        card.classList.add('scale-95');
+        card.classList.remove('scale-100');
+      }, 3500);
+    }
+
+    window.addEventListener('termsChanged', () => {
+      loadRecentScans();
+      const waNotice = document.getElementById('kioskParentWaNotice');
+      if (waNotice) {
+        waNotice.innerText = `Notifikasi WhatsApp terkirim ke ${(AppTerms.get('parentPlural') || 'wali santri').toLowerCase()} via Cloud Gateway`;
+      }
+    });
+  </script>
+</body>
+</html>

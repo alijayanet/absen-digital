@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A1128"
+    android:orientation="vertical">
+
+    <!-- 1. Top Header Bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="#0F172A"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp">
+
+        <!-- Logo & Title -->
+        <ImageView
+            android:id="@+id/ivSchoolLogo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@string/app_name"
+            android:src="@mipmap/ic_launcher" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvHeaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SMART SCHOOL &amp; MAJLIS TA'LIM"
+                android:textColor="@android:color/white"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHeaderSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sistem Presensi RFID USB &amp; Antrian Mengaji Santri"
+                android:textColor="#34D399"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Digital Clock & Date Center-Right -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvLiveClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="07:00:00 WIB"
+                android:textColor="#38BDF8"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvLiveDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Jumat, 09 Oktober 2026"
+                android:textColor="#94A3B8"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Server Status Badge -->
+        <TextView
+            android:id="@+id/tvConnectionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="18dp"
+            android:background="@drawable/bg_badge_success"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="🟢 Online"
+            android:textColor="#34D399"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Settings Button (TV Remote Focusable) -->
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Pengaturan Server"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_settings_gear"
+            app:tint="@android:color/white" />
+
+    </LinearLayout>
+
+    <!-- 2. Prayer Times Strip (Jadwal Sholat 5 Waktu) -->
+    <LinearLayout
+        android:id="@+id/prayerBar"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:background="#131D38"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_mosque"
+            app:tint="#10B981" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Jadwal Sholat:"
+            android:textColor="#34D399"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPrayerSchedule"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:text="Subuh: 04:13  •  Dzuhur: 11:37  •  Ashar: 14:38  •  Maghrib: 17:43  •  Isya: 18:53"
+            android:textColor="#E2E8F0"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvNextPrayerCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Menuju Subuh: 09:12:38"
+            android:textColor="#FBBF24"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 3. Active Queue Call Banner (Animated / Prominent Notification) -->
+    <LinearLayout
+        android:id="@+id/layoutActiveCallBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_calling_banner"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="10dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ImageView
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_speaker"
+            app:tint="#FEF3C7" />
+
+        <TextView
+            android:id="@+id/tvCallingBannerText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:text="📢 PANGGILAN: NOMOR ANTRIAN #05 (AHMAD DAHLAN) ➔ MEJA 1 (SANTRI LAKI LAKI)"
+            android:textColor="#FFFFFF"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvCallingCountBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#78350F"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:text="Panggilan Ke-1"
+            android:textColor="#FEF3C7"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 4. Main Body: Split into Left (RFID Absensi) and Right (Antrian Mengaji) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- ================= LEFT COLUMN: RFID SCANNER & STATUS (~32% width) ================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="32"
+            app:cardBackgroundColor="#131D38"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeColor="#1E293B"
+            app:strokeWidth="1.5dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Header Absensi -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_rfid_card"
+                        app:tint="#34D399" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="PRESENSI RFID SANTRI"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_badge_success"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="3dp"
+                        android:text="HID READY"
+                        android:textColor="#34D399"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="10dp"
+                    android:background="#1E293B" />
+
+                <!-- Container 1: Standby Mode (Default) -->
+                <LinearLayout
+                    android:id="@+id/layoutRfidStandby"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/ivRfidPulse"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:src="@drawable/ic_rfid_card"
+                        app:tint="#10B981" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="TEMPELKAN KARTU RFID"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:text="Dekatkan kartu santri ke reader USB di samping layar"
+                        android:textColor="#94A3B8"
+                        android:textSize="13sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:background="#0F172A"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💡 Otomatisasi Presensi:"
+                            android:textColor="#FBBF24"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="• Langsung tercatat Hadir ke sistem sekolah\n• Mendapatkan nomor antrian mengaji otomatis\n• 100% tanpa pop-up keyboard virtual di layar"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Container 2: Scan Result Mode (Card Pop-up / Overlay) -->
+                <LinearLayout
+                    android:id="@+id/layoutRfidResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="gone">
+
+                    <!-- Result Badge -->
+                    <TextView
+                        android:id="@+id/tvScanResultBadge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_badge_success"
+                        android:gravity="center"
+                        android:paddingVertical="8dp"
+                        android:text="✅ PRESENSI BERHASIL"
+                        android:textColor="#34D399"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <!-- Student Photo / Avatar -->
+                    <ImageView
+                        android:id="@+id/ivStudentPhoto"
+                        android:layout_width="88dp"
+                        android:layout_height="88dp"
+                        android:layout_marginTop="12dp"
+                        android:contentDescription="Foto Santri"
+                        android:src="@drawable/ic_user_avatar" />
+
+                    <!-- Student Name -->
+                    <TextView
+                        android:id="@+id/tvStudentName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="Ahmad Dahlan"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <!-- Student Info (NIS & Kelas) -->
+                    <TextView
+                        android:id="@+id/tvStudentClassNis"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="NIS: 202401001  •  SANTRI LAKI LAKI"
+                        android:textColor="#94A3B8"
+                        android:textSize="13sp" />
+
+                    <!-- Time & Status -->
+                    <TextView
+                        android:id="@+id/tvScanTimeStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Jam: 07:15:22 WIB  •  Status: HADIR"
+                        android:textColor="#38BDF8"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <!-- Golden Ticket Box: Assigned Queue Number -->
+                    <LinearLayout
+                        android:id="@+id/layoutQueueAssigned"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_calling_banner"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="NOMOR ANTRIAN MENGAJI ANDA"
+                            android:textColor="#FEF3C7"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAssignedQueueNumber"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="NOMOR 05"
+                            android:textColor="@android:color/white"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAssignedQueueClass"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Silakan menuju ruang tunggu antrian"
+                            android:textColor="#FEF3C7"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Auto-dismiss countdown notice -->
+                    <TextView
+                        android:id="@+id/tvDismissTimer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Kembali ke standby dalam 5 detik..."
+                        android:textColor="#64748B"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ================= RIGHT COLUMN: STATUS ANTRIAN MENGAJI (~68% width) ================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="6dp"
+            android:layout_weight="68"
+            app:cardBackgroundColor="#131D38"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:strokeColor="#1E293B"
+            app:strokeWidth="1.5dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Header Panel Antrian -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="PAPAN STATUS MEJA MENGAJI SANTRI"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvTotalTablesCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#0F172A"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="2 Meja Aktif"
+                        android:textColor="#38BDF8"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="10dp"
+                    android:background="#1E293B" />
+
+                <!-- RecyclerView of Tables -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvQueueTables"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:scrollbars="vertical" />
+
+                <!-- Empty State -->
+                <TextView
+                    android:id="@+id/tvEmptyTables"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="Memuat data antrian meja mengaji..."
+                    android:textColor="#64748B"
+                    android:textSize="15sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <!-- 5. Bottom Marquee Running Text & Quick Help -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        android:background="#0F172A"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:id="@+id/tvInfoBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#065F46"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:text="INFO"
+            android:textColor="#34D399"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <!-- Marquee Announcement Text (Fullscreen Width ke Kanan) -->
+        <TextView
+            android:id="@+id/tvMarqueeAnnouncement"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:ellipsize="marquee"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:scrollHorizontally="true"
+            android:singleLine="true"
+            android:text="Selamat datang di Majlis Ta'lim &amp; Lembaga Pendidikan Al-Muhajirin • Santri wajib melakukan presensi kartu sebelum mengaji • Mohon tenang dan tertib selama kegiatan mengaji berlangsung."
+            android:textColor="#E2E8F0"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

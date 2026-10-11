@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cetak ID Card Santri - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/static/js/html2canvas.min.js"></script>
+  <script src="/static/js/jszip.min.js"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Ukuran Standar Kartu CR-80 (54mm x 85.6mm) */
+    .idcard-box {
+      width: 54mm;
+      height: 85.6mm;
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+      background: white;
+      border-radius: 4mm;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Cetak <span data-term="cardTitle">Kartu Santri</span></h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Model 4 Portrait &bull; Logo Samping 1:1 Presisi</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="credit-card" class="w-4 h-4 text-teal-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
+
+    <!-- Kontrol Toolbar -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="w-full sm:w-auto flex items-center gap-3">
+        <label class="text-xs font-bold text-slate-700 shrink-0">Pilih <span data-term="studentSingular">Santri</span>:</label>
+        <select id="studentSelect" onchange="renderSelectedCard()" class="p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold w-full sm:w-64 focus:outline-none focus:border-teal-500">
+          <!-- Populated via JS -->
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+        <button onclick="downloadCardImage()" class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Unduh PNG</span>
+        </button>
+        <button id="btnZipAll" onclick="downloadAllCardsZip()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="archive" class="w-4 h-4"></i>
+          <span>Unduh Semua (.ZIP)</span>
+        </button>
+        <button onclick="sendToParentWhatsApp()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>Kirim WhatsApp</span>
+        </button>
+        <button onclick="window.print()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Cetak</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Preview Kartu Santri (Model 4 Portrait dengan Ribbon Samping & Logo 1:1) -->
+    <div class="flex items-center justify-center p-4">
+      <div id="idcardRender" class="idcard-box shadow-2xl border border-slate-300 flex flex-row">
+        
+        <!-- Ribbon Kiri (Logo 1:1 Bulat + Nama Instansi Vertikal) -->
+        <div class="w-[14mm] bg-gradient-to-b from-teal-800 via-teal-900 to-slate-900 flex flex-col items-center justify-between py-3 px-1 text-white shrink-0">
+          <!-- Logo 1:1 Bulat Presisi -->
+          <div id="cardLogoBox" class="w-[10mm] h-[10mm] rounded-full bg-white flex items-center justify-center text-teal-800 font-extrabold text-sm shadow overflow-hidden">
+            <img id="cardLogoImg" src="" class="w-full h-full object-cover hidden">
+            <span id="cardLogoFallback">🏫</span>
+          </div>
+
+          <!-- Teks Vertikal Nama Instansi -->
+          <div id="ribbonSchoolName" class="text-[8px] font-black tracking-widest text-teal-200 uppercase whitespace-nowrap" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+            SMART SCHOOL
+          </div>
+
+          <!-- Aksen Bawah -->
+          <div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
+        </div>
+
+        <!-- Badan Kartu Kanan -->
+        <div class="flex-1 flex flex-col justify-between p-3.5 bg-gradient-to-b from-white to-slate-50">
+          <!-- Header Lembaga -->
+          <div>
+            <h4 class="text-[10px] font-black text-slate-800 uppercase tracking-tight leading-tight" id="cardBannerTitle">KARTU SANTRI RESMI</h4>
+            <p class="text-[7px] text-slate-400 font-medium">Sistem Presensi Mandiri IoT</p>
+            <div class="h-0.5 w-full bg-teal-500 rounded-full mt-1"></div>
+          </div>
+
+          <!-- Foto / Avatar Santri -->
+          <div class="flex flex-col items-center my-auto">
+            <div class="relative w-16 h-16 mb-2">
+              <img id="cardPhoto" src="" class="w-full h-full rounded-2xl object-cover shadow-md border-2 border-white hidden">
+              <div class="w-full h-full rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black text-2xl shadow-md border-2 border-white" id="cardAvatar">
+                A
+              </div>
+            </div>
+            <h3 class="text-xs font-black text-slate-900 text-center leading-tight line-clamp-2" id="cardName">Nama Santri</h3>
+            <span class="text-[9px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full mt-1" id="cardClass">Kelas -</span>
+            <p class="text-[7.5px] text-slate-500 font-mono mt-0.5" id="cardTtl"></p>
+          </div>
+
+          <!-- Info Nomor Induk & Barcode Dummy -->
+          <div class="text-center pt-2 border-t border-slate-100">
+            <p class="font-mono text-[9px] font-extrabold text-slate-700 tracking-wider"><span id="cardNisLabel">NIS</span>: <span id="cardNis">1001</span></p>
+            <div class="mt-1 bg-slate-900 text-white font-mono text-[8px] py-1 px-2 rounded tracking-widest font-black inline-block" id="cardBarcode">
+              ||| ||||| || ||||
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    let studentList = [];
+
+    async function loadStudents() {
+      try {
+        const res = await fetch('/api/students');
+        studentList = await res.json();
+        const select = document.getElementById('studentSelect');
+
+        if (!studentList || studentList.length === 0) {
+          select.innerHTML = `<option value="">Belum ada ${AppTerms.get('studentPlural').toLowerCase()}</option>`;
+          return;
+        }
+
+        select.innerHTML = studentList.map(s => `
+          <option value="${s.id}">${s.name} (${s.nis})</option>
+        `).join('');
+
+        renderSelectedCard();
+      } catch (e) {
+        console.error('Error loading students:', e);
+      }
+    }
+
+    function renderSelectedCard() {
+      const select = document.getElementById('studentSelect');
+      const selectedId = parseInt(select.value);
+      const student = studentList.find(s => s.id === selectedId) || studentList[0];
+
+      const cardBanner = document.getElementById('cardBannerTitle');
+      if (cardBanner) {
+        cardBanner.innerText = (AppTerms.get('cardTitle') || 'KARTU SANTRI').toUpperCase() + ' RESMI';
+      }
+      const nisLabel = document.getElementById('cardNisLabel');
+      if (nisLabel) {
+        nisLabel.innerText = AppTerms.get('nisLabel') || 'NIS';
+      }
+
+      if (student) {
+        document.getElementById('cardName').innerText = student.name;
+        const cls = student.class_name ? `${AppTerms.get('classLabel')} ${student.class_name}` : AppTerms.get('studentSingular');
+        document.getElementById('cardClass').innerText = cls;
+        document.getElementById('cardNis').innerText = student.nis;
+
+        const ttl = (student.pob || student.dob) ? `${student.pob || ''}${student.pob && student.dob ? ', ' : ''}${student.dob || ''}` : '';
+        document.getElementById('cardTtl').innerText = ttl;
+
+        const photoEl = document.getElementById('cardPhoto');
+        const avatarEl = document.getElementById('cardAvatar');
+        if (student.photo) {
+          photoEl.src = student.photo;
+          photoEl.classList.remove('hidden');
+          avatarEl.classList.add('hidden');
+        } else {
+          photoEl.src = '';
+          photoEl.classList.add('hidden');
+          avatarEl.classList.remove('hidden');
+          avatarEl.innerText = student.name.charAt(0);
+        }
+
+        document.getElementById('cardBarcode').innerText = `||| ${student.nis} |||`;
+      }
+    }
+
+    async function downloadCardImage() {
+      const cardEl = document.getElementById('idcardRender');
+      const name = document.getElementById('cardName').innerText;
+      try {
+        const canvas = await html2canvas(cardEl, { scale: 3, useCORS: true });
+        const link = document.createElement('a');
+        link.download = `Kartu_${name.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (e) {
+        alert('Gagal membuat gambar kartu: ' + e.message);
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const cfg = await res.json();
+        if (cfg.school_name) {
+          const ribbon = document.getElementById('ribbonSchoolName');
+          if (ribbon) ribbon.innerText = cfg.school_name;
+        }
+        updateCardLogo(cfg.school_logo);
+      } catch (e) {}
+    }
+
+    function updateCardLogo(logoUrl) {
+      const logoImg = document.getElementById('cardLogoImg');
+      const logoFallback = document.getElementById('cardLogoFallback');
+      if (logoImg && logoFallback) {
+        if (logoUrl) {
+          logoImg.src = logoUrl;
+          logoImg.classList.remove('hidden');
+          logoFallback.classList.add('hidden');
+        } else {
+          logoImg.src = '';
+          logoImg.classList.add('hidden');
+          logoFallback.classList.remove('hidden');
+        }
+      }
+    }
+
+    window.addEventListener('logoChanged', (e) => {
+      updateCardLogo(e.detail.logo);
+    });
+
+    async function downloadAllCardsZip() {
+      if (!studentList || studentList.length === 0) {
+        alert(`Tidak ada data ${AppTerms.get('studentPlural').toLowerCase()} untuk diunduh.`);
+        return;
+      }
+      if (typeof JSZip === 'undefined') {
+        alert('Pustaka JSZip belum siap.');
+        return;
+      }
+
+      const btn = document.getElementById('btnZipAll');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+
+      const folderName = 'Kartu_' + (AppTerms.get('studentPlural') || 'Santri').replace(/\s+/g, '_');
+      const zip = new JSZip();
+      const folder = zip.folder(folderName);
+      const cardEl = document.getElementById('idcardRender');
+
+      try {
+        for (let i = 0; i < studentList.length; i++) {
+          const s = studentList[i];
+          btn.innerHTML = `<span class="inline-block animate-spin mr-1">⏳</span><span>(${i + 1}/${studentList.length}) Merender...</span>`;
+
+          // Tampilkan santri ke elemen pratinjau kartu
+          document.getElementById('cardBannerTitle').innerText = (AppTerms.get('cardTitle') || 'KARTU SANTRI').toUpperCase() + ' RESMI';
+          document.getElementById('cardNisLabel').innerText = AppTerms.get('nisLabel') || 'NIS';
+          document.getElementById('cardName').innerText = s.name;
+          const cls = s.class_name ? `${AppTerms.get('classLabel')} ${s.class_name}` : AppTerms.get('studentSingular');
+          document.getElementById('cardClass').innerText = cls;
+          document.getElementById('cardNis').innerText = s.nis;
+
+          const ttl = (s.pob || s.dob) ? `${s.pob || ''}${s.pob && s.dob ? ', ' : ''}${s.dob || ''}` : '';
+          document.getElementById('cardTtl').innerText = ttl;
+
+          const photoEl = document.getElementById('cardPhoto');
+          const avatarEl = document.getElementById('cardAvatar');
+          if (s.photo) {
+            photoEl.src = s.photo;
+            photoEl.classList.remove('hidden');
+            avatarEl.classList.add('hidden');
+          } else {
+            photoEl.src = '';
+            photoEl.classList.add('hidden');
+            avatarEl.classList.remove('hidden');
+            avatarEl.innerText = s.name.charAt(0);
+          }
+
+          document.getElementById('cardBarcode').innerText = `||| ${s.nis} |||`;
+
+          // Beri jeda kecil agar DOM ter-render
+          await new Promise(r => setTimeout(r, 80));
+
+          const canvas = await html2canvas(cardEl, { scale: 3, useCORS: true });
+          const base64Data = canvas.toDataURL('image/png').split(',')[1];
+          const cleanName = s.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+          folder.file(`Kartu_${s.nis}_${cleanName}.png`, base64Data, { base64: true });
+        }
+
+        btn.innerHTML = `<span>Mengompresi ZIP...</span>`;
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.download = `${folderName}_${new Date().toISOString().slice(0, 10)}.zip`;
+        link.href = URL.createObjectURL(blob);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        alert(`✅ Berhasil! ${studentList.length} kartu ${AppTerms.get('studentPlural').toLowerCase()} berhasil dibundel dan diunduh dalam file ZIP.`);
+      } catch (err) {
+        alert('Gagal mengunduh ZIP: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        renderSelectedCard();
+        lucide.createIcons();
+      }
+    }
+
+    function sendToParentWhatsApp() {
+      const select = document.getElementById('studentSelect');
+      const selectedId = parseInt(select.value);
+      const student = studentList.find(s => s.id === selectedId);
+
+      if (!student || !student.parent_phone) {
+        alert(`Nomor WhatsApp ${AppTerms.get('parentSingular').toLowerCase()} belum terisi pada data ${AppTerms.get('studentSingular').toLowerCase()} ini. Silakan lengkapi di menu ${AppTerms.get('studentPlural')}.`);
+        return;
+      }
+
+      let phone = student.parent_phone.replace(/\D/g, '');
+      if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+
+      const text = encodeURIComponent(
+        `Assalamu'alaikum Wr. Wb. / Salam Sejahtera\n\n` +
+        `Yth. Bapak/Ibu ${AppTerms.get('parentSingular')} dari *${student.name}*,\n` +
+        `Berikut kami informasikan bahwa ${AppTerms.get('cardTitle')} resmi telah aktif dengan ${AppTerms.get('nisLabel')}: *${student.nis}*.\n\n` +
+        `Terima kasih.`
+      );
+
+      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    }
+
+    window.addEventListener('termsChanged', () => {
+      renderSelectedCard();
+    });
+
+    loadSettings();
+    loadStudents();
+  </script>
+</body>
+</html>

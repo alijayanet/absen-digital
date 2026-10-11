@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Presensi - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .shadow-sm, .shadow, .shadow-md, .shadow-xl { box-shadow: none !important; }
+      .border { border: 1px solid #ddd !important; }
+    }
+    @media screen {
+      .print-only { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar (Tidak Tercetak) -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md no-print">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Laporan Presensi</h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Rekap, Cetak &amp; Ekspor Data Kehadiran</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="file-text" class="w-4 h-4 text-teal-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- Kop Surat Resmi (Hanya Muncul Saat Dicetak) -->
+    <div class="print-only border-b-2 border-black pb-4 mb-6 flex items-center justify-between">
+      <div class="w-16 h-16 flex items-center justify-center shrink-0">
+        <img id="printLogoImg" src="" class="max-w-full max-h-full object-contain hidden">
+      </div>
+      <div class="flex-1 text-center px-4">
+        <h1 class="text-xl font-black uppercase tracking-wider" id="printSchoolName">MUSHOLLA AL MUHAJIRIN</h1>
+        <p class="text-xs text-gray-600 mt-1" id="printSchoolAddress">Jl. Raya Pesantren No. 1</p>
+        <p class="text-xs text-gray-600" id="printSchoolPhone">Telp / Kontak: 08123456789</p>
+        <div class="mt-3 text-sm font-extrabold underline uppercase" id="printReportTitle">
+          LAPORAN REKAPITULASI PRESENSI KEHADIRAN
+        </div>
+        <p class="text-xs text-gray-600 mt-0.5" id="printDatePeriod">Periode: -</p>
+      </div>
+      <div class="w-16 h-16 shrink-0"></div>
+    </div>
+
+    <!-- Header & Action Buttons (No Print) -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" data-term="attendanceReportTitle">Laporan Presensi Kehadiran</h2>
+        <p class="text-xs text-slate-500">Filter berdasarkan rentang tanggal, cetak laporan resmi, atau unduh ke file CSV/Excel.</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="exportToCsv()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span>Unduh CSV / Excel</span>
+        </button>
+        <button onclick="window.print()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Cetak Laporan</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bilah Filter Laporan (No Print) -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm no-print">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Dari Tanggal:</label>
+          <input type="date" id="filterStartDate" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Sampai Tanggal:</label>
+          <input type="date" id="filterEndDate" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1"><span data-term="groupLabel">Kelas</span>:</label>
+          <select id="filterClass" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+            <option value="0">Semua</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Status Kehadiran:</label>
+          <select id="filterStatus" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+            <option value="ALL">Semua Status</option>
+            <option value="HADIR">Hadir Tepat Waktu</option>
+            <option value="TERLAMBAT">Terlambat</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+        <button onclick="loadAttendanceReport()" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+          <span>Terapkan Filter</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Ringkasan Statistik KPI (No Print) -->
+    <div class="grid grid-cols-3 gap-4 no-print">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm text-center">
+        <p class="text-xs text-slate-400 font-bold uppercase">Total Kehadiran</p>
+        <p id="statTotal" class="text-2xl font-black text-slate-900 mt-1">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm text-center">
+        <p class="text-xs text-emerald-600 font-bold uppercase">Tepat Waktu</p>
+        <p id="statHadir" class="text-2xl font-black text-emerald-600 mt-1">0</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm text-center">
+        <p class="text-xs text-amber-600 font-bold uppercase">Terlambat</p>
+        <p id="statTerlambat" class="text-2xl font-black text-amber-600 mt-1">0</p>
+      </div>
+    </div>
+
+    <!-- Tabel Data Laporan Presensi -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-100 text-slate-700 uppercase font-black tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="py-3 px-3 text-center w-12">No</th>
+              <th class="py-3 px-3">Tanggal</th>
+              <th class="py-3 px-3">Waktu</th>
+              <th class="py-3 px-3" data-term="singular">Santri</th>
+              <th class="py-3 px-3" data-term="groupLabel">Kelas</th>
+              <th class="py-3 px-3">Status</th>
+              <th class="py-3 px-3 text-right">Keterlambatan</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody" class="divide-y divide-slate-100 font-medium">
+            <tr>
+              <td colspan="7" class="text-center py-10 text-slate-400 italic">Memuat data presensi...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Kolom Tanda Tangan Cetak (Hanya Muncul Saat Dicetak) -->
+    <div class="print-only pt-10">
+      <div class="flex justify-between items-center text-xs">
+        <div class="text-center w-48">
+          <p>Petugas Presensi,</p>
+          <div class="h-20"></div>
+          <p class="font-bold underline">(........................................)</p>
+        </div>
+        <div class="text-center w-48">
+          <p id="printPlaceDate">Indramayu, -</p>
+          <p id="printPrincipalTitle">Kepala / Pimpinan Lembaga,</p>
+          <div class="h-20"></div>
+          <p id="printPrincipalName" class="font-bold underline">Ust. H. Abdullah, Lc.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500 no-print">
+    Smart School All-in-One Standalone &bull; Didukung oleh SQLite Native &amp; WhatsApp Cloud Gateway
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    function setInitialDates() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('filterStartDate').value = today;
+      document.getElementById('filterEndDate').value = today;
+
+      const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+      document.getElementById('printPlaceDate').innerText = 'Tanggal: ' + new Date().toLocaleDateString('id-ID', dateOptions);
+    }
+
+    async function loadSettingsAndClasses() {
+      try {
+        const [settingsRes, classesRes] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/classes')
+        ]);
+        const cfg = await settingsRes.json();
+        const classes = await classesRes.json();
+
+        if (cfg.school_name) document.getElementById('printSchoolName').innerText = cfg.school_name;
+        if (cfg.school_address) document.getElementById('printSchoolAddress').innerText = cfg.school_address;
+        if (cfg.school_phone) document.getElementById('printSchoolPhone').innerText = 'Kontak: ' + cfg.school_phone;
+        if (cfg.school_principal_name) document.getElementById('printPrincipalName').innerText = cfg.school_principal_name;
+
+        const printLogo = document.getElementById('printLogoImg');
+        if (printLogo && cfg.school_logo) {
+          printLogo.src = cfg.school_logo;
+          printLogo.classList.remove('hidden');
+        }
+
+        if (window.AppTerms) {
+          document.getElementById('printPrincipalTitle').innerText = AppTerms.get('headLabel', 'Kepala / Pimpinan Lembaga') + ',';
+          document.getElementById('printReportTitle').innerText = 'LAPORAN REKAPITULASI PRESENSI ' + AppTerms.get('plural', 'SANTRI').toUpperCase();
+        }
+
+        const classSelect = document.getElementById('filterClass');
+        classSelect.innerHTML = '<option value="0">Semua ' + (window.AppTerms ? AppTerms.get('groupLabel', 'Kelas') : 'Kelas') + '</option>' +
+          classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+      } catch (e) {
+        console.error('Error loading config:', e);
+      }
+    }
+
+    async function loadAttendanceReport() {
+      const startDate = document.getElementById('filterStartDate').value;
+      const endDate = document.getElementById('filterEndDate').value;
+      const classId = document.getElementById('filterClass').value;
+      const status = document.getElementById('filterStatus').value;
+
+      document.getElementById('printDatePeriod').innerText = `Periode: ${startDate} s/d ${endDate}`;
+
+      const tbody = document.getElementById('attendanceTableBody');
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 italic">Mengambil data presensi...</td></tr>';
+
+      try {
+        const url = `/api/attendances/report?startDate=${startDate}&endDate=${endDate}&classId=${classId}&status=${status}`;
+        const res = await fetch(url);
+        const list = await res.json();
+
+        // Hitung KPI
+        let hadir = 0;
+        let terlambat = 0;
+        list.forEach(item => {
+          if (item.status === 'HADIR') hadir++;
+          if (item.status === 'TERLAMBAT') terlambat++;
+        });
+
+        document.getElementById('statTotal').innerText = list.length;
+        document.getElementById('statHadir').innerText = hadir;
+        document.getElementById('statTerlambat').innerText = terlambat;
+
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 italic">Tidak ada catatan presensi pada rentang tanggal tersebut.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map((item, idx) => {
+          const isLate = item.status === 'TERLAMBAT';
+          return `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+              <td class="py-2.5 px-3 text-center text-slate-400 font-mono">${idx + 1}</td>
+              <td class="py-2.5 px-3 font-mono text-slate-600">${item.date}</td>
+              <td class="py-2.5 px-3 font-mono font-bold text-slate-800">${item.time_in}</td>
+              <td class="py-2.5 px-3">
+                <span class="font-bold text-slate-900">${item.name}</span>
+                <span class="text-[10px] text-slate-400 font-mono ml-1">(${item.nis})</span>
+              </td>
+              <td class="py-2.5 px-3 font-semibold text-slate-700">${item.class_name || '-'}</td>
+              <td class="py-2.5 px-3">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isLate ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                  ${item.status}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-right font-mono ${isLate ? 'text-amber-700 font-bold' : 'text-slate-400'}">
+                ${item.late_minutes > 0 ? `+${item.late_minutes} Menit` : '-'}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-rose-500 font-bold">Gagal memuat: ${e.message}</td></tr>`;
+      }
+    }
+
+    function exportToCsv() {
+      const startDate = document.getElementById('filterStartDate').value;
+      const endDate = document.getElementById('filterEndDate').value;
+      const classId = document.getElementById('filterClass').value;
+      const status = document.getElementById('filterStatus').value;
+      window.location.href = `/api/attendances/export/csv?startDate=${startDate}&endDate=${endDate}&classId=${classId}&status=${status}`;
+    }
+
+    setInitialDates();
+    loadSettingsAndClasses().then(loadAttendanceReport);
+  </script>
+</body>
+</html>

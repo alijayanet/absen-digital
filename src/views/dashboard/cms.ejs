@@ -1,0 +1,927 @@
+<%- include('../partials/header', { title: 'Pengaturan Sekolah & CMS Web', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Pengaturan & CMS</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">Kelola profil sekolah, foto banner, kepala sekolah, galeri, dan template</p>
+        </div>
+      </div>
+      <a href="/" target="_blank" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition shrink-0" title="Lihat Web Sekolah">
+        <i data-lucide="external-link" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+        <span class="hidden sm:inline sm:ml-1.5">Lihat Web Sekolah</span>
+      </a>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl">
+      <% if (successMsg) { %>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+
+      <!-- 1. Profil Sekolah, Logo & Banner Hero -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="school" class="w-4 h-4 text-blue-600"></i>
+          Profil Sekolah, Logo & Foto Banner Utama
+        </h3>
+        <p class="text-xs text-slate-500 mb-5">
+          Atur identitas resmi sekolah, logo transparan, dan foto banner latar belakang hero di halaman beranda.
+        </p>
+
+        <form action="/dashboard/cms/profile" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Upload Logo -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+              <div class="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 overflow-hidden shadow-sm flex-shrink-0">
+                <% if (settings.school_logo) { %>
+                  <img src="<%= settings.school_logo %>" alt="Logo" class="w-full h-full object-contain">
+                <% } else { %>
+                  <i data-lucide="image" class="w-6 h-6 text-slate-400"></i>
+                <% } %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <label class="block font-semibold text-slate-700 mb-1">Logo Sekolah</label>
+                <input type="file" name="school_logo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+              </div>
+            </div>
+
+            <!-- Upload Banner Hero -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+              <div class="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 overflow-hidden shadow-sm flex-shrink-0">
+                <% if (settings.school_hero_image) { %>
+                  <img src="<%= settings.school_hero_image %>" alt="Banner" class="w-full h-full object-cover">
+                <% } else { %>
+                  <i data-lucide="image" class="w-6 h-6 text-slate-400"></i>
+                <% } %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <label class="block font-semibold text-slate-700 mb-1">Foto Banner Hero (Latar Belakang)</label>
+                <input type="file" name="school_hero_image" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Sekolah *</label>
+              <input type="text" name="school_name" value="<%= settings.school_name || '' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Akreditasi</label>
+              <input type="text" name="school_accreditation" value="<%= settings.school_accreditation || 'Terakreditasi A (Unggul)' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Slogan / Tagline Sekolah</label>
+            <input type="text" name="school_tagline" value="<%= settings.school_tagline || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Deskripsi Singkat Sekolah</label>
+            <textarea name="school_description" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"><%= settings.school_description || '' %></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Alamat Sekolah</label>
+              <input type="text" name="school_address" value="<%= settings.school_address || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nomor Telepon</label>
+              <input type="text" name="school_phone" value="<%= settings.school_phone || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Email Sekolah</label>
+              <input type="email" name="school_email" value="<%= settings.school_email || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Profil & Banner
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. Profil Kepala Sekolah & Legalisasi Kartu Pelajar -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i data-lucide="award" class="w-4 h-4 text-blue-600"></i>
+            Profil Kepala Sekolah & Legalisasi Kartu Pelajar (Tanda Tangan & Stempel)
+          </h3>
+          <span class="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
+            Otomatis Tercetak di Sisi Belakang Kartu
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 mb-4">
+          Kelola data pimpinan sekolah, tanda tangan digital, cap stempel resmi, serta informasi tempat/tanggal penerbitan kartu identitas pelajar.
+        </p>
+
+        <form action="/dashboard/cms/principal" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+          <!-- Identitas Kepala Sekolah: Nama & NIP -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar Kepala Sekolah *</label>
+              <input type="text" name="school_principal_name" required value="<%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">NIP Kepala Sekolah (Opsional)</label>
+              <input type="text" name="school_principal_nip" placeholder="Contoh: 19720315 199802 1 002 (atau kosongkan / beri strip -)" value="<%= settings.school_principal_nip || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <p class="text-[11px] text-slate-400 mt-1">Kosongkan atau beri tanda strip (-) jika sekolah swasta / yayasan.</p>
+            </div>
+          </div>
+
+          <!-- Pengaturan Legalisasi Kartu: Tempat & Tanggal Penerbitan -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kota / Tempat Penerbitan Kartu</label>
+              <input type="text" name="card_issue_city" placeholder="Contoh: Cirebon" value="<%= settings.card_issue_city || 'Cirebon' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <p class="text-[11px] text-slate-400 mt-1">Ditampilkan pada format tanggal: [Kota], [Tanggal].</p>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tanggal Penerbitan Kartu</label>
+              <input type="text" name="card_issue_date" placeholder="Contoh: 15 Juli 2026" value="<%= settings.card_issue_date || '15 Juli 2026' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <p class="text-[11px] text-slate-400 mt-1">Ditampilkan pada sisi belakang kartu di atas nama Kepala Sekolah.</p>
+            </div>
+          </div>
+
+          <!-- Tiga Kotak Unggah: Tanda Tangan, Cap Stempel & Foto -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            <!-- 1. Tanda Tangan Digital -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="pen-tool" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Tanda Tangan Digital</span>
+                </label>
+                <% if (settings.school_principal_signature) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_signature) { %>
+                  <img src="<%= settings.school_principal_signature %>" class="max-h-full max-w-full object-contain">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="file-signature" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Default Vektor Sistem</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_signature" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Disarankan PNG transparan scan tanda tangan asli.</p>
+
+              <% if (settings.school_principal_signature) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_signature" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus file & gunakan default</span>
+                </label>
+              <% } %>
+            </div>
+
+            <!-- 2. Cap Stempel Resmi -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="stamp" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>Cap Stempel Sekolah</span>
+                </label>
+                <% if (settings.school_principal_stamp) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_stamp) { %>
+                  <img src="<%= settings.school_principal_stamp %>" class="max-h-full max-w-full object-contain">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="stamp" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Default Stempel Bulat</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_stamp" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Disarankan cap stempel bulat PNG transparan (biru/ungu).</p>
+
+              <% if (settings.school_principal_stamp) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_stamp" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus file & gunakan default</span>
+                </label>
+              <% } %>
+            </div>
+
+            <!-- 3. Foto Profil Kepala Sekolah (Landing Page) -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-600"></i>
+                  <span>Foto Kepala Sekolah</span>
+                </label>
+                <% if (settings.school_principal_photo) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_photo) { %>
+                  <img src="<%= settings.school_principal_photo %>" class="max-h-full max-w-full object-cover rounded">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="user" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Belum Ada Foto</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_photo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Foto portrait untuk sambutan di web depan.</p>
+
+              <% if (settings.school_principal_photo) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_photo" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus foto profil</span>
+                </label>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Sambutan Kepala Sekolah -->
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Teks Sambutan Kepala Sekolah (Web Profil Depan)</label>
+            <textarea name="school_principal_welcome" rows="3" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_principal_welcome || '' %></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span>Simpan Profil & Legalisasi Kartu</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. Visi, Misi & Statistik Sekolah -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="compass" class="w-4 h-4 text-blue-600"></i>
+          Visi, Misi & Angka Statistik Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Paparkan arah tujuan pendidikan serta indikator keunggulan sekolah.
+        </p>
+
+        <form action="/dashboard/cms/vision-mission" method="POST" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Visi Sekolah</label>
+            <textarea name="school_vision" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium"><%= settings.school_vision || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Misi Sekolah (Pisahkan per baris)</label>
+            <textarea name="school_mission" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_mission || '' %></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jumlah Guru & Staf (Opsional)</label>
+              <input type="text" name="school_stats_teachers" placeholder="Otomatis dihitung dari database jika kosong" value="<%= settings.school_stats_teachers || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <p class="text-[11px] text-slate-400 mt-1">Biarkan kosong agar otomatis sinkron dengan jumlah guru/staf di database.</p>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tingkat Kelulusan / Prestasi</label>
+              <input type="text" name="school_stats_graduates" value="<%= settings.school_stats_graduates || '100% Lulusan' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+          </div>
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Visi, Misi & Statistik
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 4. Galeri Foto Kegiatan & Fasilitas Sekolah -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="images" class="w-4 h-4 text-blue-600"></i>
+          Galeri Foto Kegiatan, Fasilitas & Prestasi Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Unggah dokumentasi foto fasilitas sekolah, ekstrakurikuler, dan kegiatan siswa untuk dipamerkan di halaman depan.
+        </p>
+
+        <!-- Form Tambah Foto Galeri -->
+        <form action="/dashboard/cms/gallery" method="POST" enctype="multipart/form-data" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs mb-6">
+          <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+            Tambah Foto Baru ke Galeri
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Judul / Nama Dokumentasi *</label>
+              <input type="text" name="title" required placeholder="Contoh: Upacara Hari Kemerdekaan" class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
+              <select name="category" class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+                <option value="Fasilitas">Fasilitas Sekolah</option>
+                <option value="Kegiatan">Kegiatan Siswa</option>
+                <option value="Prestasi">Prestasi & Lomba</option>
+                <option value="Akademik">Akademik</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Pilih File Gambar</label>
+              <input type="file" name="gallery_photo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Keterangan / Deskripsi Singkat</label>
+            <input type="text" name="description" placeholder="Deskripsi singkat dokumentasi..." class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Unggah Foto ke Galeri
+            </button>
+          </div>
+        </form>
+
+        <!-- Daftar Foto Galeri yang Tersedia -->
+        <h4 class="font-bold text-slate-800 text-xs mb-3">Foto yang Sedang Ditampilkan (<%= gallery.length %> Foto)</h4>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <% gallery.forEach(item => { %>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex flex-col justify-between">
+              <div class="relative w-full aspect-video bg-slate-200 overflow-hidden">
+                <% if (item.image_url) { %>
+                  <img src="<%= item.image_url %>" alt="<%= item.title %>" class="w-full h-full object-cover">
+                <% } else { %>
+                  <div class="w-full h-full flex items-center justify-center text-slate-400">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                  </div>
+                <% } %>
+                <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900/80 text-white">
+                  <%= item.category %>
+                </span>
+              </div>
+              <div class="p-3">
+                <p class="font-bold text-slate-900 text-xs truncate"><%= item.title %></p>
+                <div class="mt-2 pt-2 border-t border-slate-200 flex justify-end">
+                  <form action="/dashboard/cms/gallery/<%= item.id %>/delete" method="POST" onsubmit="return confirm('Hapus foto ini dari galeri?')">
+                    <button type="submit" class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <span>Hapus</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- 5. Pengumuman Landing Page -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="megaphone" class="w-4 h-4 text-blue-600"></i>
+          Papan Pengumuman Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Pengumuman ini tampil di bagian bawah halaman web untuk dibaca oleh seluruh wali murid.
+        </p>
+
+        <form action="/dashboard/cms/announcement" method="POST" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Judul Pengumuman</label>
+            <input type="text" name="announcement_title" value="<%= settings.announcement_title || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Isi Pesan Pengumuman</label>
+            <textarea name="announcement_content" rows="3" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.announcement_content || '' %></textarea>
+          </div>
+          <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-center gap-2 text-blue-800">
+            <i data-lucide="info" class="w-4 h-4 text-blue-600 flex-shrink-0"></i>
+            <span>Informasi <strong>Pintu Gerbang Ditutup</strong> (<%= settings.toleransi_telat || '07:15' %> WIB) dan <strong>Hari Aktif</strong> (<%= settings.hari_aktif || 'Senin – Jumat' %>) dapat disetel pada bagian <strong>Jadwal Operasional & Hari Aktif</strong> di bawah.</span>
+          </div>
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengumuman
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 6. Jadwal Operasional, Hari Aktif & Jam Masuk Absensi -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+          Jadwal Operasional, Hari Aktif & Jam Masuk
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Tentukan hari operasional sekolah, jam masuk, serta batas toleransi gerbang sebelum siswa dicatat berstatus terlambat.
+        </p>
+
+        <form action="/dashboard/cms/schedule" method="POST" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Hari Aktif Sekolah</label>
+              <input type="text" name="hari_aktif" value="<%= settings.hari_aktif || 'Senin – Jumat' %>" placeholder="Contoh: Senin – Jumat" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <span class="text-[10px] text-slate-400 mt-1 block">Tampil di papan pengumuman landing page</span>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jam Masuk (WIB)</label>
+              <input type="time" name="jam_masuk" value="<%= settings.jam_masuk || '07:00' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Jam mulai kegiatan presensi</span>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Batas Toleransi / Tutup Gerbang (WIB)</label>
+              <input type="time" name="toleransi_telat" value="<%= settings.toleransi_telat || '07:15' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Tampil sebagai "Pintu Gerbang Ditutup"</span>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jam Cutoff Alpa / Broadcast (WIB)</label>
+              <input type="time" name="jam_cutoff_alpa" value="<%= settings.jam_cutoff_alpa || '07:30' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Batas broadcast WA siswa alpa</span>
+            </div>
+          </div>
+
+          <!-- Pengaturan Otomatis Kirim Rekap Guru -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="send" class="w-4 h-4 text-blue-600"></i>
+                  Kirim Rekap Urutan Presensi Otomatis ke WhatsApp Guru / Wali Kelas
+                </span>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  Setiap hari pada jam yang ditentukan, sistem akan otomatis mengirim rekapan urutan presensi siswa (tap pertama hingga akhir) ke nomor WhatsApp Wali Kelas masing-masing.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" name="wa_auto_teacher_summary" value="1" <%= settings.wa_auto_teacher_summary === '1' ? 'checked' : '' %> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div class="max-w-xs pt-1">
+              <label class="block font-semibold text-slate-700 mb-1">Jam Pengiriman Rekap Guru Otomatis (WIB)</label>
+              <input type="time" name="jam_rekap_guru" value="<%= settings.jam_rekap_guru || '09:00' %>" class="w-full p-2 bg-white border border-slate-200 rounded-lg font-mono text-xs">
+              <span class="text-[10px] text-slate-400 mt-1 block">Contoh: 09:00 (Pukul 9 pagi). Rekap juga tetap dapat dikirimkan secara manual kapan saja dari menu Presensi.</span>
+            </div>
+
+            <div class="max-w-xs pt-1">
+              <label class="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <i data-lucide="globe" class="w-3.5 h-3.5 text-blue-500"></i>
+                Zona Waktu Sistem Penjadwalan
+              </label>
+              <select name="scheduler_timezone" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium">
+                <option value="Asia/Jakarta" <%= (settings.scheduler_timezone || 'Asia/Jakarta') === 'Asia/Jakarta' ? 'selected' : '' %>>WIB — Waktu Indonesia Barat (UTC+7)</option>
+                <option value="Asia/Makassar" <%= settings.scheduler_timezone === 'Asia/Makassar' ? 'selected' : '' %>>WITA — Waktu Indonesia Tengah (UTC+8)</option>
+                <option value="Asia/Jayapura" <%= settings.scheduler_timezone === 'Asia/Jayapura' ? 'selected' : '' %>>WIT — Waktu Indonesia Timur (UTC+9)</option>
+              </select>
+              <span class="text-[10px] text-slate-400 mt-1 block">Zona waktu yang digunakan untuk pengecekan jam otomatis rekap, cutoff alpa, dan timestamp presensi. Default: WIB.</span>
+            </div>
+          </div>
+
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Jadwal & Pengaturan
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 7. Konfigurasi & Template Pesan WhatsApp -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+          Template Pesan WhatsApp Otomatis
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Atur teks notifikasi yang akan dikirimkan oleh bot WhatsApp Baileys.
+        </p>
+
+        <form action="/dashboard/cms/whatsapp" method="POST" class="space-y-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Aktifkan Notifikasi WhatsApp Otomatis</span>
+              <p class="text-[11px] text-slate-500">Jika dinonaktifkan, pesan tidak akan dikirim ke antrean.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="wa_enabled" value="1" <%= settings.wa_enabled === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              1. Template Notifikasi Presensi Masuk
+            </label>
+            <textarea name="wa_template_absen" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_absen || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              2. Template Pesan Pengenalan Kontak & Verifikasi "YA"
+            </label>
+            <textarea name="wa_template_intro" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_intro || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              3. Template Peringatan Siswa Belum Hadir (Alpa)
+            </label>
+            <textarea name="wa_template_alpa" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_alpa || '' %></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengaturan WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 8. Pengaturan Antrian Mengaji Santri (Opsional TPQ / Pesantren) -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="list-ordered" class="w-4 h-4 text-purple-600"></i>
+          Pengaturan Antrian Mengaji Santri (TPA / TPQ / Pesantren)
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Fitur opsional untuk antrian santri mengaji berdasarkan urutan kedatangan tap presensi, dengan pembagian meja per kelas.
+        </p>
+
+        <form action="/dashboard/cms/queue" method="POST" class="space-y-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Aktifkan Fitur Antrian Mengaji</span>
+              <p class="text-[11px] text-slate-500">Jika diaktifkan, setiap santri tap presensi akan otomatis mendapatkan nomor antrian meja kelas.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="queue_enabled" value="1" <%= (settings.queue_enabled || '1') === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Aktifkan Suara Bel & Panggilan Suara di Layar TV</span>
+              <p class="text-[11px] text-slate-500">Membunyikan nada bel (Ding-Dong) dan menyebutkan nomor antrian serta nama meja secara otomatis saat ustadz menekan tombol panggil.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="queue_sound_enabled" value="1" <%= (settings.queue_sound_enabled || '1') === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          <div class="max-w-md">
+            <label class="block font-semibold text-slate-700 mb-1">
+              Kalimat Awalan Panggilan Suara
+            </label>
+            <input type="text" name="queue_calling_prefix" value="<%= settings.queue_calling_prefix || 'Nomor antrian' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-xs">
+            <span class="text-[10px] text-slate-400 mt-1 block">Contoh: "Nomor antrian" -> Panggilan suara: <em>"Nomor antrian 0 5, silakan menuju Meja Kelas Santri Laki-laki"</em>.</span>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengaturan Antrian
+            </button>
+            <a href="/queue/display" target="_blank" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition inline-flex items-center gap-1.5">
+              <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+              Buka Display TV
+            </a>
+            <a href="/dashboard/queue/desk" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition inline-flex items-center gap-1.5">
+              <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
+              Buka Panel Pemanggil
+            </a>
+          </div>
+        </form>
+      <!-- 9. Pengaturan Jadwal Sholat & Titik Koordinat Wilayah (Peta Interaktif) -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="compass" class="w-4 h-4 text-emerald-600"></i>
+          Pengaturan Jadwal Sholat & Titik Koordinat Wilayah (Peta)
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Tentukan lokasi TPQ / Musholla di peta koordinat untuk menghitung waktu sholat (Imsak, Subuh, Terbit, Dzuhur, Ashar, Maghrib, Isya) secara otomatis dan akurat sesuai hisab resmi Kemenag RI.
+        </p>
+
+        <form action="/dashboard/cms/prayer" method="POST" class="space-y-4 text-xs">
+          <!-- Toggle Aktifkan Jadwal Sholat -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Tampilkan Jadwal Sholat di Layar TV / Kiosk</span>
+              <p class="text-[11px] text-slate-500">Menampilkan 7 waktu sholat dan hitung mundur waktu berikutnya di bawah kartu meja antrian.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="prayer_enabled" value="1" <%= (settings.prayer_enabled || '1') === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
+          <!-- Toggle Layar Peringatan Full-Screen Waktu Tiba -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Layar Penuh Peringatan Waktu Sholat Tiba & Alarm Adzan</span>
+              <p class="text-[11px] text-slate-500">Saat waktu sholat tiba, layar otomatis memunculkan peringatan adzan dan hitung mundur iqomah.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="prayer_alert_enabled" value="1" <%= (settings.prayer_alert_enabled || '1') === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
+          <!-- Input Durasi Iqomah & Koreksi Ihtiyat -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Durasi Jeda Iqomah (Menit)</label>
+              <input type="number" min="1" max="60" name="prayer_iqomah_duration" value="<%= settings.prayer_iqomah_duration || '10' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs font-bold">
+              <span class="text-[10px] text-slate-400 mt-1 block">Waktu hitung mundur persiapan sholat berjamaah sebelum layar kembali ke antrian.</span>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Koreksi Pengaman Waktu (Ihtiyat Kemenag)</label>
+              <div class="flex items-center gap-2">
+                <input type="number" min="0" max="10" name="prayer_ihtiyat" value="<%= settings.prayer_ihtiyat || '2' %>" class="w-24 p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs font-bold">
+                <span class="text-xs text-slate-500 font-medium">Menit (Standar Kemenag RI: +2 Menit)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nama Wilayah & Pencarian Lokasi -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Kota / Wilayah Ditampilkan</label>
+              <input type="text" id="prayerCityInput" name="prayer_city_name" value="<%= settings.prayer_city_name || 'Kab. Indramayu / Cirebon' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold" placeholder="Contoh: Kab. Indramayu">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Pencarian Cepat Lokasi di Peta</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="mapSearchInput" placeholder="Ketik nama kota / kecamatan / alamat..." class="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <button type="button" onclick="searchLocation()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs transition flex items-center gap-1 shrink-0">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                  Cari
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tombol GPS & Koordinat -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+            <div class="flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i>
+              <span class="text-[11px] font-bold text-emerald-900">Geser pin di peta atau klik lokasi mana saja untuk menentukan koordinat:</span>
+            </div>
+            <button type="button" onclick="detectGPSLocation()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+              Deteksi GPS Saya
+            </button>
+          </div>
+
+          <!-- Kotak Peta Interaktif Leaflet -->
+          <div class="rounded-xl border border-slate-300 overflow-hidden shadow-sm relative">
+            <div id="prayerMap" class="w-full h-72 z-0"></div>
+          </div>
+
+          <!-- Field Latitude, Longitude, & Zona Waktu -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Garis Lintang (Latitude)</label>
+              <input type="text" id="prayerLatInput" name="prayer_latitude" value="<%= settings.prayer_latitude || '-6.3263' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs font-bold" required>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Garis Bujur (Longitude)</label>
+              <input type="text" id="prayerLngInput" name="prayer_longitude" value="<%= settings.prayer_longitude || '108.3200' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs font-bold" required>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Zona Waktu (Auto dari Peta)</label>
+              <select id="prayerTimezoneSelect" name="prayer_timezone" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs font-bold">
+                <option value="7" <%= (settings.prayer_timezone || '7') === '7' ? 'selected' : '' %>>WIB (UTC+7)</option>
+                <option value="8" <%= settings.prayer_timezone === '8' ? 'selected' : '' %>>WITA (UTC+8)</option>
+                <option value="9" <%= settings.prayer_timezone === '9' ? 'selected' : '' %>>WIT (UTC+9)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Live Preview Jadwal Sholat Hari Ini -->
+          <div class="p-3 bg-slate-900 text-white rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800">
+              <span class="text-xs font-bold flex items-center gap-1.5 text-emerald-400">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                Pratinjau Jadwal Sholat Hari Ini (Koordinat Terpilih)
+              </span>
+              <span id="previewCityBadge" class="text-[10px] font-mono text-slate-400"><%= settings.prayer_city_name || 'Kab. Indramayu / Cirebon' %></span>
+            </div>
+            <div class="grid grid-cols-7 gap-1 text-center font-mono" id="prayerLivePreview">
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Imsak</span>
+                <strong id="prevImsak" class="text-xs text-amber-300">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Subuh</span>
+                <strong id="prevSubuh" class="text-xs text-emerald-400">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Syuruq</span>
+                <strong id="prevTerbit" class="text-xs text-amber-400">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Dzuhur</span>
+                <strong id="prevDzuhur" class="text-xs text-cyan-400">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Ashar</span>
+                <strong id="prevAshar" class="text-xs text-teal-400">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Maghrib</span>
+                <strong id="prevMaghrib" class="text-xs text-rose-400">--:--</strong>
+              </div>
+              <div class="p-1.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <span class="block text-[9px] text-slate-400 uppercase font-sans">Isya</span>
+                <strong id="prevIsya" class="text-xs text-indigo-400">--:--</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengaturan Jadwal Sholat & Peta
+            </button>
+            <a href="/queue/display" target="_blank" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs transition inline-flex items-center gap-1.5">
+              <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+              Lihat di Layar TV
+            </a>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Leaflet CDN & Interactive Prayer Map Scripts -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  let prayerMap = null;
+  let prayerMarker = null;
+
+  function initPrayerMap() {
+    const latInput = document.getElementById('prayerLatInput');
+    const lngInput = document.getElementById('prayerLngInput');
+    if (!latInput || !lngInput) return;
+
+    const lat = parseFloat(latInput.value) || -6.3263;
+    const lng = parseFloat(lngInput.value) || 108.3200;
+
+    const mapContainer = document.getElementById('prayerMap');
+    if (!mapContainer || prayerMap) return;
+
+    prayerMap = L.map('prayerMap', { scrollWheelZoom: false }).setView([lat, lng], 13);
+    
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(prayerMap);
+
+    prayerMarker = L.marker([lat, lng], { draggable: true }).addTo(prayerMap);
+
+    prayerMarker.on('dragend', function () {
+      const pos = prayerMarker.getLatLng();
+      updateCoordinates(pos.lat, pos.lng);
+    });
+
+    prayerMap.on('click', function (e) {
+      prayerMarker.setLatLng(e.latlng);
+      updateCoordinates(e.latlng.lat, e.latlng.lng);
+    });
+
+    fetchPrayerPreview();
+  }
+
+  function updateCoordinates(lat, lng) {
+    document.getElementById('prayerLatInput').value = lat.toFixed(6);
+    document.getElementById('prayerLngInput').value = lng.toFixed(6);
+
+    // Otomatis sesuaikan zona waktu berdasarkan garis bujur wilayah di peta Indonesia:
+    const autoTz = lng >= 125.0 ? '9' : (lng >= 114.0 ? '8' : '7');
+    const tzSelect = document.getElementById('prayerTimezoneSelect');
+    if (tzSelect) tzSelect.value = autoTz;
+
+    fetchPrayerPreview();
+  }
+
+  async function fetchPrayerPreview() {
+    try {
+      const res = await fetch('/api/prayer-times');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.schedule) {
+        document.getElementById('prevImsak').textContent = data.schedule.imsak;
+        document.getElementById('prevSubuh').textContent = data.schedule.subuh;
+        document.getElementById('prevTerbit').textContent = data.schedule.terbit;
+        document.getElementById('prevDzuhur').textContent = data.schedule.dzuhur;
+        document.getElementById('prevAshar').textContent = data.schedule.ashar;
+        document.getElementById('prevMaghrib').textContent = data.schedule.maghrib;
+        document.getElementById('prevIsya').textContent = data.schedule.isya;
+      }
+    } catch (e) {
+      console.warn('Preview prayer fetch:', e);
+    }
+  }
+
+  async function searchLocation() {
+    const query = document.getElementById('mapSearchInput').value.trim();
+    if (!query) return alert('Silakan masukkan nama kota, kecamatan, atau alamat yang ingin dicari');
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&limit=1`);
+      const results = await res.json();
+      if (results && results.length > 0) {
+        const item = results[0];
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lon);
+        prayerMap.setView([lat, lng], 14);
+        prayerMarker.setLatLng([lat, lng]);
+        updateCoordinates(lat, lng);
+
+        const cityInput = document.getElementById('prayerCityInput');
+        if (cityInput && (!cityInput.value || cityInput.value === 'Kab. Indramayu / Cirebon')) {
+          cityInput.value = item.display_name.split(',')[0];
+        }
+      } else {
+        alert('Lokasi tidak ditemukan. Coba ketik nama kota / daerah yang lebih umum.');
+      }
+    } catch (err) {
+      alert('Pencarian peta gagal: ' + err.message);
+    }
+  }
+
+  function detectGPSLocation() {
+    if (!navigator.geolocation) {
+      return alert('Browser Anda belum mendukung fitur deteksi GPS.');
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        prayerMap.setView([lat, lng], 15);
+        prayerMarker.setLatLng([lat, lng]);
+        updateCoordinates(lat, lng);
+        alert(`Lokasi GPS berhasil ditemukan:\nLatitude: ${lat.toFixed(6)}\nLongitude: ${lng.toFixed(6)}`);
+      },
+      (err) => {
+        alert('Gagal mendeteksi GPS: ' + err.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initPrayerMap, 300);
+  });
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

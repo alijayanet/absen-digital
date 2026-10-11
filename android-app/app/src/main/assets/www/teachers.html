@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Pembina / Guru - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Data <span data-term="teacherLabel">Guru &amp; Wali Kelas</span></h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Manajemen Pendidik, Pembina &amp; Kontak WhatsApp</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-teal-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- Header & Action Buttons -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" data-term="teacherPlural">Daftar Guru &amp; Wali Kelas</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola identitas pendidik / penanggung jawab dan kelompok binaan</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="openTeacherModal()" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah <span data-term="teacherSingular">Guru</span> Baru</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabel Guru -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+              <th class="px-4 py-3.5 text-center w-12">No</th>
+              <th class="px-4 py-3.5">NIP / Kode</th>
+              <th class="px-4 py-3.5">Nama &amp; Gelar</th>
+              <th class="px-4 py-3.5">Kategori</th>
+              <th class="px-4 py-3.5">No. WhatsApp</th>
+              <th class="px-4 py-3.5" data-term="teacherLeaderCol">Penanggung Jawab Untuk</th>
+              <th class="px-4 py-3.5 text-center w-28">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="teacherTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="px-5 py-8 text-center text-slate-400 italic">
+                Memuat data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Tambah / Edit Guru -->
+  <div id="teacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modalTitle" class="font-bold text-slate-900 text-base">Tambah <span data-term="teacherSingular">Guru</span> Baru</h3>
+        <button onclick="closeTeacherModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="teacherForm" onsubmit="saveTeacher(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="teacherId" value="">
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">NIP / Kode Identitas (Opsional):</label>
+          <input type="text" id="teacherNip" placeholder="Contoh: G001 atau 1985..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap &amp; Gelar *:</label>
+          <input type="text" id="teacherName" required placeholder="Contoh: Drs. H. Ahmad Fauzi, M.Pd" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-bold">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin / Panggilan:</label>
+          <select id="teacherGender" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-semibold">
+            <option value="L" id="optTeacherL">Laki-laki</option>
+            <option value="P" id="optTeacherP">Perempuan</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">No. WhatsApp / HP Aktif:</label>
+          <input type="text" id="teacherPhone" placeholder="Contoh: 081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
+          <p class="text-[10px] text-slate-400 mt-1">Dapat digunakan untuk komunikasi presensi dan koordinasi.</p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeTeacherModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition">Simpan Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500">
+    Smart School All-in-One Standalone &bull; Didukung oleh SQLite Native &amp; WhatsApp Cloud Gateway
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let allTeachers = [];
+
+    function updateTeacherSelectLabels() {
+      if (window.AppTerms) {
+        document.getElementById('optTeacherL').innerText = AppTerms.get('teacherMale', 'Laki-laki');
+        document.getElementById('optTeacherP').innerText = AppTerms.get('teacherFemale', 'Perempuan');
+      }
+    }
+
+    window.addEventListener('termsChanged', () => {
+      updateTeacherSelectLabels();
+      renderTeachers();
+    });
+
+    async function loadTeachers() {
+      try {
+        const res = await fetch('/api/teachers');
+        allTeachers = await res.json();
+        updateTeacherSelectLabels();
+        renderTeachers();
+      } catch (err) {
+        console.error('Error loading teachers:', err);
+      }
+    }
+
+    function renderTeachers() {
+      const tbody = document.getElementById('teacherTableBody');
+      if (!allTeachers || allTeachers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-slate-400 italic">Belum ada data yang didaftarkan.</td></tr>';
+        return;
+      }
+
+      const maleTitle = window.AppTerms ? AppTerms.get('teacherMale', 'Laki-laki') : 'Laki-laki';
+      const femaleTitle = window.AppTerms ? AppTerms.get('teacherFemale', 'Perempuan') : 'Perempuan';
+
+      tbody.innerHTML = allTeachers.map((t, idx) => {
+        const cleanPhone = (t.phone || '').replace(/[^0-9]/g, '');
+        const waUrl = cleanPhone.startsWith('0') 
+          ? `https://wa.me/62${cleanPhone.substring(1)}` 
+          : `https://wa.me/${cleanPhone}`;
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 text-center font-mono text-slate-400">${idx + 1}</td>
+            <td class="px-4 py-3 font-mono font-bold text-slate-600">${t.nip || '-'}</td>
+            <td class="px-4 py-3">
+              <span class="font-extrabold text-slate-900 text-sm">${t.name}</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.gender === 'P' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+                ${t.gender === 'P' ? femaleTitle : maleTitle}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              ${t.phone ? `
+                <a href="${waUrl}" target="_blank" class="font-mono text-teal-700 hover:text-teal-900 font-bold flex items-center gap-1">
+                  <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                  <span>${t.phone}</span>
+                </a>
+              ` : '<span class="text-slate-400">-</span>'}
+            </td>
+            <td class="px-4 py-3">
+              ${t.assigned_classes && t.assigned_classes !== '-' ? `
+                <span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                  ${t.assigned_classes}
+                </span>
+              ` : '<span class="text-slate-400 italic">Belum membina kelompok</span>'}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="editTeacher(${t.id})" class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition" title="Edit Data">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteTeacher(${t.id})" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition" title="Hapus Data">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function openTeacherModal() {
+      const singular = window.AppTerms ? AppTerms.get('teacherSingular', 'Guru') : 'Guru';
+      document.getElementById('modalTitle').innerHTML = `Tambah ${singular} Baru`;
+      document.getElementById('teacherId').value = '';
+      document.getElementById('teacherNip').value = '';
+      document.getElementById('teacherName').value = '';
+      document.getElementById('teacherGender').value = 'L';
+      document.getElementById('teacherPhone').value = '';
+      document.getElementById('teacherModal').classList.remove('hidden');
+    }
+
+    function editTeacher(target) {
+      const t = typeof target === 'object' && target !== null ? target : allTeachers.find(item => item.id == target);
+      if (!t) return;
+      const singular = window.AppTerms ? AppTerms.get('teacherSingular', 'Guru') : 'Guru';
+      document.getElementById('modalTitle').innerHTML = `Edit ${singular}: ` + t.name;
+      document.getElementById('teacherId').value = t.id;
+      document.getElementById('teacherNip').value = t.nip || '';
+      document.getElementById('teacherName').value = t.name;
+      document.getElementById('teacherGender').value = t.gender || 'L';
+      document.getElementById('teacherPhone').value = t.phone || '';
+      document.getElementById('teacherModal').classList.remove('hidden');
+    }
+
+    function closeTeacherModal() {
+      document.getElementById('teacherModal').classList.add('hidden');
+    }
+
+    async function saveTeacher(e) {
+      e.preventDefault();
+      const id = document.getElementById('teacherId').value;
+      const nip = document.getElementById('teacherNip').value.trim();
+      const name = document.getElementById('teacherName').value.trim();
+      const gender = document.getElementById('teacherGender').value;
+      const phone = document.getElementById('teacherPhone').value.trim();
+
+      if (!name) {
+        alert('Nama wajib diisi!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/teachers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id ? parseInt(id) : null,
+            nip, name, gender, phone
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeTeacherModal();
+          loadTeachers();
+        } else {
+          alert('Gagal: ' + data.message);
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan: ' + err.message);
+      }
+    }
+
+    async function deleteTeacher(target) {
+      const t = typeof target === 'object' && target !== null ? target : allTeachers.find(item => item.id == target);
+      if (!t) return;
+      const id = t.id;
+      const name = t.name;
+      if (!confirm(`Hapus data "${name}"? Penugasan penanggung jawab yang bersangkutan akan otomatis dilepas.`)) return;
+
+      try {
+        const res = await fetch('/api/teachers/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadTeachers();
+        } else {
+          alert('Gagal menghapus: ' + data.message);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    loadTeachers();
+  </script>
+</body>
+</html>

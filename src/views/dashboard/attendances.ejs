@@ -1,0 +1,799 @@
+<%- include('../partials/header', { title: 'Rekap Presensi & Alpa', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <!-- Sisi Kiri: Menu Hamburger & Judul Halaman -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">
+            Rekap Presensi
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">
+            Monitoring kehadiran harian, input izin/sakit, dan broadcast alpa
+          </p>
+        </div>
+      </div>
+
+      <!-- Sisi Kanan: Action Buttons (Icon Saja di HP, Icon + Teks di Desktop) -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button 
+          type="button"
+          onclick="openTeacherSummaryModal()" 
+          class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition" 
+          title="Kirim Urutan Absensi ke WhatsApp Guru"
+        >
+          <i data-lucide="share-2" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Kirim ke WA Guru</span>
+        </button>
+
+        <button 
+          onclick="openModal('manualModal')" 
+          class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition" 
+          title="Input Izin / Sakit"
+        >
+          <i data-lucide="edit-3" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Input Izin / Sakit</span>
+        </button>
+
+        <button 
+          onclick="triggerBroadcastAlpa()" 
+          class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition" 
+          title="Broadcast Notifikasi Belum Hadir"
+        >
+          <i data-lucide="send" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Broadcast Belum Hadir</span>
+        </button>
+
+        <button 
+          type="button"
+          onclick="openModal('exportModal')" 
+          class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-200" 
+          title="Download Laporan Excel (Per Bulan, Rentang Tanggal, atau Harian)"
+        >
+          <i data-lucide="download" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Download Laporan</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
+      <% if (successMsg) { %>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+
+      <% if (currentUser && currentUser.role === 'guru') { %>
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="w-4 h-4 text-blue-600"></i>
+            <span>Mode Wali Kelas: Rekapitulasi presensi siswa kelas <strong><%= currentUser.class_name || 'Binaan' %></strong></span>
+          </div>
+          <span class="bg-blue-200/70 text-blue-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">Wali Kelas</span>
+        </div>
+      <% } %>
+
+      <!-- Filter Bar -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <form action="/dashboard/attendances" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-end gap-3">
+          <!-- Filter Tanggal -->
+          <div class="w-full lg:w-auto">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tanggal</label>
+            <input type="date" name="date" value="<%= filters.date %>" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 sm:py-1.5 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500">
+          </div>
+
+          <!-- Filter Kelas (Hanya jika Admin) -->
+          <% if (currentUser && currentUser.role !== 'guru') { %>
+          <div class="w-full lg:w-auto">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kelas</label>
+            <select name="class_id" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 sm:py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="">Semua Kelas</option>
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>" <%= filters.classId == c.id ? 'selected' : '' %>><%= c.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <% } %>
+
+          <!-- Filter Status -->
+          <div class="w-full lg:w-auto">
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status Presensi</label>
+            <select name="status" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 sm:py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="">Semua Status</option>
+              <option value="HADIR" <%= filters.status === 'HADIR' ? 'selected' : '' %>>Hadir Tepat Waktu</option>
+              <option value="TERLAMBAT" <%= filters.status === 'TERLAMBAT' ? 'selected' : '' %>>Terlambat</option>
+              <option value="SAKIT" <%= filters.status === 'SAKIT' ? 'selected' : '' %>>Sakit</option>
+              <option value="IZIN" <%= filters.status === 'IZIN' ? 'selected' : '' %>>Izin</option>
+            </select>
+          </div>
+
+          <div class="w-full lg:w-auto">
+            <button type="submit" class="w-full lg:w-auto px-4 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition shadow-sm flex items-center justify-center gap-1.5">
+              <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+              <span>Terapkan Filter</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Section: Siswa yang Hadir / Tercatat -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h3 class="font-bold text-slate-800 text-sm">Daftar Siswa yang Sudah Presensi (<%= attendances.length %> Siswa)</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-500 font-semibold"><%= filters.date %></span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="px-4 py-3">Siswa</th>
+                <th class="px-4 py-3">Kelas</th>
+                <th class="px-4 py-3">Waktu Masuk</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Keterlambatan</th>
+                <th class="px-4 py-3">Catatan / Surat</th>
+                <th class="px-4 py-3">Dicatat Oleh</th>
+                <th class="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (attendances.length === 0) { %>
+                <tr>
+                  <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                    Belum ada data presensi pada tanggal dan filter yang dipilih.
+                  </td>
+                </tr>
+              <% } %>
+              <% attendances.forEach(a => { %>
+                <tr class="hover:bg-slate-50/50 transition">
+                  <td class="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2.5">
+                    <% if (a.photo) { %>
+                      <img src="<%= a.photo %>" class="w-7 h-7 rounded-lg object-cover">
+                    <% } else { %>
+                      <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                        <%= a.student_name.charAt(0) %>
+                      </div>
+                    <% } %>
+                    <div>
+                      <div><%= a.student_name %></div>
+                      <div class="text-[10px] font-normal text-slate-400">NIS: <%= a.nis %></div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600 font-medium">
+                    <%= a.class_name || '-' %>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-slate-600">
+                    <%= a.time_in %> WIB
+                  </td>
+                  <td class="px-4 py-3">
+                    <% if (a.status === 'HADIR') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        HADIR
+                      </span>
+                    <% } else if (a.status === 'TERLAMBAT') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        TERLAMBAT
+                      </span>
+                    <% } else if (a.status === 'SAKIT') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        SAKIT
+                      </span>
+                    <% } else if (a.status === 'IZIN') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                        IZIN
+                      </span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        ALPA
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-slate-600">
+                    <%= a.late_minutes > 0 ? a.late_minutes + ' menit' : '-' %>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500">
+                    <%= a.notes || '-' %>
+                  </td>
+                  <td class="px-4 py-3 text-[11px] text-slate-400 font-mono">
+                    <%= a.created_by || 'SYSTEM' %>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <form action="/dashboard/attendances/<%= a.id %>/delete" method="POST" class="inline-block" onsubmit="return confirm('Hapus catatan kehadiran ini?')">
+                      <button type="submit" class="p-1 rounded hover:bg-rose-50 text-rose-600 transition" title="Hapus">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section: Siswa yang Belum Hadir / Alpa -->
+      <div class="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden">
+        <div class="px-4 sm:px-6 py-3.5 sm:py-4 bg-rose-50/40 border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <h3 class="font-bold text-rose-900 text-sm">Daftar Siswa Belum Hadir / Alpa (<%= absentStudents.length %> Siswa)</h3>
+          </div>
+          <button onclick="triggerBroadcastAlpa()" class="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1.5 self-start sm:self-auto">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Kirim Notifikasi WA Serentak</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="px-4 py-3">NIS</th>
+                <th class="px-4 py-3">Nama Siswa</th>
+                <th class="px-4 py-3">Kelas</th>
+                <th class="px-4 py-3">Wali Murid</th>
+                <th class="px-4 py-3">Nomor WhatsApp</th>
+                <th class="px-4 py-3 text-right">Aksi Cepat</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (absentStudents.length === 0) { %>
+                <tr>
+                  <td colspan="6" class="px-4 py-6 text-center text-slate-400">
+                    Luar biasa! Semua siswa telah hadir pada tanggal ini.
+                  </td>
+                </tr>
+              <% } %>
+              <% absentStudents.forEach(s => { %>
+                <tr class="hover:bg-slate-50/50 transition">
+                  <td class="px-4 py-3 font-mono font-bold text-slate-700"><%= s.nis %></td>
+                  <td class="px-4 py-3 font-semibold text-slate-900"><%= s.name %></td>
+                  <td class="px-4 py-3 text-slate-600"><%= s.class_name || '-' %></td>
+                  <td class="px-4 py-3 text-slate-700"><%= s.parent_name || '-' %></td>
+                  <td class="px-4 py-3 font-mono text-slate-500"><%= s.parent_phone || '-' %></td>
+                  <td class="px-4 py-3 text-right">
+                    <button onclick="openManualForStudent(<%= s.id %>, '<%= s.name %>')" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                      Tandai Izin/Sakit
+                    </button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Input Absensi Manual (Izin / Sakit / Hadir) -->
+<div id="manualModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm">Input Kehadiran Manual</h3>
+      <button onclick="closeModal('manualModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form action="/dashboard/attendances/manual" method="POST" class="mt-4 space-y-3 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Pilih Siswa *</label>
+        <select id="manual_student_id" name="student_id" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+          <% allStudents.forEach(s => { %>
+            <option value="<%= s.id %>"><%= s.name %> (<%= s.class_name || '-' %> - NIS: <%= s.nis %>)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Tanggal *</label>
+          <input type="date" name="date" value="<%= filters.date %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Status *</label>
+          <select name="status" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            <option value="IZIN">Izin</option>
+            <option value="SAKIT">Sakit</option>
+            <option value="HADIR">Hadir Manual</option>
+            <option value="ALPA">Alpa</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Catatan / Keterangan (Opsional)</label>
+        <textarea name="notes" rows="2" placeholder="Alasan izin, surat dokter, dll..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"></textarea>
+      </div>
+
+      <div class="pt-3 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('manualModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Kirim Urutan Absensi ke WhatsApp Guru -->
+<div id="teacherSummaryModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] flex flex-col">
+    <!-- Header Modal -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Kirim Rekap Urutan Absen ke WA Guru</h3>
+          <p class="text-[11px] text-slate-500">Kirim daftar kehadiran murid kronologis (dari awal ke akhir) dalam 1 pesan</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeModal('teacherSummaryModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Form & Controls -->
+    <div class="mt-4 space-y-3.5 text-xs overflow-y-auto pr-1 flex-1">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Pilihan Kelas -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Kelas Target *</label>
+          <% if (currentUser && currentUser.role === 'guru' && currentUser.class_id) { %>
+            <input type="hidden" id="summary_class_id" value="<%= currentUser.class_id %>">
+            <input type="text" readonly value="Kelas <%= currentUser.class_name %>" class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-700 cursor-not-allowed">
+          <% } else { %>
+            <select id="summary_class_id" onchange="fetchTeacherSummaryPreview()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium focus:outline-none focus:border-emerald-500">
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>" <%= (filters.classId == c.id) ? 'selected' : '' %>>Kelas <%= c.name %></option>
+              <% }) %>
+            </select>
+          <% } %>
+        </div>
+
+        <!-- Tanggal Absen -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Tanggal Absensi *</label>
+          <input type="date" id="summary_date" value="<%= filters.date %>" onchange="fetchTeacherSummaryPreview()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <!-- Informasi Wali Kelas & Nomor WhatsApp Tujuan -->
+      <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <span class="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+            Wali Kelas: <span id="summary_teacher_name" class="font-bold text-slate-800">Memuat...</span>
+          </span>
+          <span id="summary_stats_badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs">
+            0 Siswa Hadir
+          </span>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 text-[11px] mb-1">Nomor WhatsApp Tujuan Guru / Wali Kelas *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
+              <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+            </span>
+            <input type="text" id="summary_target_phone" placeholder="Contoh: 081947215703 atau 62819..." class="w-full pl-8 p-2 bg-white border border-emerald-200 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500">
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Otomatis terisi nomor wali kelas. Anda juga dapat menggantinya dengan nomor lain.</p>
+        </div>
+      </div>
+
+      <!-- Preview Teks Pesan WhatsApp -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block font-semibold text-slate-700">Pratinjau Isi Pesan WhatsApp (Dapat Diedit)</label>
+          <button type="button" onclick="copySummaryText()" class="text-emerald-700 hover:text-emerald-800 font-semibold text-[11px] inline-flex items-center gap-1">
+            <i data-lucide="copy" class="w-3 h-3"></i>
+            <span id="copy_badge">Salin Pesan</span>
+          </button>
+        </div>
+        <textarea id="summary_message" rows="9" class="w-full p-2.5 bg-slate-900 text-emerald-400 font-mono text-[11px] leading-relaxed rounded-xl border border-slate-800 focus:outline-none focus:border-emerald-500 shadow-inner select-all"></textarea>
+      </div>
+    </div>
+
+    <!-- Tombol Aksi Bawah Modal -->
+    <div class="pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 shrink-0">
+      <button type="button" onclick="closeModal('teacherSummaryModal')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition text-xs">
+        Tutup
+      </button>
+
+      <div class="flex items-center gap-2">
+        <!-- Buka Langsung di WhatsApp Web/App -->
+        <button type="button" onclick="openDirectWhatsApp()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 font-semibold transition text-xs" title="Buka dan kirim lewat WhatsApp Web atau Aplikasi">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Buka di WA</span>
+        </button>
+
+        <!-- Kirim Otomatis via Bot WhatsApp Server -->
+        <button type="button" id="btn_send_summary" onclick="sendTeacherSummaryViaBot()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition text-xs">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>Kirim via Bot Server</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Download / Export Laporan Presensi Excel -->
+<div id="exportModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] flex flex-col">
+    <!-- Header Modal -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Download Laporan Presensi</h3>
+          <p class="text-[11px] text-slate-500">Pilih periode laporan (Bulanan, Rentang Tanggal, atau Harian)</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeModal('exportModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Form Download Excel -->
+    <form action="/dashboard/attendances/export/excel" method="GET" class="mt-4 space-y-4 text-xs overflow-y-auto pr-1 flex-1">
+      <!-- Pilihan Mode Periode -->
+      <div>
+        <label class="block font-bold text-slate-700 mb-1.5">Pilihan Periode Laporan:</label>
+        <div class="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl">
+          <button type="button" id="tab_period_month" onclick="setExportPeriodMode('month')" class="py-1.5 px-2 rounded-lg font-bold text-xs transition bg-white text-blue-600 shadow-sm">
+            Per Bulan
+          </button>
+          <button type="button" id="tab_period_range" onclick="setExportPeriodMode('range')" class="py-1.5 px-2 rounded-lg font-semibold text-xs text-slate-600 hover:text-slate-900 transition">
+            Rentang Tanggal
+          </button>
+          <button type="button" id="tab_period_daily" onclick="setExportPeriodMode('daily')" class="py-1.5 px-2 rounded-lg font-semibold text-xs text-slate-600 hover:text-slate-900 transition">
+            Per Hari
+          </button>
+        </div>
+        <input type="hidden" name="period_type" id="export_period_type" value="month">
+      </div>
+
+      <!-- Input Sesuai Mode: Per Bulan -->
+      <div id="export_group_month" class="space-y-1">
+        <label class="block font-semibold text-slate-700">Pilih Bulan & Tahun *</label>
+        <input type="month" name="month" id="export_input_month" value="<%= filters.date ? filters.date.slice(0, 7) : '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <p class="text-[11px] text-slate-500">Mendownload rekap kehadiran 1 bulan penuh beserta lembar rekapitulasi per siswa.</p>
+      </div>
+
+      <!-- Input Sesuai Mode: Rentang Tanggal -->
+      <div id="export_group_range" class="hidden space-y-2">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Mulai Tanggal *</label>
+            <input type="date" name="start_date" id="export_input_start_date" value="<%= filters.date ? filters.date.slice(0, 8) + '01' : '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Sampai Tanggal *</label>
+            <input type="date" name="end_date" id="export_input_end_date" value="<%= filters.date %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500">Mendownload kehadiran dari tanggal mulai sampai dengan tanggal akhir yang ditentukan.</p>
+      </div>
+
+      <!-- Input Sesuai Mode: Harian -->
+      <div id="export_group_daily" class="hidden space-y-1">
+        <label class="block font-semibold text-slate-700">Pilih Tanggal *</label>
+        <input type="date" name="date" id="export_input_date" value="<%= filters.date %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <p class="text-[11px] text-slate-500">Mendownload data kehadiran untuk satu tanggal spesifik.</p>
+      </div>
+
+      <!-- Filter Kelas -->
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Kelas</label>
+        <% if (currentUser && currentUser.role === 'guru' && currentUser.class_id) { %>
+          <input type="hidden" name="class_id" value="<%= currentUser.class_id %>">
+          <input type="text" readonly value="Kelas <%= currentUser.class_name %>" class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg font-semibold text-slate-700 cursor-not-allowed">
+        <% } else { %>
+          <select name="class_id" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Semua Kelas</option>
+            <% classes.forEach(c => { %>
+              <option value="<%= c.id %>" <%= filters.classId == c.id ? 'selected' : '' %>>Kelas <%= c.name %></option>
+            <% }) %>
+          </select>
+        <% } %>
+      </div>
+
+      <!-- Filter Status -->
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Status Kehadiran</label>
+        <select name="status" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500">
+          <option value="">Semua Status (Hadir, Terlambat, Sakit, Izin, Alpa)</option>
+          <option value="HADIR" <%= filters.status === 'HADIR' ? 'selected' : '' %>>Hanya Hadir Tepat Waktu</option>
+          <option value="TERLAMBAT" <%= filters.status === 'TERLAMBAT' ? 'selected' : '' %>>Hanya Terlambat</option>
+          <option value="SAKIT" <%= filters.status === 'SAKIT' ? 'selected' : '' %>>Hanya Sakit</option>
+          <option value="IZIN" <%= filters.status === 'IZIN' ? 'selected' : '' %>>Hanya Izin</option>
+          <option value="ALPA" <%= filters.status === 'ALPA' ? 'selected' : '' %>>Hanya Alpa</option>
+        </select>
+      </div>
+
+      <!-- Tombol Aksi Bawah Modal -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeModal('exportModal')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition">
+          Batal
+        </button>
+        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Unduh Excel (.xlsx)</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function setExportPeriodMode(mode) {
+    const periodInput = document.getElementById('export_period_type');
+    if (periodInput) periodInput.value = mode;
+
+    const groupMonth = document.getElementById('export_group_month');
+    const groupRange = document.getElementById('export_group_range');
+    const groupDaily = document.getElementById('export_group_daily');
+
+    const inputMonth = document.getElementById('export_input_month');
+    const inputStartDate = document.getElementById('export_input_start_date');
+    const inputEndDate = document.getElementById('export_input_end_date');
+    const inputDate = document.getElementById('export_input_date');
+
+    const tabMonth = document.getElementById('tab_period_month');
+    const tabRange = document.getElementById('tab_period_range');
+    const tabDaily = document.getElementById('tab_period_daily');
+
+    [tabMonth, tabRange, tabDaily].forEach(t => {
+      if (t) t.className = "py-1.5 px-2 rounded-lg font-semibold text-xs text-slate-600 hover:text-slate-900 transition";
+    });
+
+    if (groupMonth) groupMonth.classList.add('hidden');
+    if (groupRange) groupRange.classList.add('hidden');
+    if (groupDaily) groupDaily.classList.add('hidden');
+
+    if (inputMonth) inputMonth.disabled = true;
+    if (inputStartDate) inputStartDate.disabled = true;
+    if (inputEndDate) inputEndDate.disabled = true;
+    if (inputDate) inputDate.disabled = true;
+
+    if (mode === 'month') {
+      if (tabMonth) tabMonth.className = "py-1.5 px-2 rounded-lg font-bold text-xs transition bg-white text-blue-600 shadow-sm";
+      if (groupMonth) groupMonth.classList.remove('hidden');
+      if (inputMonth) inputMonth.disabled = false;
+    } else if (mode === 'range') {
+      if (tabRange) tabRange.className = "py-1.5 px-2 rounded-lg font-bold text-xs transition bg-white text-blue-600 shadow-sm";
+      if (groupRange) groupRange.classList.remove('hidden');
+      if (inputStartDate) inputStartDate.disabled = false;
+      if (inputEndDate) inputEndDate.disabled = false;
+    } else {
+      if (tabDaily) tabDaily.className = "py-1.5 px-2 rounded-lg font-bold text-xs transition bg-white text-blue-600 shadow-sm";
+      if (groupDaily) groupDaily.classList.remove('hidden');
+      if (inputDate) inputDate.disabled = false;
+    }
+  }
+
+  function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    if (id === 'exportModal') {
+      const currentMode = document.getElementById('export_period_type')?.value || 'month';
+      setExportPeriodMode(currentMode);
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+
+  function openManualForStudent(studentId, studentName) {
+    document.getElementById('manual_student_id').value = studentId;
+    openModal('manualModal');
+  }
+
+  let currentSummaryData = null;
+
+  async function openTeacherSummaryModal() {
+    openModal('teacherSummaryModal');
+    await fetchTeacherSummaryPreview();
+  }
+
+  async function fetchTeacherSummaryPreview() {
+    const classIdEl = document.getElementById('summary_class_id');
+    const dateEl = document.getElementById('summary_date');
+    const classId = classIdEl ? classIdEl.value : '';
+    const date = dateEl ? dateEl.value : '';
+
+    const teacherNameEl = document.getElementById('summary_teacher_name');
+    const targetPhoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    const badgeEl = document.getElementById('summary_stats_badge');
+
+    teacherNameEl.innerText = 'Memuat...';
+    messageEl.value = 'Sedang memuat data urutan presensi...';
+
+    try {
+      const res = await fetch(`/dashboard/attendances/teacher-summary-preview?class_id=${encodeURIComponent(classId)}&date=${encodeURIComponent(date)}`);
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Gagal memuat pratinjau');
+        return;
+      }
+
+      currentSummaryData = data;
+      teacherNameEl.innerText = data.teacherName ? `${data.teacherName}` : '(Belum ada wali kelas)';
+      targetPhoneEl.value = data.teacherPhone || '';
+      messageEl.value = data.message || '';
+      badgeEl.innerText = `${data.attendancesCount} dari ${data.totalStudents} Siswa Hadir`;
+    } catch (e) {
+      console.error(e);
+      messageEl.value = 'Gagal memuat data: ' + e.message;
+    }
+  }
+
+  function copySummaryText() {
+    const messageEl = document.getElementById('summary_message');
+    const copyBadge = document.getElementById('copy_badge');
+    if (!messageEl || !messageEl.value) return;
+
+    navigator.clipboard.writeText(messageEl.value).then(() => {
+      copyBadge.innerText = 'Tersalin! ✓';
+      setTimeout(() => {
+        copyBadge.innerText = 'Salin Pesan';
+      }, 2000);
+    }).catch(err => {
+      messageEl.select();
+      document.execCommand('copy');
+      copyBadge.innerText = 'Tersalin! ✓';
+      setTimeout(() => {
+        copyBadge.innerText = 'Salin Pesan';
+      }, 2000);
+    });
+  }
+
+  function openDirectWhatsApp() {
+    const phoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    let phone = phoneEl ? phoneEl.value.trim().replace(/[^0-9]/g, '') : '';
+    const message = messageEl ? messageEl.value : '';
+
+    if (!phone) {
+      alert('Masukkan nomor WhatsApp tujuan terlebih dahulu.');
+      phoneEl.focus();
+      return;
+    }
+
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.slice(1);
+    }
+
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+  }
+
+  async function sendTeacherSummaryViaBot() {
+    const phoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    const classIdEl = document.getElementById('summary_class_id');
+    const dateEl = document.getElementById('summary_date');
+    const btnSend = document.getElementById('btn_send_summary');
+
+    const phone = phoneEl ? phoneEl.value.trim() : '';
+    const message = messageEl ? messageEl.value.trim() : '';
+    const classId = classIdEl ? classIdEl.value : '';
+    const date = dateEl ? dateEl.value : '';
+
+    if (!phone) {
+      alert('Nomor WhatsApp tujuan wajib diisi.');
+      phoneEl.focus();
+      return;
+    }
+
+    if (!message) {
+      alert('Pesan rekap absensi tidak boleh kosong.');
+      return;
+    }
+
+    btnSend.disabled = true;
+    btnSend.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Mengirim...</span>`;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await fetch('/dashboard/attendances/send-teacher-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone,
+          message,
+          class_id: classId,
+          date,
+          class_name: currentSummaryData ? currentSummaryData.className : ''
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Gagal mengirim rekap ke bot');
+        btnSend.disabled = false;
+        btnSend.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Kirim via Bot Server</span>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      alert(data.message);
+      closeModal('teacherSummaryModal');
+    } catch (e) {
+      alert('Gagal mengirim: ' + e.message);
+    } finally {
+      btnSend.disabled = false;
+      btnSend.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Kirim via Bot Server</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  async function triggerBroadcastAlpa() {
+    const targetDate = "<%= filters.date %>";
+    const classId = "<%= filters.classId %>";
+
+    if (!confirm(`Kirim notifikasi WhatsApp 'BELUM HADIR' ke seluruh wali murid siswa yang belum presensi pada tanggal ${targetDate}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/dashboard/attendances/broadcast-alpa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: targetDate, class_id: classId || null })
+      });
+      const data = await res.json();
+      alert(data.message);
+      location.reload();
+    } catch (e) {
+      alert('Gagal mengirim broadcast: ' + e.message);
+    }
+  }
+
+  // Auto-buka modal jika parameter openSummary=true
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openSummary') === 'true') {
+      openTeacherSummaryModal();
+    }
+  });
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

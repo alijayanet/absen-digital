@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan Kelas / Divisi - Smart School Standalone</title>
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/terms.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <nav class="bg-slate-900 text-white px-4 sm:px-8 py-3.5 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div data-brand-logo class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-lg shadow overflow-hidden shrink-0">
+          🏫
+        </div>
+        <div class="truncate">
+          <h1 class="text-sm sm:text-base font-extrabold text-white leading-tight truncate">Pengaturan <span data-term="groupLabel">Kelas</span></h1>
+          <p class="text-[10px] sm:text-xs text-teal-400 font-medium truncate">Manajemen Kelompok &amp; Penetapan Penanggung Jawab</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons on Mobile & Desktop -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Desktop Links -->
+        <div class="hidden xl:flex items-center gap-1 text-xs font-semibold">
+          <a href="/dashboard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Dashboard</a>
+          <a href="/students" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="students">Santri</a>
+          <a href="/classes" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700" data-nav="classes">Kelas</a>
+          <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
+          <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
+          <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
+          <a href="/settings" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Pengaturan</a>
+        </div>
+
+        <a href="/kiosk" target="_blank" class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition flex items-center gap-1 shadow">
+          <i data-lucide="tv" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Layar Kiosk</span>
+        </a>
+
+        <button data-admin-logout class="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Keluar dari Panel Admin">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Keluar</span>
+        </button>
+
+        <!-- Mobile Menu Toggle Button (Visible on screens < xl) -->
+        <button data-mobile-nav-toggle class="xl:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700 shadow-sm" title="Menu Navigasi">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Grid (Dropdown) -->
+    <div id="mobileNavMenu" class="hidden xl:hidden pt-3.5 pb-1 border-t border-slate-800 mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+      <a href="/dashboard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-400"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/students" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="users" class="w-4 h-4 text-blue-400"></i>
+        <span data-nav="students">Santri</span>
+      </a>
+      <a href="/classes" class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-800 text-teal-300 font-bold border border-slate-700">
+        <i data-lucide="book-open" class="w-4 h-4 text-teal-400"></i>
+        <span data-nav="classes">Kelas</span>
+      </a>
+      <a href="/teachers" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="graduation-cap" class="w-4 h-4 text-purple-400"></i>
+        <span data-nav="teachers">Guru / Wali</span>
+      </a>
+      <a href="/attendances" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+        <span>Laporan</span>
+      </a>
+      <a href="/idcard" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="credit-card" class="w-4 h-4 text-indigo-400"></i>
+        <span>Cetak Kartu</span>
+      </a>
+      <a href="/whatsapp" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="message-square" class="w-4 h-4 text-green-400"></i>
+        <span>WhatsApp</span>
+      </a>
+      <a href="/settings" class="flex items-center gap-2 p-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Pengaturan</span>
+      </a>
+      <button data-admin-logout class="flex items-center gap-2 p-2.5 rounded-xl text-rose-300 hover:bg-rose-950/60 transition col-span-2 sm:col-span-4 border border-rose-900/60 font-bold justify-center">
+        <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+        <span>Keluar dari Panel Admin (Logout)</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6">
+
+    <!-- Header & Action Buttons -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight" data-term="groupPlural">Daftar Rombongan Belajar / Kelas</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Kelola data kelompok dan penanggung jawab pembina</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="openClassModal()" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Tambah <span data-term="groupLabel">Kelas</span> Baru</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabel Kelas -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+              <th class="px-4 py-3.5 text-center w-12">No</th>
+              <th class="px-4 py-3.5">Nama <span data-term="groupLabel">Kelas</span></th>
+              <th class="px-4 py-3.5" data-term="groupLevel">Jenjang / Tingkat</th>
+              <th class="px-4 py-3.5"><span data-term="groupLeader">Wali Kelas</span> / Pembina</th>
+              <th class="px-4 py-3.5 text-center">Jumlah <span data-term="plural">Santri</span></th>
+              <th class="px-4 py-3.5 text-center w-28">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="classTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="6" class="px-5 py-8 text-center text-slate-400 italic">
+                Memuat data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Tambah / Edit Kelas -->
+  <div id="classModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 id="modalTitle" class="font-bold text-slate-900 text-base">Tambah <span data-term="groupLabel">Kelas</span> Baru</h3>
+        <button onclick="closeClassModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="classForm" onsubmit="saveClass(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="classId" value="">
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nama <span data-term="groupLabel">Kelas</span> *:</label>
+          <input type="text" id="className" required placeholder="Contoh: Iqro 1, Kelas 7A, Divisi IT" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-bold">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1" data-term="groupLevel">Jenjang / Tingkat:</label>
+          <input type="text" id="classLevel" placeholder="Contoh: Santri, Dasar, Lanjutan, Staff" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Pilih <span data-term="groupLeader">Wali Kelas</span> / Penanggung Jawab:</label>
+          <select id="classTeacher" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-semibold">
+            <option value="0">-- Belum Ditentukan --</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-1">Pilih penanggung jawab kelompok ini.</p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeClassModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition">Batal</button>
+          <button type="submit" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition">Simpan Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-center text-xs text-slate-500">
+    Smart School All-in-One Standalone &bull; Didukung oleh SQLite Native &amp; WhatsApp Cloud Gateway
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let allClasses = [];
+    let allTeachers = [];
+
+    window.addEventListener('termsChanged', () => {
+      renderClasses();
+    });
+
+    async function loadData() {
+      try {
+        const [classesRes, teachersRes] = await Promise.all([
+          fetch('/api/classes'),
+          fetch('/api/teachers')
+        ]);
+        allClasses = await classesRes.json();
+        allTeachers = await teachersRes.json();
+
+        // Populate dropdown wali kelas
+        const teacherSelect = document.getElementById('classTeacher');
+        teacherSelect.innerHTML = '<option value="0">-- Belum Ditentukan --</option>' + 
+          allTeachers.map(t => {
+            const shortTitle = t.gender === 'P' ? (window.AppTerms ? AppTerms.get('teacherFemaleShort', 'Ustdz.') : 'Ustdz.') : (window.AppTerms ? AppTerms.get('teacherMaleShort', 'Ust.') : 'Ust.');
+            return `<option value="${t.id}">${t.name} (${shortTitle})</option>`;
+          }).join('');
+
+        renderClasses();
+      } catch (err) {
+        console.error('Error loading classes:', err);
+      }
+    }
+
+    function renderClasses() {
+      const tbody = document.getElementById('classTableBody');
+      if (!allClasses || allClasses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-400 italic">Belum ada data kelompok yang didaftarkan.</td></tr>';
+        return;
+      }
+
+      const singular = window.AppTerms ? AppTerms.get('singular', 'Santri') : 'Santri';
+
+      tbody.innerHTML = allClasses.map((c, idx) => {
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 text-center font-mono text-slate-400">${idx + 1}</td>
+            <td class="px-4 py-3">
+              <span class="font-extrabold text-slate-900 text-sm">${c.name}</span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${c.level || 'Dasar'}</span>
+            </td>
+            <td class="px-4 py-3">
+              ${c.teacher_name && c.teacher_name !== '-' 
+                ? `<div class="font-bold text-teal-800 flex items-center gap-1.5"><i data-lucide="user-check" class="w-3.5 h-3.5 text-teal-600"></i> ${c.teacher_name}</div>` 
+                : `<span class="text-slate-400 italic">Belum ditentukan</span>`}
+            </td>
+            <td class="px-4 py-3 text-center">
+              <span class="px-2.5 py-1 rounded-xl text-xs font-black font-mono ${c.student_count > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
+                ${c.student_count || 0} ${singular}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="editClass(${c.id})" class="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition" title="Edit Data">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteClass(${c.id})" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition" title="Hapus Data">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function openClassModal() {
+      const groupLabel = window.AppTerms ? AppTerms.get('groupLabel', 'Kelas') : 'Kelas';
+      document.getElementById('modalTitle').innerHTML = `Tambah ${groupLabel} Baru`;
+      document.getElementById('classId').value = '';
+      document.getElementById('className').value = '';
+      document.getElementById('classLevel').value = 'Dasar';
+      document.getElementById('classTeacher').value = '0';
+      document.getElementById('classModal').classList.remove('hidden');
+    }
+
+    function editClass(target) {
+      const c = typeof target === 'object' && target !== null ? target : allClasses.find(item => item.id == target);
+      if (!c) return;
+      const groupLabel = window.AppTerms ? AppTerms.get('groupLabel', 'Kelas') : 'Kelas';
+      document.getElementById('modalTitle').innerHTML = `Edit ${groupLabel}: ` + c.name;
+      document.getElementById('classId').value = c.id;
+      document.getElementById('className').value = c.name;
+      document.getElementById('classLevel').value = c.level || 'Dasar';
+      document.getElementById('classTeacher').value = c.teacher_id || '0';
+      document.getElementById('classModal').classList.remove('hidden');
+    }
+
+    function closeClassModal() {
+      document.getElementById('classModal').classList.add('hidden');
+    }
+
+    async function saveClass(e) {
+      e.preventDefault();
+      const id = document.getElementById('classId').value;
+      const name = document.getElementById('className').value.trim();
+      const level = document.getElementById('classLevel').value.trim() || 'Dasar';
+      const teacherId = parseInt(document.getElementById('classTeacher').value) || 0;
+
+      if (!name) {
+        alert('Nama wajib diisi!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/classes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: id ? parseInt(id) : null,
+            name, level, teacher_id: teacherId
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeClassModal();
+          loadData();
+        } else {
+          alert('Gagal: ' + data.message);
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan: ' + err.message);
+      }
+    }
+
+    async function deleteClass(target) {
+      const c = typeof target === 'object' && target !== null ? target : allClasses.find(item => item.id == target);
+      if (!c) return;
+      const id = c.id;
+      const name = c.name;
+      const studentCount = c.student_count || 0;
+      const singular = window.AppTerms ? AppTerms.get('singular', 'santri') : 'santri';
+      if (studentCount > 0) {
+        alert(`Data "${name}" masih memiliki ${studentCount} ${singular} aktif! Anda harus memindahkan ${singular} terlebih dahulu sebelum menghapus data ini.`);
+        return;
+      }
+
+      if (!confirm(`Hapus data "${name}"?`)) return;
+
+      try {
+        const res = await fetch('/api/classes/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadData();
+        } else {
+          alert('Gagal menghapus: ' + data.message);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

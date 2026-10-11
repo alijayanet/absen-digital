@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Absensi &amp; Smart School</string>
+    <string name="app_tagline">Sistem Presensi IoT, QRIS &amp; Manajemen Sekolah</string>
+    <string name="server_config_title">Pengaturan Server Sekolah</string>
+    <string name="server_config_desc">Masukkan URL server lokal atau domain sekolah untuk menghubungkan aplikasi.</string>
+    <string name="server_url_hint">http://192.168.8.8:3000</string>
+    <string name="btn_test_connection">Tes Koneksi</string>
+    <string name="btn_save_connect">Simpan &amp; Hubungkan</string>
+    <string name="btn_scan_qr">Scan QR Config</string>
+    <string name="connection_success">Koneksi ke server berhasil!</string>
+    <string name="connection_failed">Gagal terhubung ke server. Periksa kembali URL dan jaringan WiFi Anda.</string>
+    <string name="retry">Coba Lagi</string>
+    <string name="change_server">Ubah Server</string>
+    <string name="gateway_listener_title">Auto-Payment Gateway</string>
+    <string name="gateway_listener_desc">Listener otomatis mendeteksi notifikasi mutasi uang masuk dari E-Wallet dan Mobile Banking untuk verifikasi lunas SPP real-time.</string>
+</resources>

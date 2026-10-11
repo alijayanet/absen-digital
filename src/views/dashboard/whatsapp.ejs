@@ -1,0 +1,499 @@
+<%- include('../partials/header', { title: 'Manajemen WhatsApp Gateway', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">WhatsApp Gateway</h1>
+            <% if (providerSettings.provider === 'fonnte') { %>
+              <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                <i data-lucide="zap" class="w-3 h-3"></i> Fonnte Cloud
+              </span>
+            <% } else if (providerSettings.provider === 'wablas') { %>
+              <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                <i data-lucide="cloud" class="w-3 h-3"></i> Wablas Cloud
+              </span>
+            <% } else { %>
+              <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <i data-lucide="qr-code" class="w-3 h-3"></i> Baileys Web
+              </span>
+            <% } %>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">Status sesi bot WhatsApp, antrean pesan, dan verifikasi nomor 2-arah</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <% if (providerSettings.provider === 'baileys') { %>
+          <form action="/dashboard/whatsapp/reconnect" method="POST" class="inline-block">
+            <button type="submit" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition" title="Mulai Ulang Koneksi WhatsApp">
+              <i data-lucide="refresh-cw" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+              <span class="hidden sm:inline sm:ml-1.5">Mulai Ulang</span>
+            </button>
+          </form>
+
+          <form action="/dashboard/whatsapp/repair-keys" method="POST" class="inline-block" onsubmit="return confirm('Bersihkan cache pre-keys & sesi usang untuk mengatasi masalah pesan pending / Bad MAC tanpa perlu scan QR ulang?')">
+            <button type="submit" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition" title="Perbaiki Sesi & Bersihkan Pre-Keys (Anti-Waiting)">
+              <i data-lucide="wrench" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+              <span class="hidden sm:inline sm:ml-1.5">Perbaiki Sesi</span>
+            </button>
+          </form>
+
+          <form action="/dashboard/whatsapp/logout" method="POST" class="inline-block" onsubmit="return confirm('Keluar dari sesi WhatsApp? Anda perlu scan QR lagi.')">
+            <button type="submit" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-semibold transition" title="Logout Sesi WhatsApp">
+              <i data-lucide="log-out" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+              <span class="hidden sm:inline sm:ml-1.5">Logout Sesi</span>
+            </button>
+          </form>
+        <% } else { %>
+          <form action="/dashboard/whatsapp/reconnect" method="POST" class="inline-block">
+            <button type="submit" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-100 text-xs font-semibold transition" title="Cek Status Gateway Cloud">
+              <i data-lucide="refresh-cw" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+              <span class="hidden sm:inline sm:ml-1.5">Cek Status Gateway</span>
+            </button>
+          </form>
+        <% } %>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
+      <% if (successMsg) { %>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+
+      <!-- Card Pengaturan Gateway WhatsApp Multi-Engine -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+          <div>
+            <h2 class="font-bold text-slate-900 text-base flex items-center gap-2">
+              <i data-lucide="settings-2" class="w-5 h-5 text-indigo-600"></i>
+              Pilihan Mesin Gateway WhatsApp
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Pilih engine yang digunakan untuk mengirim notifikasi absensi & kartu siswa.</p>
+          </div>
+          <span class="text-xs px-3 py-1 rounded-full font-bold <%= providerSettings.enabled === '1' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200' %>">
+            <%= providerSettings.enabled === '1' ? '● Notifikasi Aktif' : '○ Notifikasi Nonaktif' %>
+          </span>
+        </div>
+
+        <form action="/dashboard/whatsapp/settings" method="POST" class="space-y-5">
+          <!-- Pilihan Provider Radio -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Pilihan 1: Fonnte (Rekomendasi STB) -->
+            <label class="cursor-pointer border-2 rounded-2xl p-4 transition flex flex-col justify-between <%= providerSettings.provider === 'fonnte' ? 'border-purple-600 bg-purple-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white' %>" onclick="switchProvider('fonnte')">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="inline-flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                    <i data-lucide="zap" class="w-4 h-4 text-purple-600"></i> Fonnte API
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-800">Rekomendasi STB ⭐</span>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                  Sangat ringan (< 1 MB RAM), koneksi cloud stabil 24 jam tanpa membebani memori STB.
+                </p>
+              </div>
+              <div class="mt-4 flex items-center gap-2">
+                <input type="radio" name="wa_provider" value="fonnte" <%= providerSettings.provider === 'fonnte' ? 'checked' : '' %> class="text-purple-600 focus:ring-purple-500">
+                <span class="text-xs font-semibold text-slate-700">Gunakan Fonnte</span>
+              </div>
+            </label>
+
+            <!-- Pilihan 2: Wablas -->
+            <label class="cursor-pointer border-2 rounded-2xl p-4 transition flex flex-col justify-between <%= providerSettings.provider === 'wablas' ? 'border-blue-600 bg-blue-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white' %>" onclick="switchProvider('wablas')">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="inline-flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                    <i data-lucide="cloud" class="w-4 h-4 text-blue-600"></i> Wablas API
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">Cloud Gateway</span>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                  Gateway cloud menggunakan token dan domain server akun Wablas Anda.
+                </p>
+              </div>
+              <div class="mt-4 flex items-center gap-2">
+                <input type="radio" name="wa_provider" value="wablas" <%= providerSettings.provider === 'wablas' ? 'checked' : '' %> class="text-blue-600 focus:ring-blue-500">
+                <span class="text-xs font-semibold text-slate-700">Gunakan Wablas</span>
+              </div>
+            </label>
+
+            <!-- Pilihan 3: Baileys -->
+            <label class="cursor-pointer border-2 rounded-2xl p-4 transition flex flex-col justify-between <%= (providerSettings.provider === 'baileys' || !providerSettings.provider) ? 'border-emerald-600 bg-emerald-50/40 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white' %>" onclick="switchProvider('baileys')">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <span class="inline-flex items-center gap-1.5 font-bold text-sm text-slate-900">
+                    <i data-lucide="qr-code" class="w-4 h-4 text-emerald-600"></i> Baileys Web
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800">Server Linux</span>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">
+                  Koneksi langsung via WhatsApp Web (Scan QR). Membutuhkan RAM 100-200 MB.
+                </p>
+              </div>
+              <div class="mt-4 flex items-center gap-2">
+                <input type="radio" name="wa_provider" value="baileys" <%= (providerSettings.provider === 'baileys' || !providerSettings.provider) ? 'checked' : '' %> class="text-emerald-600 focus:ring-emerald-500">
+                <span class="text-xs font-semibold text-slate-700">Gunakan Baileys</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Input Konfigurasi Fonnte -->
+          <div id="sectionFonnte" class="<%= providerSettings.provider === 'fonnte' ? '' : 'hidden' %> bg-purple-50/60 border border-purple-100 rounded-xl p-4 space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-800 mb-1">API Token Fonnte:</label>
+              <input type="password" name="wa_fonnte_token" value="<%= providerSettings.fonnte_token || '' %>" placeholder="Masukkan Token Akun Fonnte (contoh: a1b2c3d4e5f6...)" class="w-full p-2.5 bg-white border border-purple-200 rounded-lg text-xs font-mono focus:border-purple-500 focus:outline-none shadow-sm">
+            </div>
+            <p class="text-[11px] text-slate-600">
+              💡 Belum punya token? Daftar akun di <a href="https://fonnte.com" target="_blank" class="text-purple-700 underline font-bold">fonnte.com</a> &rarr; tautkan nomor WhatsApp &rarr; salin API Token di menu Device.
+            </p>
+          </div>
+
+          <!-- Input Konfigurasi Wablas -->
+          <div id="sectionWablas" class="<%= providerSettings.provider === 'wablas' ? '' : 'hidden' %> bg-blue-50/60 border border-blue-100 rounded-xl p-4 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-800 mb-1">Domain Server Wablas:</label>
+                <input type="text" name="wa_wablas_domain" value="<%= providerSettings.wablas_domain || 'https://api.wablas.com' %>" placeholder="https://api.wablas.com" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-xs font-mono focus:border-blue-500 focus:outline-none shadow-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-800 mb-1">API Token Wablas:</label>
+                <input type="password" name="wa_wablas_token" value="<%= providerSettings.wablas_token || '' %>" placeholder="Masukkan Token Wablas..." class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-xs font-mono focus:border-blue-500 focus:outline-none shadow-sm">
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-600">
+              💡 Dapatkan API Token & Domain dari dashboard akun Anda di <a href="https://wablas.com" target="_blank" class="text-blue-700 underline font-bold">wablas.com</a>.
+            </p>
+          </div>
+
+          <!-- Info Baileys -->
+          <div id="sectionBaileys" class="<%= (providerSettings.provider === 'baileys' || !providerSettings.provider) ? '' : 'hidden' %> bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-800">
+            ℹ️ Mode Baileys aktif. Gunakan kotak pemindaian QR Code di bawah untuk menautkan nomor WhatsApp sekolah.
+          </div>
+
+          <!-- Toggle Notifikasi & Tombol Simpan -->
+          <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+              <input type="checkbox" name="wa_enabled" value="1" <%= providerSettings.enabled === '1' ? 'checked' : '' %> class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+              <span>Aktifkan pengiriman otomatis notifikasi presensi siswa</span>
+            </label>
+
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span>Simpan Pengaturan Gateway</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Grid Status Koneksi & Uji Coba -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Card QR Code / Status Koneksi -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+          <div id="waStatusBadge" class="mb-4">
+            <% if (statusInfo.status === 'connected') { %>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <%= statusInfo.providerName || 'WhatsApp' %> Terhubung
+              </span>
+            <% } else if (statusInfo.status === 'qr_ready') { %>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Siap Scan QR
+              </span>
+            <% } else { %>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Belum Terhubung
+              </span>
+            <% } %>
+          </div>
+
+          <!-- Container QR Image / Cloud Gateway Info -->
+          <div class="w-52 h-52 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center p-3 relative overflow-hidden mb-3">
+            <% if (providerSettings.provider === 'fonnte' || providerSettings.provider === 'wablas') { %>
+              <!-- Tampilan Cloud Gateway (Fonnte / Wablas) -->
+              <div class="text-center p-2 flex flex-col items-center justify-center">
+                <% if (statusInfo.status === 'connected') { %>
+                  <div class="w-14 h-14 rounded-2xl <%= providerSettings.provider === 'fonnte' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600' %> flex items-center justify-center mb-2 shadow-inner">
+                    <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800"><%= providerSettings.provider === 'fonnte' ? 'Fonnte Cloud Gateway' : 'Wablas Cloud Gateway' %></p>
+                  <p class="font-mono text-[10px] text-slate-500 mt-1"><%= statusInfo.tokenMasked || 'Token Terpasang' %></p>
+                  <span class="mt-2 text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">Siap Mengirim Pesan</span>
+                <% } else { %>
+                  <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mb-2 shadow-inner">
+                    <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800">Token Belum Diisi</p>
+                  <p class="text-[10px] text-slate-500 mt-1">Masukkan API Token pada form pengaturan di atas.</p>
+                <% } %>
+              </div>
+            <% } else { %>
+              <!-- Tampilan Baileys Scan QR -->
+              <img id="waQrImage" src="<%= statusInfo.qrCodeDataUrl || '' %>" alt="QR Code WhatsApp" class="w-full h-full object-contain <%= statusInfo.status === 'qr_ready' ? '' : 'hidden' %>">
+              
+              <div id="waConnectedPlaceholder" class="<%= statusInfo.status === 'connected' ? '' : 'hidden' %> text-emerald-600 flex flex-col items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-16 h-16 text-emerald-500"></i>
+                <p class="text-xs font-bold text-slate-800">Sesi Aktif</p>
+                <p class="font-mono text-[11px] text-slate-500 truncate max-w-[180px]"><%= statusInfo.userJid || '' %></p>
+              </div>
+
+              <div id="waLoadingPlaceholder" class="<%= (statusInfo.status !== 'connected' && statusInfo.status !== 'qr_ready') ? '' : 'hidden' %> text-slate-400 flex flex-col items-center gap-2">
+                <i data-lucide="loader-2" class="w-10 h-10 text-slate-400 animate-spin"></i>
+                <p class="text-xs">Menyiapkan QR Code...</p>
+              </div>
+            <% } %>
+          </div>
+
+          <p class="text-xs text-slate-500 max-w-xs">
+            <% if (providerSettings.provider === 'fonnte' || providerSettings.provider === 'wablas') { %>
+              Pesan dikirim melalui server cloud <%= providerSettings.provider === 'fonnte' ? 'Fonnte' : 'Wablas' %>. RAM STB sangat hemat & tidak panas.
+            <% } else { %>
+              Buka WhatsApp di ponsel &rarr; Ketuk Titik Tiga / Perangkat Tertaut &rarr; Tautkan Perangkat &rarr; Scan QR di atas.
+            <% } %>
+          </p>
+        </div>
+
+        <!-- Card Uji Coba Kirim Pesan (Test Send) -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+              <i data-lucide="send" class="w-4 h-4 text-blue-600"></i>
+              Uji Coba Kirim Pesan WhatsApp (<%= statusInfo.providerName || 'WhatsApp' %>)
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">
+              Kirim pesan percobaan ke nomor Anda untuk memastikan koneksi gateway berfungsi dengan baik.
+            </p>
+
+            <form action="/dashboard/whatsapp/test" method="POST" class="space-y-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Nomor Tujuan WhatsApp (Contoh: 081234567890)</label>
+                <input type="text" name="test_phone" required placeholder="081234567890" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Isi Pesan Uji Coba</label>
+                <textarea name="test_message" rows="3" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">Halo, ini adalah pesan uji coba dari sistem Absensi Sekolah via <%= statusInfo.providerName || 'WhatsApp Gateway' %>.</textarea>
+              </div>
+              <div>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+                  Kirim Pesan Percobaan
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Info Perlindungan Anti-Ban / Cloud Note -->
+          <div class="mt-6 pt-4 border-t border-slate-100 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 text-xs text-emerald-900 space-y-1">
+            <p class="font-bold flex items-center gap-1.5 text-emerald-800">
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+              Penyampaian Notifikasi Presensi:
+            </p>
+            <p class="text-[11px] text-emerald-700 leading-relaxed">
+              Setiap kali siswa tap kartu RFID / scan barcode di Kiosk TV, sistem otomatis memasukkan pesan ke antrean dan meneruskannya ke gateway aktif (<%= statusInfo.providerName %>) secara aman dan instan.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ringkasan Antrean & Tombol Retry -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-6 text-xs">
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Pending</span>
+            <span class="text-xl font-extrabold text-slate-800 font-mono"><%= stats.pending || 0 %></span>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Sedang Mengirim</span>
+            <span class="text-xl font-extrabold text-blue-600 font-mono"><%= stats.sending || 0 %></span>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Terkirim</span>
+            <span class="text-xl font-extrabold text-emerald-600 font-mono"><%= stats.sent || 0 %></span>
+          </div>
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Gagal</span>
+            <span class="text-xl font-extrabold text-rose-600 font-mono"><%= stats.failed || 0 %></span>
+          </div>
+        </div>
+
+        <% if (stats.failed > 0) { %>
+          <form action="/dashboard/whatsapp/retry-queue" method="POST">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+              <span>Coba Lagi <%= stats.failed %> Pesan Gagal</span>
+            </button>
+          </form>
+        <% } %>
+      </div>
+
+      <!-- Tabel 50 Log Antrean Terakhir -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="font-bold text-slate-800 text-sm">Riwayat Antrean Pesan (50 Terakhir)</h3>
+          <span class="text-xs text-slate-500 font-mono"><%= stats.total || 0 %> Total Antrean</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="px-4 py-3">Waktu</th>
+                <th class="px-4 py-3">Nomor Tujuan</th>
+                <th class="px-4 py-3">Siswa</th>
+                <th class="px-4 py-3">Tipe Pesan</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (queueLogs.length === 0) { %>
+                <tr>
+                  <td colspan="6" class="px-4 py-8 text-center text-slate-400 italic">
+                    Belum ada antrean pesan WhatsApp yang tercatat.
+                  </td>
+                </tr>
+              <% } %>
+              <% queueLogs.forEach(q => { %>
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-500">
+                    <%= q.created_at %>
+                  </td>
+                  <td class="px-4 py-3 font-mono font-medium text-slate-700">
+                    <%= q.phone %>
+                  </td>
+                  <td class="px-4 py-3 font-medium text-slate-800">
+                    <%= q.student_name || '-' %>
+                    <% if (q.nis) { %>
+                      <span class="text-slate-400 text-[10px] block font-mono">NIS: <%= q.nis %></span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded font-mono text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      <%= q.type %>
+                    </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <% if (q.status === 'sent') { %>
+                      <span class="inline-flex items-center gap-1 text-emerald-600 font-bold text-[11px]">
+                        <i data-lucide="check" class="w-3 h-3"></i> Terkirim
+                      </span>
+                    <% } else if (q.status === 'sending') { %>
+                      <span class="inline-flex items-center gap-1 text-blue-600 font-bold text-[11px]">
+                        <i data-lucide="loader" class="w-3 h-3 animate-spin"></i> Proses
+                      </span>
+                    <% } else if (q.status === 'failed') { %>
+                      <span class="inline-flex items-center gap-1 text-rose-600 font-bold text-[11px]">
+                        <i data-lucide="alert-circle" class="w-3 h-3"></i> Gagal
+                      </span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1 text-slate-400 font-medium text-[11px]">
+                        <i data-lucide="clock" class="w-3 h-3"></i> Pending
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-3 text-slate-500 text-[11px] max-w-xs truncate">
+                    <%= q.error_message || q.message %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  function switchProvider(provider) {
+    const sFonnte = document.getElementById('sectionFonnte');
+    const sWablas = document.getElementById('sectionWablas');
+    const sBaileys = document.getElementById('sectionBaileys');
+
+    if (provider === 'fonnte') {
+      sFonnte.classList.remove('hidden');
+      sWablas.classList.add('hidden');
+      sBaileys.classList.add('hidden');
+    } else if (provider === 'wablas') {
+      sFonnte.classList.add('hidden');
+      sWablas.classList.remove('hidden');
+      sBaileys.classList.add('hidden');
+    } else {
+      sFonnte.classList.add('hidden');
+      sWablas.classList.add('hidden');
+      sBaileys.classList.remove('hidden');
+    }
+  }
+
+  // Polling Status WhatsApp Realtime Setiap 4 Detik (khusus Baileys)
+  <% if (providerSettings.provider === 'baileys' || !providerSettings.provider) { %>
+    async function pollWaStatus() {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+
+        const qrImg = document.getElementById('waQrImage');
+        const connPlaceholder = document.getElementById('waConnectedPlaceholder');
+        const loadPlaceholder = document.getElementById('waLoadingPlaceholder');
+        const statusBadge = document.getElementById('waStatusBadge');
+
+        if (!qrImg || !connPlaceholder || !loadPlaceholder || !statusBadge) return;
+
+        if (data.status === 'connected') {
+          qrImg.classList.add('hidden');
+          loadPlaceholder.classList.add('hidden');
+          connPlaceholder.classList.remove('hidden');
+          statusBadge.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> WhatsApp Terhubung
+            </span>
+          `;
+        } else if (data.status === 'qr_ready' && data.qrCodeDataUrl) {
+          connPlaceholder.classList.add('hidden');
+          loadPlaceholder.classList.add('hidden');
+          qrImg.src = data.qrCodeDataUrl;
+          qrImg.classList.remove('hidden');
+          statusBadge.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Siap Scan QR
+            </span>
+          `;
+        } else {
+          qrImg.classList.add('hidden');
+          connPlaceholder.classList.add('hidden');
+          loadPlaceholder.classList.remove('hidden');
+        }
+      } catch (e) {
+        // Ignore polling network error
+      }
+    }
+
+    setInterval(pollWaStatus, 4000);
+  <% } %>
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

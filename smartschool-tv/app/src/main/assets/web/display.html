@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layar Kiosk Presensi & Antrian Mengaji Live - SmartSchool TV</title>
+  
+  <!-- Offline Bundle: Tailwind CSS & Lucide Icons -->
+  <script src="tailwind.min.js"></script>
+  <script src="lucide.min.js"></script>
+
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    /* Laser Scanner Animation */
+    @keyframes scanLaser {
+      0% { top: 8%; opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { top: 92%; opacity: 0.2; }
+    }
+    .animate-scan-laser {
+      animation: scanLaser 2s ease-in-out infinite alternate;
+    }
+
+    /* Glow Effect for Calling Active Table Card */
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);
+        border-color: rgba(52, 211, 153, 0.9);
+      }
+      50% {
+        box-shadow: 0 0 50px rgba(16, 185, 129, 0.75);
+        border-color: rgba(110, 231, 183, 1);
+      }
+    }
+    .calling-card {
+      animation: pulseGlow 1.8s infinite;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(71, 85, 105, 1);
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
+
+  <!-- ========================================== -->
+  <!-- 1. HEADER UTAMA LAYAR MULTIFUNGSI           -->
+  <!-- ========================================== -->
+  <header class="bg-slate-900/95 border-b border-slate-800 px-3 sm:px-5 py-1.5 sm:py-2 flex items-center justify-between shadow-lg flex-shrink-0 z-30 backdrop-blur-md">
+    
+    <!-- Info Sekolah & Brand (Leluasa & Luas untuk Nama Sekolah Panjang) -->
+    <div class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 pr-4">
+      <div id="schoolLogoFallback" class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg sm:text-xl font-bold shadow flex-shrink-0">
+        📖
+      </div>
+      <img id="schoolLogoImg" src="" alt="Logo" class="hidden w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-xl bg-white/10 p-0.5 border border-slate-700/80 shadow flex-shrink-0">
+      
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-1.5">
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-widest flex items-center gap-1 shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Kiosk Presensi RFID & Antrian Live
+          </span>
+        </div>
+        <h1 id="schoolNameTitle" class="text-xs sm:text-base lg:text-lg xl:text-xl font-black text-white tracking-tight uppercase truncate leading-tight mt-0.5">
+          SMARTSCHOOL TV
+        </h1>
+      </div>
+    </div>
+
+    <!-- Tombol Audio, Fullscreen, Menu Admin, & Jam Digital -->
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      
+      <!-- Tombol Akses Menu Admin Shell TV -->
+      <button onclick="openAdminShell()" class="px-2.5 sm:px-3 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow cursor-pointer" title="Buka Menu Admin Shell">
+        <i data-lucide="shield" class="w-3.5 h-3.5 text-teal-400"></i>
+        <span class="hidden sm:inline">Menu Admin</span>
+      </button>
+
+      <!-- Tombol Audio Activator -->
+      <button id="audioToggleBtn" onclick="toggleAudio()" class="px-2.5 sm:px-3 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow cursor-pointer">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+        <span id="audioBtnText" class="hidden sm:inline">Aktifkan Suara Bel</span>
+      </button>
+
+      <!-- Tombol Layar Penuh -->
+      <button onclick="toggleFullscreen()" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer border border-slate-700 shadow-sm" title="Layar Penuh (F11)">
+        <i data-lucide="maximize" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+      </button>
+
+      <!-- Jam Digital Sesuai Zona Waktu Wilayah -->
+      <div class="text-right pl-2 border-l border-slate-800">
+        <div id="liveClock" class="text-base sm:text-xl lg:text-2xl font-black text-emerald-400 font-mono tracking-wider leading-tight">
+          --:--:--
+        </div>
+        <div id="liveDate" class="text-[9px] sm:text-[10px] text-slate-400 font-semibold truncate hidden sm:block leading-tight">
+          Memuat...
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 2. BANNER PENGUMUMAN PANGGILAN TERBARU     -->
+  <!-- ========================================== -->
+  <div id="callBanner" class="bg-gradient-to-r from-emerald-950 via-emerald-800 to-teal-900 border-b border-emerald-500/50 px-4 py-1.5 flex items-center justify-between text-xs transition-all duration-300 opacity-0 -translate-y-2 pointer-events-none z-20 shrink-0">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <span class="p-0.5 rounded-lg bg-emerald-500 text-slate-950 font-black text-[10px] px-2 animate-bounce flex items-center gap-1 shadow shrink-0">
+        <i data-lucide="bell" class="w-3 h-3 fill-current"></i>
+        <span>MEMANGGIL</span>
+      </span>
+      <span id="callBannerText" class="text-emerald-100 font-black text-xs sm:text-sm truncate">
+        Menunggu panggilan berikutnya...
+      </span>
+    </div>
+    <div class="text-[10px] text-emerald-300 font-semibold hidden md:flex items-center gap-1 shrink-0">
+      <i data-lucide="arrow-right-circle" class="w-3.5 h-3.5"></i>
+      Santri dimohon segera menuju meja penguji
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. MAIN CONTAINER: SATU FRAME DUA FUNGSI   -->
+  <!-- ========================================== -->
+  <main id="mainContainer" class="flex-1 p-2 sm:p-3 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-2.5 items-stretch min-h-0">
+    
+    <!-- ---------------------------------------- -->
+    <!-- FRAME KIRI: KIOSK SCANNER PRESENSI MANDIRI -->
+    <!-- ---------------------------------------- -->
+    <section id="kioskPane" class="lg:col-span-4 xl:col-span-4 flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300">
+      
+      <!-- Card Kiosk Scanner (Fokus Penuh RFID Mandiri) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 shadow-xl flex flex-col justify-between shrink-0 relative overflow-hidden backdrop-blur-sm">
+        
+        <!-- Header Panel RFID -->
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80 mb-2">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h2 class="text-[11px] font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="credit-card" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Presensi Siswa RFID
+            </h2>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            Reader Siaga
+          </span>
+        </div>
+
+        <!-- Zona Animasi Tap RFID (Pengganti Kamera) -->
+        <div class="relative w-full py-5 px-3 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-xl overflow-hidden flex flex-col items-center justify-center border border-dashed border-emerald-500/40 shadow-inner group">
+          <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600/30 to-teal-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)] mb-2 group-hover:scale-105 transition-transform">
+            <span class="absolute w-full h-full rounded-2xl bg-emerald-400/20 animate-ping"></span>
+            <i data-lucide="radio" class="w-7 h-7 text-emerald-400"></i>
+          </div>
+          <p class="text-xs font-black text-white tracking-wide uppercase">Tempelkan Kartu Santri</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">Dekatkan kartu RFID / gantungan ke reader</p>
+        </div>
+
+        <!-- Slot Tampilan Status RFID USB (Readonly agar tidak memicu keyboard virtual TV) -->
+        <div class="mt-2 space-y-1">
+          <div class="bg-slate-950/90 border border-slate-800 rounded-lg p-1.5 flex items-center gap-2 shadow-inner">
+            <i data-lucide="scan-line" class="w-3.5 h-3.5 text-emerald-400 animate-pulse shrink-0"></i>
+            <input 
+              type="text" 
+              id="rfidInput" 
+              readonly
+              tabindex="-1"
+              placeholder="Siaga membaca tap RFID..." 
+              autocomplete="off"
+              class="bg-transparent border-none text-[11px] text-emerald-400 font-mono focus:outline-none w-full placeholder-slate-500 pointer-events-none select-none"
+            >
+          </div>
+
+          <div class="flex items-center justify-between text-[9px] text-slate-400 px-1 font-medium">
+            <span class="flex items-center gap-1 text-emerald-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> USB Reader Standby
+            </span>
+            <span class="text-slate-500">
+              *Tap langsung terdata
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed Presensi Terkini Sesi Ini -->
+      <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-2.5 shadow-xl flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="flex items-center justify-between mb-1 pb-1 border-b border-slate-800/80 shrink-0">
+          <h3 class="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+            <i data-lucide="history" class="w-3 h-3 text-blue-400"></i>
+            Presensi Terkini & Antrian
+          </h3>
+          <span class="text-[9px] font-mono text-slate-500">Hari Ini</span>
+        </div>
+
+        <div id="recentScansList" class="space-y-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
+          <div class="text-center py-4 text-slate-500 text-xs italic">
+            Belum ada santri yang tap presensi sesi ini.
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ---------------------------------------- -->
+    <!-- FRAME KANAN: DISPLAY ANTRIAN MENGAJI LIVE  -->
+    <!-- ---------------------------------------- -->
+    <section id="queuePane" class="lg:col-span-8 xl:col-span-8 flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300">
+      
+      <!-- Baris Indikator Meja -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1 flex items-center justify-between shadow shrink-0 text-xs backdrop-blur-sm">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-[11px] font-black text-white uppercase tracking-wider">
+            Status Meja Panggilan Mengaji Santri
+          </span>
+        </div>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="text-slate-400">
+            Suara TV: <strong class="text-emerald-400">Aktif</strong>
+          </span>
+          <span class="hidden sm:inline text-slate-600">&bull;</span>
+          <span class="text-slate-400 hidden sm:inline">
+            Meja: <strong class="text-white">Multi-Kelas TPQ</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Grid Meja Penguji (Auto-Render Realtime) -->
+      <div id="tablesGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 shrink-0 items-start">
+        <!-- Rendered by JavaScript -->
+        <div class="col-span-full py-6 text-center text-slate-500">
+          <div class="animate-spin w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+          <p class="text-xs font-semibold">Memuat daftar meja antrian santri...</p>
+        </div>
+      </div>
+
+      <!-- Jadwal Sholat Lengkap & Ticker Hadits (Mengisi Area Bawah Pas 1 Frame) -->
+      <div id="prayerScheduleCard" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-2.5 shadow-xl flex-1 flex flex-col justify-between min-h-0 overflow-hidden backdrop-blur-sm">
+        <!-- Header Bar Jadwal Sholat -->
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80 shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="text-base leading-none">🕌</span>
+            <div>
+              <h3 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                Jadwal Waktu Sholat
+                <span class="text-slate-500 font-normal">|</span>
+                <span id="prayerCityDisplay" class="text-[10px] font-bold text-emerald-400 capitalize">
+                  Kab. Indramayu / Cirebon
+                </span>
+                <span id="prayerTzDisplay" class="px-1.5 py-0.5 rounded bg-slate-800 text-[9px] font-mono text-emerald-400 font-bold border border-slate-700">
+                  WIB
+                </span>
+              </h3>
+            </div>
+          </div>
+          <div id="nextPrayerBadge" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-bold text-emerald-300 shadow-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Menuju <strong id="nextPrayerName" class="text-white">Subuh</strong>:</span>
+            <span id="nextPrayerCountdown" class="font-mono text-emerald-400 font-black">--:--:--</span>
+          </div>
+        </div>
+
+        <!-- 7 Kolom Waktu Sholat (Kompak & Ramping: Tinggi Terpangkas Rapi!) -->
+        <div class="grid grid-cols-7 gap-1.5 my-1 text-center font-mono shrink-0">
+          <div id="card_imsak" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase font-sans tracking-wide">Imsak</span>
+            <strong id="time_imsak" class="text-xs sm:text-sm font-black text-slate-300 mt-0.5">--:--</strong>
+          </div>
+          <div id="card_subuh" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-emerald-400 uppercase font-sans tracking-wide">Subuh</span>
+            <strong id="time_subuh" class="text-xs sm:text-sm font-black text-white mt-0.5">--:--</strong>
+          </div>
+          <div id="card_terbit" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-amber-400/80 uppercase font-sans tracking-wide">Syuruq</span>
+            <strong id="time_terbit" class="text-xs sm:text-sm font-black text-slate-300 mt-0.5">--:--</strong>
+          </div>
+          <div id="card_dzuhur" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-cyan-400 uppercase font-sans tracking-wide">Dzuhur</span>
+            <strong id="time_dzuhur" class="text-xs sm:text-sm font-black text-white mt-0.5">--:--</strong>
+          </div>
+          <div id="card_ashar" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-teal-400 uppercase font-sans tracking-wide">Ashar</span>
+            <strong id="time_ashar" class="text-xs sm:text-sm font-black text-white mt-0.5">--:--</strong>
+          </div>
+          <div id="card_maghrib" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-rose-400 uppercase font-sans tracking-wide">Maghrib</span>
+            <strong id="time_maghrib" class="text-xs sm:text-sm font-black text-white mt-0.5">--:--</strong>
+          </div>
+          <div id="card_isya" class="prayer-time-box py-0.5 sm:py-1 px-1 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-center transition-all duration-300 shadow-inner">
+            <span class="text-[8px] sm:text-[9px] font-bold text-indigo-400 uppercase font-sans tracking-wide">Isya</span>
+            <strong id="time_isya" class="text-xs sm:text-sm font-black text-white mt-0.5">--:--</strong>
+          </div>
+        </div>
+
+        <!-- Mutiara Hadits & Motivasi Santri Mengaji -->
+        <div id="haditsContainer" class="flex-1 min-h-0 flex flex-col justify-center rounded-xl p-3 sm:p-4 bg-gradient-to-r from-emerald-950/40 via-slate-950/70 to-emerald-950/40 border border-emerald-500/30 shadow-inner overflow-hidden transition-all duration-500">
+          <div class="flex items-center justify-between pb-1 border-b border-slate-800/60 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm text-emerald-400">📖</span>
+              <span class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-emerald-300">
+                Mutiara Hadits & Keutamaan Al-Qur'an
+              </span>
+            </div>
+            <span id="islamicQuoteSource" class="px-2.5 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/40 text-[9px] sm:text-[11px] font-mono font-bold text-emerald-300">
+              HR. Bukhari no. 5027
+            </span>
+          </div>
+
+          <div class="my-auto py-2 text-center flex flex-col justify-center">
+            <p id="islamicQuoteArabic" class="text-base sm:text-xl md:text-2xl font-serif text-emerald-300 font-bold tracking-wide transition-opacity duration-300 drop-shadow-md">
+              خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ
+            </p>
+            <p id="islamicQuoteIndo" class="text-xs sm:text-sm md:text-base font-semibold text-slate-100 transition-opacity duration-300 leading-relaxed italic mt-1.5 max-w-3xl mx-auto drop-shadow-sm">
+              "Sebaik-baik kalian adalah orang yang belajar Al-Qur'an dan mengajarkannya."
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- 4. MODAL POP-UP HASIL PRESENSI SANTRI      -->
+  <!-- ========================================== -->
+  <div id="resultModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="resultCard" class="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl text-center transform scale-95 transition-transform duration-300 relative overflow-hidden">
+      
+      <!-- Efek Cahaya Latar Pop-up -->
+      <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Avatar Foto Siswa -->
+      <div class="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
+        <img id="resPhoto" src="" alt="Foto Santri" class="w-full h-full object-cover rounded-2xl border-2 border-emerald-400 shadow-xl hidden">
+        <div id="resAvatarFallback" class="w-full h-full rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-black text-4xl shadow-xl">
+          ?
+        </div>
+      </div>
+
+      <!-- Badge Status Kehadiran -->
+      <div id="resBadge" class="inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+        ✓ PRESENSI BERHASIL
+      </div>
+
+      <!-- Nama Siswa & Kelas -->
+      <h3 id="resName" class="text-xl sm:text-2xl font-black text-white leading-tight truncate">Nama Santri</h3>
+      <p id="resMeta" class="text-xs text-slate-400 mt-1 font-medium">Kelas - &bull; NIS: -</p>
+
+      <!-- Badge Nomor Antrian Mengaji -->
+      <div id="resQueueBox" class="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 border border-emerald-500/60 shadow-xl">
+        <p class="text-[10px] font-extrabold text-emerald-300 uppercase tracking-widest flex items-center justify-center gap-1.5">
+          <span>📖</span>
+          <span>NOMOR ANTRIAN MENGAJI ANDA:</span>
+        </p>
+        <div class="flex items-center justify-center gap-2.5 mt-1.5">
+          <span id="resQueueNumber" class="text-4xl sm:text-5xl font-black text-white font-mono drop-shadow">#01</span>
+          <span id="resQueueClass" class="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-600/80 text-white border border-emerald-400/40 shadow">Kelas</span>
+        </div>
+        <p class="text-[10px] text-emerald-200/80 mt-1 font-medium">Silakan tunggu giliran panggilan di layar display aula</p>
+      </div>
+
+      <!-- Pesan Keterangan & Jam -->
+      <div id="resMessage" class="mt-3.5 p-2.5 rounded-xl bg-slate-950/80 text-xs text-slate-300 font-medium">
+        Presensi berhasil dicatat.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- 5. FULL-SCREEN PRAYER ALERT OVERLAY (WAKTU SHOLAT)   -->
+  <!-- ==================================================== -->
+  <div id="prayerAlertOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 z-50 transition-all duration-700 opacity-0 pointer-events-none">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-emerald-900/40 via-slate-950/80 to-slate-950 pointer-events-none"></div>
+
+    <div class="relative z-10 max-w-2xl w-full text-center space-y-6">
+      <div class="inline-flex p-5 rounded-3xl bg-emerald-950/80 border-2 border-emerald-500/50 shadow-[0_0_60px_rgba(16,185,129,0.35)] animate-bounce">
+        <span class="text-6xl">🕌</span>
+      </div>
+
+      <div>
+        <p class="text-2xl sm:text-3xl font-serif text-emerald-300 font-bold tracking-wide">
+          حَيَّ عَلَى الصَّلَاةِ • حَيَّ عَلَى الْفَلَاحِ
+        </p>
+        <h2 id="alertPrayerTitle" class="text-3xl sm:text-5xl font-black text-white uppercase tracking-tight mt-3">
+          WAKTU SHOLAT TELAH TIBA
+        </h2>
+        <p id="alertPrayerCity" class="text-sm sm:text-base text-slate-300 mt-2 font-medium">
+          Wilayah: <span id="alertPrayerCityText" class="capitalize font-bold text-white">Kab. Indramayu / Cirebon</span> & Sekitarnya
+        </p>
+      </div>
+
+      <!-- Kotak Countdown Iqomah -->
+      <div class="p-6 rounded-3xl bg-slate-900/90 border-2 border-emerald-500/70 shadow-2xl max-w-md mx-auto">
+        <p class="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
+          <i data-lucide="timer" class="w-4 h-4"></i>
+          HITUNG MUNDUR MENUJU IQOMAH
+        </p>
+        <div id="alertIqomahTimer" class="text-5xl sm:text-6xl font-black text-white font-mono tracking-wider drop-shadow">
+          10 : 00
+        </div>
+        <p class="text-xs text-slate-400 mt-2 font-medium">
+          Mari bersiap, berwudhu, serta luruskan dan rapatkan shaf
+        </p>
+      </div>
+
+      <div>
+        <button type="button" onclick="dismissPrayerAlert()" class="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-700 shadow inline-flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Kembali ke Antrian Mengaji
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 6. JAVASCRIPT: LOGIKA DUAL-SCREEN TERPADU   -->
+  <!-- ========================================== -->
+  <script>
+    lucide.createIcons();
+
+    // Global state
+    window.currentPrayerData = null;
+    var currentPrayerData = null;
+    var localCountdownSeconds = 0;
+    var iqomahCountdownTimer = null;
+    var alertedPrayersToday = new Set();
+    var isPrayerAlertActive = false;
+    var callingPrefix = "Nomor antrian";
+
+    // ------------------------------------------
+    // A. MODE VIEW SWITCHER (DUAL / QUEUE / KIOSK)
+    // ------------------------------------------
+    let currentMode = 'dual';
+
+    function setViewMode(mode) {
+      currentMode = mode;
+      const kioskPane = document.getElementById('kioskPane');
+      const queuePane = document.getElementById('queuePane');
+      const btnDual = document.getElementById('modeBtnDual');
+      const btnQueue = document.getElementById('modeBtnQueue');
+      const btnKiosk = document.getElementById('modeBtnKiosk');
+
+      const inactiveClass = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 text-slate-400 hover:text-white cursor-pointer';
+      const activeClass = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 bg-emerald-600 text-white shadow cursor-pointer';
+
+      if (btnDual) btnDual.className = inactiveClass;
+      if (btnQueue) btnQueue.className = inactiveClass;
+      if (btnKiosk) btnKiosk.className = inactiveClass;
+
+      if (mode === 'dual') {
+        kioskPane.classList.remove('hidden');
+        queuePane.classList.remove('hidden');
+        kioskPane.className = 'lg:col-span-4 xl:col-span-4 flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300';
+        queuePane.className = 'lg:col-span-8 xl:col-span-8 flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300';
+        if (btnDual) btnDual.className = activeClass;
+      } else if (mode === 'queue_only') {
+        kioskPane.classList.add('hidden');
+        queuePane.classList.remove('hidden');
+        queuePane.className = 'col-span-12 flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300';
+        if (btnQueue) btnQueue.className = activeClass;
+      } else if (mode === 'kiosk_only') {
+        queuePane.classList.add('hidden');
+        kioskPane.classList.remove('hidden');
+        kioskPane.className = 'col-span-12 max-w-2xl mx-auto w-full flex flex-col gap-2 min-w-0 h-full min-h-0 transition-all duration-300';
+        if (btnKiosk) btnKiosk.className = activeClass;
+      }
+    }
+
+    // ------------------------------------------
+    // B. JAM DIGITAL REALTIME SESUAI ZONA WILAYAH
+    // ------------------------------------------
+    function updateClock() {
+      try {
+        const tzMap = { 7: 'Asia/Jakarta', 8: 'Asia/Makassar', 9: 'Asia/Jayapura' };
+        const tzKey = (currentPrayerData && currentPrayerData.schedule) ? currentPrayerData.schedule.timezone : 7;
+        const timeZone = tzMap[tzKey] || 'Asia/Jakarta';
+        const tzLabel = (currentPrayerData && currentPrayerData.schedule) ? (currentPrayerData.schedule.timezoneName || 'WIB') : 'WIB';
+
+        const now = new Date();
+        const timeParts = new Intl.DateTimeFormat('id-ID', {
+          timeZone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).format(now);
+
+        const clockEl = document.getElementById('liveClock');
+        if (clockEl) clockEl.innerText = timeParts;
+
+        const dateParts = new Intl.DateTimeFormat('id-ID', {
+          timeZone,
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }).format(now);
+
+        const dateEl = document.getElementById('liveDate');
+        if (dateEl) dateEl.innerText = `${dateParts} (${tzLabel})`;
+      } catch (e) {
+        try {
+          const now = new Date();
+          const h = String(now.getHours()).padStart(2, '0');
+          const m = String(now.getMinutes()).padStart(2, '0');
+          const s = String(now.getSeconds()).padStart(2, '0');
+          const clockEl = document.getElementById('liveClock');
+          if (clockEl) clockEl.innerText = `${h}:${m}:${s}`;
+          const dateEl = document.getElementById('liveDate');
+          if (dateEl) dateEl.innerText = now.toLocaleDateString('id-ID');
+        } catch (_) {}
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ------------------------------------------
+    // C. FULLSCREEN & ADMIN BRIDGE
+    // ------------------------------------------
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    function openAdminShell() {
+      if (window.AndroidBridge && window.AndroidBridge.openAdmin) {
+        window.AndroidBridge.openAdmin();
+      } else {
+        window.location.href = '/app/index.html';
+      }
+    }
+
+    // ------------------------------------------
+    // D. AUDIO ENGINE: SYNTHESIZER & TTS NATIVE / WEB
+    // ------------------------------------------
+    let audioUnlocked = false;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) audioCtx = new AudioCtxClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      audioUnlocked = true;
+      const btn = document.getElementById('audioToggleBtn');
+      const txt = document.getElementById('audioBtnText');
+      if (btn && txt) {
+        btn.className = 'px-2.5 sm:px-3 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow cursor-pointer';
+        txt.innerText = '✓ Audio Suara Aktif';
+      }
+    }
+
+    function toggleAudio() {
+      initAudio();
+      playChime();
+    }
+
+    // Bel Ding-Dong Sintetis Web Audio API (D5 -> A5)
+    function playChime() {
+      try {
+        if (!audioUnlocked) initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        // Nada Pertama (D5 ~587.33 Hz)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0.5, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
+
+        // Nada Kedua (A5 ~880.00 Hz)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880.00, now + 0.4);
+        gain2.gain.setValueAtTime(0.5, now + 0.4);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.4);
+        osc2.stop(now + 1.2);
+      } catch (err) {
+        console.warn('Audio chime error:', err);
+      }
+    }
+
+    function playKioskBeep(type) {
+      if (window.AndroidBridge) {
+        if (type === 'SUCCESS' && window.AndroidBridge.beepSuccess) {
+          window.AndroidBridge.beepSuccess();
+          return;
+        } else if (window.AndroidBridge.beepError) {
+          window.AndroidBridge.beepError();
+          return;
+        }
+      }
+
+      try {
+        if (!audioCtx) {
+          const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtxClass) audioCtx = new AudioCtxClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (!audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'SUCCESS') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.setValueAtTime(783.99, now + 0.1); // G5
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'WARNING') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        }
+      } catch (e) {}
+    }
+
+    // Helper format nama santri agar diucapkan utuh mengalir
+    function formatStudentNameForSpeech(raw) {
+      if (!raw) return '';
+      let name = String(raw).trim();
+      name = name.replace(/\(.*?\)/g, ' ').replace(/\[.*?\]/g, ' ');
+      name = name.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, (c) => c.toUpperCase());
+      name = name
+        .replace(/\bM\.\s*/gi, 'Muhammad ')
+        .replace(/\bMuh\.\s*/gi, 'Muhammad ')
+        .replace(/\bMoh\.\s*/gi, 'Muhammad ')
+        .replace(/\bAch?\.\s*/gi, 'Ahmad ')
+        .replace(/\bAbd\.\s*/gi, 'Abdul ')
+        .replace(/\bIbnu\.\s*/gi, 'Ibnu ')
+        .replace(/\bH\.\s*/gi, 'Haji ')
+        .replace(/\bHj\.\s*/gi, 'Hajjah ')
+        .replace(/\bSiti\.\s*/gi, 'Siti ');
+      name = name.replace(/['`’]/g, '');
+      name = name.replace(/[^a-zA-Z0-9\s]/g, ' ');
+      return name.replace(/\s+/g, ' ').trim();
+    }
+
+    function numberToIndoWords(num) {
+      const satuan = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+      const n = parseInt(num, 10);
+      if (isNaN(n) || n <= 0) return String(num);
+      if (n < 10) return `nol ${satuan[n]}`;
+      if (n < 12) return satuan[n];
+      if (n < 20) return `${satuan[n - 10]} belas`;
+      if (n < 100) {
+        const puluhan = Math.floor(n / 10);
+        const sisa = n % 10;
+        return `${satuan[puluhan]} puluh${sisa !== 0 ? ' ' + satuan[sisa] : ''}`;
+      }
+      return String(n);
+    }
+
+    function speakCall(text) {
+      if (!text) return;
+
+      // Prioritas 1: Native Android TextToSpeech Bridge (TV Speaker)
+      if (window.AndroidBridge && window.AndroidBridge.speak) {
+        window.AndroidBridge.speak(text);
+        return;
+      }
+
+      // Prioritas 2: Fallback Web Speech API
+      setTimeout(() => {
+        try {
+          if (!('speechSynthesis' in window)) return;
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'id-ID';
+          utter.rate = 0.92;
+          utter.pitch = 1.0;
+
+          const voices = window.speechSynthesis.getVoices();
+          const idVoice = voices.find(v => (v.lang && (v.lang.toLowerCase().startsWith('id') || v.lang.toLowerCase().includes('indonesia'))));
+          if (idVoice) utter.voice = idVoice;
+
+          window.speechSynthesis.speak(utter);
+        } catch (err) {
+          console.warn('Speech synthesis error:', err);
+        }
+      }, 900);
+    }
+
+    // ------------------------------------------
+    // E. RFID INPUT LISTENER GLOBAL (KIOSK & ANDROID TV)
+    // ------------------------------------------
+    const rfidInput = document.getElementById('rfidInput');
+    let isProcessingScan = false;
+    let globalRfidBuffer = '';
+    let lastKeypressTime = 0;
+    const RFID_TIMEOUT_MS = 500;
+
+    // Listener Global Window (Membaca USB RFID Reader langsung di background tanpa memicu keyboard digital TV)
+    window.addEventListener('keydown', (e) => {
+      if (e.target && e.target.tagName === 'INPUT' && e.target.id !== 'rfidInput') return;
+      if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+
+      const now = Date.now();
+      if (now - lastKeypressTime > RFID_TIMEOUT_MS) {
+        globalRfidBuffer = '';
+      }
+      lastKeypressTime = now;
+
+      if (e.key === 'Enter') {
+        const scannedCode = globalRfidBuffer.trim();
+        globalRfidBuffer = '';
+        if (scannedCode.length >= 3 && !isProcessingScan) {
+          e.preventDefault();
+          if (rfidInput) rfidInput.value = 'Kartu: ' + scannedCode;
+          processAttendance(scannedCode);
+        }
+      } else if (e.key.length === 1) {
+        if (/[a-zA-Z0-9]/.test(e.key)) {
+          globalRfidBuffer += e.key;
+        }
+      }
+    });
+
+    // ------------------------------------------
+    // F. PROSES PRESENSI & MODAL HASIL (KIOSK RFID)
+    // ------------------------------------------
+    const resultModal = document.getElementById('resultModal');
+    const resultCard = document.getElementById('resultCard');
+    const resPhoto = document.getElementById('resPhoto');
+    const resAvatarFallback = document.getElementById('resAvatarFallback');
+    const resBadge = document.getElementById('resBadge');
+    const resName = document.getElementById('resName');
+    const resMeta = document.getElementById('resMeta');
+    const resMessage = document.getElementById('resMessage');
+    const recentScansList = document.getElementById('recentScansList');
+    const recentScans = [];
+
+    async function processAttendance(code) {
+      isProcessingScan = true;
+      initAudio();
+
+      try {
+        const response = await fetch('/api/attendance/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+
+        const data = await response.json();
+        showResultModal(data);
+
+        if (data.student) {
+          addRecentScan(data.student, data.status, data.timeIn, data.queue);
+        }
+
+        // Sinkronisasi data meja antrian
+        fetchTablesData();
+
+      } catch (err) {
+        showResultModal({
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: 'Koneksi ke server lokal gagal.'
+        });
+      } finally {
+        setTimeout(() => {
+          isProcessingScan = false;
+          if (rfidInput) rfidInput.value = '';
+        }, 1500);
+      }
+    }
+
+    let modalTimer = null;
+
+    function showResultModal(data) {
+      clearTimeout(modalTimer);
+
+      if (data.student) {
+        resName.innerText = data.student.name;
+        resMeta.innerText = `Kelas ${data.student.class_name || '-'} • NIS: ${data.student.nis}`;
+        if (data.student.photo) {
+          resPhoto.src = data.student.photo;
+          resPhoto.classList.remove('hidden');
+          resAvatarFallback.classList.add('hidden');
+        } else {
+          resAvatarFallback.innerText = data.student.name.charAt(0);
+          resAvatarFallback.classList.remove('hidden');
+          resPhoto.classList.add('hidden');
+        }
+      } else {
+        resName.innerText = 'Tidak Dikenal';
+        resMeta.innerText = 'Kartu / QR Code tidak terdaftar';
+        resAvatarFallback.innerText = 'X';
+        resAvatarFallback.classList.remove('hidden');
+        resPhoto.classList.add('hidden');
+      }
+
+      resMessage.innerText = data.message;
+
+      // Tampilkan Nomor Antrian Mengaji
+      const resQueueBox = document.getElementById('resQueueBox');
+      const resQueueNumber = document.getElementById('resQueueNumber');
+      const resQueueClass = document.getElementById('resQueueClass');
+      if (resQueueBox) {
+        if (data.queue && data.queue.queue_number) {
+          resQueueNumber.innerText = `#${String(data.queue.queue_number).padStart(2, '0')}`;
+          resQueueClass.innerText = data.queue.class_name || (data.student ? data.student.class_name : 'Meja');
+          resQueueBox.classList.remove('hidden');
+        } else {
+          resQueueBox.classList.add('hidden');
+        }
+      }
+
+      // Konfigurasi Badge Warna & Audio
+      if (data.code === 'SUCCESS') {
+        if (data.status === 'HADIR') {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+          resBadge.innerText = '✓ HADIR TEPAT WAKTU';
+          playKioskBeep('SUCCESS');
+        } else {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-amber-500/20 text-amber-400 border border-amber-500/40';
+          resBadge.innerText = `⚠ TERLAMBAT (${data.lateMinutes || 0} MENIT)`;
+          playKioskBeep('WARNING');
+        }
+      } else if (data.code === 'ALREADY_ATTENDED') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-blue-500/20 text-blue-400 border border-blue-500/40';
+        resBadge.innerText = 'ℹ SUDAH ABSEN HARI INI';
+        playKioskBeep('WARNING');
+      } else {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-rose-500/20 text-rose-400 border border-rose-500/40';
+        resBadge.innerText = '✕ TIDAK TERDAFTAR';
+        playKioskBeep('ERROR');
+      }
+
+      // Animasi Tampil Modal
+      resultModal.classList.remove('opacity-0', 'pointer-events-none');
+      resultCard.classList.remove('scale-95');
+      resultCard.classList.add('scale-100');
+
+      modalTimer = setTimeout(() => {
+        resultModal.classList.add('opacity-0', 'pointer-events-none');
+        resultCard.classList.add('scale-95');
+        resultCard.classList.remove('scale-100');
+      }, 3500);
+    }
+
+    function addRecentScan(student, status, timeIn, queue) {
+      recentScans.unshift({ student, status, timeIn, queue });
+      if (recentScans.length > 5) recentScans.pop();
+
+      recentScansList.innerHTML = recentScans.map(item => `
+        <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 flex items-center justify-between text-xs animate-fadeIn">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 font-black flex items-center justify-center shrink-0">
+              ${item.student.name.charAt(0)}
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-white leading-tight truncate">${item.student.name}</p>
+              <p class="text-[10px] text-slate-400 truncate">${item.student.class_name || '-'}</p>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            ${item.queue ? `<span class="inline-block text-[11px] font-black font-mono text-emerald-400">#${String(item.queue.queue_number).padStart(2, '0')}</span>` : ''}
+            <div>
+              <span class="inline-block text-[9px] font-extrabold px-1.5 py-0.5 rounded ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
+                ${item.status}
+              </span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ------------------------------------------
+    // H. LIVE DISPLAY ANTRIAN TV (DATA POLLING)
+    // ------------------------------------------
+    let lastCallSignature = null;
+
+    async function fetchTablesData() {
+      try {
+        const res = await fetch('/api/queue/display-data');
+        const data = await res.json();
+        if (!data.success) return;
+
+        if (data.settings) {
+          if (data.settings.school_name) {
+            const el = document.getElementById('schoolNameTitle');
+            if (el) el.textContent = data.settings.school_name;
+          }
+          if (data.settings.queue_calling_prefix) {
+            callingPrefix = data.settings.queue_calling_prefix;
+          }
+        }
+
+        renderTables(data.tables);
+        handleCallAudio(data.lastCall);
+        if (data.prayer) {
+          handlePrayerData(data.prayer);
+        }
+      } catch (err) {
+        console.warn('Fetch queue data error:', err);
+      }
+    }
+
+    function renderTables(tables) {
+      const grid = document.getElementById('tablesGrid');
+      if (!tables || tables.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-16 text-center text-slate-500">
+            <p class="text-sm font-semibold">Belum ada meja mengaji / kelas terdaftar di sistem.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = tables.map(table => {
+        const cur = table.current;
+        const isCalling = cur && (cur.status === 'CALLING');
+        const cardGlow = isCalling ? 'calling-card' : '';
+
+        return `
+          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 flex flex-col gap-2 shadow-xl relative overflow-hidden transition-all duration-300 ${cardGlow}">
+            
+            <!-- 1. Header Meja / Kelas -->
+            <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
+              <div class="min-w-0">
+                <span class="text-[9px] font-black uppercase tracking-wider text-emerald-400 block leading-tight">Meja Penguji</span>
+                <h3 class="text-sm sm:text-base font-black text-white leading-tight uppercase truncate">${table.className}</h3>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-[9px] font-bold text-slate-400 uppercase block leading-tight">Ustadz</span>
+                <p class="text-[11px] font-bold text-slate-200 leading-tight">${table.teacherName || 'Penguji Meja'}</p>
+              </div>
+            </div>
+
+            <!-- 2. Kartu Santri yang Sedang Di Meja / Dipanggil -->
+            ${cur ? `
+              <div class="p-2 sm:p-2.5 rounded-xl ${isCalling ? 'bg-gradient-to-br from-emerald-950 via-teal-900 to-slate-900 border border-emerald-500/70 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-950/90 border border-slate-800'} shadow">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[9px] font-black uppercase tracking-wider ${isCalling ? 'text-emerald-300 animate-pulse' : 'text-slate-400'}">
+                    ${isCalling ? '📢 SEDANG DIPANGGIL' : '🟢 SEDANG MENGAJI'}
+                  </span>
+                  <span class="text-[9px] font-mono text-slate-400">Panggilan Ke-${cur.call_count || 1}</span>
+                </div>
+
+                <div class="flex items-center gap-2.5 my-0.5">
+                  <div class="text-3xl sm:text-4xl font-black text-emerald-400 font-mono tracking-tight shrink-0 drop-shadow">
+                    #${String(cur.queue_number).padStart(2, '0')}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <h4 class="text-xs sm:text-sm font-black text-white truncate leading-tight">${cur.student_name}</h4>
+                    <p class="text-[10px] text-slate-400 font-mono">NIS: ${cur.nis || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="py-2 px-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span class="text-xs font-bold text-slate-300">Belum Ada Panggilan</span>
+                </div>
+                <span class="text-[10px] text-slate-500 font-mono">Ustadz siap memanggil</span>
+              </div>
+            `}
+
+            <!-- 3. CARD ANTRIAN BERIKUTNYA -->
+            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Antrian Berikutnya:</span>
+                <span class="text-[9px] font-mono font-bold text-emerald-400">${table.nextWaiting ? table.nextWaiting.length : 0} Menunggu</span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap overflow-hidden max-h-[30px]">
+                ${table.nextWaiting && table.nextWaiting.length > 0 ? table.nextWaiting.slice(0, 6).map(w => `
+                  <span class="px-2 py-0.5 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 font-mono text-[11px] font-bold shadow-sm" title="${w.student_name}">
+                    #${String(w.queue_number).padStart(2, '0')}
+                  </span>
+                `).join('') : '<span class="text-[10px] text-slate-500 italic py-0.5">Tidak ada antrian menunggu</span>'}
+              </div>
+            </div>
+
+            <!-- 4. SUMMARY KARTU STATUS -->
+            <div class="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 font-medium">Menunggu</span>
+                <strong class="text-amber-400 font-mono text-xs font-black">${table.stats.waiting}</strong>
+              </div>
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 font-medium">Mengaji</span>
+                <strong class="text-emerald-400 font-mono text-xs font-black">${table.stats.serving}</strong>
+              </div>
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800/80 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 font-medium">Selesai</span>
+                <strong class="text-teal-400 font-mono text-xs font-black">${table.stats.completed}</strong>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function handleCallAudio(lastCall) {
+      if (!lastCall) return;
+
+      const qId = lastCall.queueId || lastCall.id || lastCall.queue_number;
+      const cAt = lastCall.calledAt || lastCall.called_at || '';
+      const cCount = lastCall.callCount || lastCall.call_count || 1;
+      const signature = `${qId}_${cAt}_${cCount}`;
+
+      if (signature !== lastCallSignature) {
+        lastCallSignature = signature;
+
+        const banner = document.getElementById('callBanner');
+        const textEl = document.getElementById('callBannerText');
+        const qNum = lastCall.queueNumber || lastCall.queue_number || 1;
+        const sName = lastCall.studentName || lastCall.student_name || 'Santri';
+        const cName = lastCall.className || lastCall.class_name || 'Meja';
+        const tName = lastCall.teacherName || lastCall.teacher_name || 'Ustadz';
+        const formattedNum = String(qNum).padStart(2, '0');
+
+        if (textEl) {
+          textEl.innerText = `${callingPrefix} #${formattedNum} - ${sName} ➔ Menuju Meja ${cName} (${tName})`;
+        }
+        if (banner) {
+          banner.classList.remove('opacity-0', '-translate-y-2', 'pointer-events-none');
+        }
+
+        playChime();
+
+        let speechSentence = lastCall.speechSentence;
+        if (!speechSentence) {
+          const numWords = numberToIndoWords(qNum);
+          const cleanName = formatStudentNameForSpeech(sName);
+          const rawClass = cName.replace(/[\/_]/g, ' ').trim();
+          const cleanClass = rawClass.toLowerCase().replace(/(?:^|\s|\/|-)\S/g, c => c.toUpperCase());
+          speechSentence = `${callingPrefix} ${numWords}, ${cleanName}, silakan menuju Meja ${cleanClass}.`;
+        }
+        speakCall(speechSentence);
+
+        clearTimeout(window.bannerTimer);
+        window.bannerTimer = setTimeout(() => {
+          if (banner) banner.classList.add('opacity-0', '-translate-y-2', 'pointer-events-none');
+        }, 8000);
+      }
+    }
+
+    // ------------------------------------------
+    // I. JADWAL SHOLAT & PERINGATAN WAKTU TIBA
+    // ------------------------------------------
+    const islamicQuotes = [
+      {
+        arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ",
+        indonesian: '"Sebaik-baik kalian adalah orang yang belajar Al-Qur\'an dan mengajarkannya."',
+        source: "HR. Bukhari no. 5027"
+      },
+      {
+        arabic: "مَنْ قَرَأَ حَرْفًا مِنْ كِتَابِ اللَّهِ فَلَهُ بِهِ حَسَنَةٌ",
+        indonesian: '"Barangsiapa membaca satu huruf dari Kitabullah (Al-Qur\'an), maka baginya satu kebaikan dengan sepuluh kelipatan."',
+        source: "HR. Tirmidzi no. 2910"
+      },
+      {
+        arabic: "أَحَبُّ الأَعْمَالِ إِلَى اللَّهِ الصَّلاَةُ عَلَى وَقْتِهَا",
+        indonesian: '"Amalan yang paling dicintai oleh Allah adalah mendirikan sholat tepat pada awal waktunya."',
+        source: "HR. Bukhari & Muslim"
+      },
+      {
+        arabic: "الْمَاهِرُ بِالْقُرْآنِ مَعَ السَّفَرَةِ الْكِرَامِ الْبَرَرَةِ",
+        indonesian: '"Orang yang mahir membaca Al-Qur\'an akan bersama para malaikat yang mulia lagi taat."',
+        source: "HR. Muslim no. 798"
+      },
+      {
+        arabic: "مَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ",
+        indonesian: '"Barangsiapa menempuh jalan untuk menuntut ilmu, Allah mudahkan baginya jalan menuju surga."',
+        source: "HR. Muslim no. 2699"
+      },
+      {
+        arabic: "اقْرَءُوا الْقُرْآنَ فَإِنَّهُ يَأْتِي يَوْمَ الْقِيَامَةِ شَفِيعًا لِأَصْحَابِهِ",
+        indonesian: '"Bacalah Al-Qur\'an, karena sesungguhnya ia akan datang pada hari kiamat sebagai pemberi syafaat bagi para pembacanya."',
+        source: "HR. Muslim no. 804"
+      }
+    ];
+    let quoteIndex = 0;
+
+    function rotateIslamicQuote() {
+      const elArabic = document.getElementById('islamicQuoteArabic');
+      const elIndo = document.getElementById('islamicQuoteIndo');
+      const elSource = document.getElementById('islamicQuoteSource');
+      if (!elArabic || !elIndo) return;
+
+      quoteIndex = (quoteIndex + 1) % islamicQuotes.length;
+      const q = islamicQuotes[quoteIndex];
+
+      elArabic.style.opacity = '0';
+      elIndo.style.opacity = '0';
+      setTimeout(() => {
+        elArabic.textContent = q.arabic;
+        elIndo.textContent = q.indonesian;
+        if (elSource) elSource.textContent = q.source;
+        elArabic.style.opacity = '1';
+        elIndo.style.opacity = '1';
+      }, 350);
+    }
+    setInterval(rotateIslamicQuote, 12000);
+
+    function playPrayerChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const freqs = [523.25, 659.25, 783.99, 1046.50];
+        freqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const startTime = ctx.currentTime + (i * 0.45);
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.35, startTime + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 2.0);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 2.1);
+        });
+      } catch (err) {
+        console.warn('Prayer chime sound error:', err);
+      }
+    }
+
+    function handlePrayerData(prayer) {
+      if (!prayer || !prayer.schedule) return;
+      currentPrayerData = prayer;
+
+      const prayerCard = document.getElementById('prayerScheduleCard');
+      if (prayer.settings && prayer.settings.prayer_enabled === '0') {
+        if (prayerCard) prayerCard.classList.add('hidden');
+        return;
+      } else {
+        if (prayerCard) prayerCard.classList.remove('hidden');
+      }
+
+      const s = prayer.schedule;
+      const elImsak = document.getElementById('time_imsak');
+      const elSubuh = document.getElementById('time_subuh');
+      const elTerbit = document.getElementById('time_terbit');
+      const elDzuhur = document.getElementById('time_dzuhur');
+      const elAshar = document.getElementById('time_ashar');
+      const elMaghrib = document.getElementById('time_maghrib');
+      const elIsya = document.getElementById('time_isya');
+
+      if (elImsak) elImsak.textContent = s.imsak || '--:--';
+      if (elSubuh) elSubuh.textContent = s.subuh || '--:--';
+      if (elTerbit) elTerbit.textContent = s.terbit || '--:--';
+      if (elDzuhur) elDzuhur.textContent = s.dzuhur || '--:--';
+      if (elAshar) elAshar.textContent = s.ashar || '--:--';
+      if (elMaghrib) elMaghrib.textContent = s.maghrib || '--:--';
+      if (elIsya) elIsya.textContent = s.isya || '--:--';
+
+      if (prayer.settings && prayer.settings.prayer_city_name) {
+        const cityEl = document.getElementById('prayerCityDisplay');
+        if (cityEl) cityEl.textContent = prayer.settings.prayer_city_name;
+        const alertCityEl = document.getElementById('alertPrayerCityText');
+        if (alertCityEl) alertCityEl.textContent = prayer.settings.prayer_city_name;
+      }
+
+      if (prayer.schedule && prayer.schedule.timezoneName) {
+        const tzEl = document.getElementById('prayerTzDisplay');
+        if (tzEl) tzEl.textContent = prayer.schedule.timezoneName;
+      }
+
+      if (prayer.nextInfo && prayer.nextInfo.next) {
+        const nextKey = prayer.nextInfo.next.key;
+        document.querySelectorAll('.prayer-time-box').forEach(box => {
+          box.classList.remove('border-emerald-500', 'bg-emerald-950/60', 'ring-2', 'ring-emerald-400/50');
+        });
+        const targetBox = document.getElementById(`card_${nextKey}`);
+        if (targetBox) {
+          targetBox.classList.add('border-emerald-500', 'bg-emerald-950/60', 'ring-2', 'ring-emerald-400/50');
+        }
+
+        const nextNameEl = document.getElementById('nextPrayerName');
+        if (nextNameEl) nextNameEl.textContent = prayer.nextInfo.next.label;
+
+        if (Math.abs(localCountdownSeconds - prayer.nextInfo.remainingSeconds) > 3) {
+          localCountdownSeconds = prayer.nextInfo.remainingSeconds;
+        }
+      }
+      updateClock();
+    }
+
+    // Detik mundur countdown
+    setInterval(() => {
+      if (localCountdownSeconds > 0) {
+        localCountdownSeconds--;
+        const h = Math.floor(localCountdownSeconds / 3600);
+        const m = Math.floor((localCountdownSeconds % 3600) / 60);
+        const s = localCountdownSeconds % 60;
+        const countdownStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        const cdEl = document.getElementById('nextPrayerCountdown');
+        if (cdEl) cdEl.textContent = countdownStr;
+      }
+      checkPrayerAlertTime();
+    }, 1000);
+
+    function checkPrayerAlertTime() {
+      if (!currentPrayerData || isPrayerAlertActive) return;
+      const settings = currentPrayerData.settings || {};
+      if (settings.prayer_alert_enabled !== '1') return;
+
+      const tzKey = currentPrayerData.schedule ? currentPrayerData.schedule.timezone : 7;
+      const tzMap = { 7: 'Asia/Jakarta', 8: 'Asia/Makassar', 9: 'Asia/Jayapura' };
+      const timeZone = tzMap[tzKey] || 'Asia/Jakarta';
+
+      const now = new Date();
+      let currentTimeStr = '';
+      let currentSeconds = now.getSeconds();
+
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: 'numeric',
+          hour12: false
+        }).formatToParts(now);
+
+        const getP = (t) => parts.find(p => p.type === t).value;
+        const h = getP('hour') === '24' ? '00' : getP('hour');
+        const m = getP('minute');
+        currentTimeStr = `${h}:${m}`;
+        currentSeconds = parseInt(getP('second')) || 0;
+      } catch (e) {
+        currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      }
+
+      const fardhuKeys = ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+      const schedule = currentPrayerData.schedule || {};
+
+      for (const key of fardhuKeys) {
+        if (schedule[key] === currentTimeStr && currentSeconds <= 5) {
+          const alertKey = `${currentPrayerData.schedule.date}_${key}`;
+          if (!alertedPrayersToday.has(alertKey)) {
+            alertedPrayersToday.add(alertKey);
+            const prayerName = key.charAt(0).toUpperCase() + key.slice(1);
+            const iqomahMinutes = parseInt(settings.prayer_iqomah_duration) || 10;
+            triggerPrayerAlert(prayerName, iqomahMinutes);
+            break;
+          }
+        }
+      }
+    }
+
+    function triggerPrayerAlert(prayerName, iqomahDurationMinutes) {
+      isPrayerAlertActive = true;
+      const overlay = document.getElementById('prayerAlertOverlay');
+      const titleEl = document.getElementById('alertPrayerTitle');
+      const timerEl = document.getElementById('alertIqomahTimer');
+      if (!overlay) return;
+
+      titleEl.textContent = `WAKTU SHOLAT ${prayerName.toUpperCase()} TELAH TIBA`;
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+
+      playPrayerChime();
+
+      let remainingIqomahSeconds = iqomahDurationMinutes * 60;
+      clearInterval(iqomahCountdownTimer);
+
+      const updateTimerDisplay = () => {
+        const m = Math.floor(remainingIqomahSeconds / 60);
+        const s = remainingIqomahSeconds % 60;
+        timerEl.textContent = `${String(m).padStart(2, '0')} : ${String(s).padStart(2, '0')}`;
+      };
+      updateTimerDisplay();
+
+      iqomahCountdownTimer = setInterval(() => {
+        remainingIqomahSeconds--;
+        if (remainingIqomahSeconds <= 0) {
+          clearInterval(iqomahCountdownTimer);
+          dismissPrayerAlert();
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+    }
+
+    function dismissPrayerAlert() {
+      clearInterval(iqomahCountdownTimer);
+      const overlay = document.getElementById('prayerAlertOverlay');
+      if (overlay) {
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+      }
+      isPrayerAlertActive = false;
+    }
+
+    // Polling setiap 2.5 Detik
+    setInterval(fetchTablesData, 2500);
+
+    // Initial Load Data Display
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchTablesData();
+    });
+  </script>
+</body>
+</html>
