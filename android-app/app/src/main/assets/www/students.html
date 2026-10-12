@@ -686,10 +686,20 @@
       for (const row of rows) {
         // Normalisasi key dictionary agar tidak sensitif huruf besar/kecil
         const getVal = (possibleKeys) => {
+          // 1. Coba exact match terlebih dahulu
           for (const key of Object.keys(row)) {
             const normalizedKey = key.trim().toLowerCase();
             for (const pk of possibleKeys) {
-              if (normalizedKey === pk.toLowerCase() || normalizedKey.includes(pk.toLowerCase())) {
+              if (normalizedKey === pk.toLowerCase()) {
+                return String(row[key] || '').trim();
+              }
+            }
+          }
+          // 2. Coba substring match jika exact match belum ditemukan
+          for (const key of Object.keys(row)) {
+            const normalizedKey = key.trim().toLowerCase();
+            for (const pk of possibleKeys) {
+              if (normalizedKey.includes(pk.toLowerCase())) {
                 return String(row[key] || '').trim();
               }
             }
@@ -706,9 +716,11 @@
         const className = getVal(['kelas', 'divisi', 'unit', 'class']);
         const rawGender = getVal(['l/p', 'jenis kelamin', 'gender', 'jk']);
         const gender = rawGender.toUpperCase().startsWith('P') ? 'P' : 'L';
-        const rfidUid = getVal(['uid rfid', 'rfid', 'uid']) || nis;
-        const parentName = getVal(['nama wali', 'wali', 'orang tua', 'parent']);
-        const parentPhone = getVal(['no wa wali', 'no wa', 'wa', 'telepon', 'phone', 'hp']);
+        // Pencarian Nama Wali (hindari cocok dengan kolom No WA/HP)
+        const parentName = getVal(['nama wali', 'wali santri', 'wali murid', 'wali', 'orang tua', 'nama orang tua', 'parent_name', 'parent']);
+        
+        // Pencarian Nomor WhatsApp (prioritaskan 'no wa wali', 'no wa', 'nomor whatsapp', 'telepon', 'phone', 'hp')
+        const parentPhone = getVal(['no wa wali', 'no wa', 'nomor wa', 'whatsapp', 'no whatsapp', 'no hp wali', 'no hp', 'telepon', 'phone', 'hp', 'parent_phone', 'kontak']);
 
         students.push({
           nis, name, pob, dob,
@@ -742,8 +754,8 @@
       let idxClass = headers.findIndex(h => h === 'kelas' || h === 'divisi' || h === 'unit' || h === 'class');
       let idxGender = headers.findIndex(h => h === 'l/p' || h.includes('kelamin') || h === 'gender' || h === 'jk');
       let idxRfid = headers.findIndex(h => h.includes('uid rfid') || h.includes('rfid') || h.includes('uid'));
-      let idxParent = headers.findIndex(h => h.includes('wali') || h.includes('orang tua') || h.includes('kontak') || h.includes('parent'));
       let idxPhone = headers.findIndex(h => h.includes('no wa') || h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp'));
+      let idxParent = headers.findIndex((h, idx) => idx !== idxPhone && (h.includes('nama wali') || h.includes('wali') || h.includes('orang tua') || h.includes('parent')) && !h.includes('no') && !h.includes('wa') && !h.includes('hp') && !h.includes('telepon'));
 
       for (let i = 1; i < lines.length; i++) {
         const parts = splitCsvRow(lines[i], delim).map(p => p.replace(/^["']|["']$/g, '').trim());
