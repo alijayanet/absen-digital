@@ -19,7 +19,7 @@ class SmartSchoolApplication : Application() {
         var httpServer: KioskHttpServer? = null
             private set
 
-        fun startHttpServer(context: Context, port: Int = 3000) {
+        fun startHttpServer(context: Context, port: Int = 8080) {
             try {
                 if (httpServer == null || !httpServer!!.isAlive) {
                     httpServer?.stop()

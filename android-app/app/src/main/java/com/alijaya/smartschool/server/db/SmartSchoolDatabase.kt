@@ -14,7 +14,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     companion object {
         const val DATABASE_NAME = "smartschool.db"
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
 
         @Volatile
         private var instance: SmartSchoolDatabase? = null
@@ -89,14 +89,34 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             )
         """)
 
+        // 6. Daily Queues Table (Antrian Mengaji Meja Ustadz)
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS daily_queues (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id INTEGER NOT NULL,
+                class_id INTEGER,
+                teacher_id INTEGER,
+                queue_number INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'WAITING',
+                call_count INTEGER DEFAULT 0,
+                called_at TEXT,
+                completed_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         // Index untuk performa query cepat
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_students_rfid ON students(rfid_uid)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_students_nis ON students(nis)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_attendances_date ON attendances(date)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_queues_lookup ON daily_queues(date, status)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_queues_student ON daily_queues(student_id, date)")
 
         // Seed Default Settings
         val defaultSettings = mapOf(
             "school_name" to "MUSHOLLA AL MUHAJIRIN",
+            "school_tagline" to "Sistem Presensi & Antrian Mengaji Digital",
             "school_address" to "Jl. Raya Pesantren No. 1",
             "school_phone" to "08123456789",
             "school_principal_name" to "Ust. H. Abdullah, Lc.",
@@ -104,6 +124,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             "jam_masuk" to "07:00",
             "toleransi_telat" to "07:15",
             "jam_pulang" to "14:00",
+            "queue_enabled" to "1",
+            "queue_calling_prefix" to "Nomor antrian",
             "wa_provider" to "fonnte",
             "wa_fonnte_token" to "",
             "wa_wablas_token" to "",
@@ -208,6 +230,26 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     is_active INTEGER DEFAULT 1
                 )
             """)
+        } catch (_: Exception) {}
+
+        try {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS daily_queues (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_id INTEGER NOT NULL,
+                    class_id INTEGER,
+                    teacher_id INTEGER,
+                    queue_number INTEGER NOT NULL,
+                    date TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'WAITING',
+                    call_count INTEGER DEFAULT 0,
+                    called_at TEXT,
+                    completed_at TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_queues_lookup ON daily_queues(date, status)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_queues_student ON daily_queues(student_id, date)")
         } catch (_: Exception) {}
 
         // Pastikan tabel teachers memiliki data awal jika kosong
@@ -786,4 +828,654 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             put("message", "Berhasil mengimpor $inserted santri baru dan memperbarui $updated santri.")
         }
     }
+
+    // =========================================================================
+    // --- ANTRIAN MENGAJI MEJA USTADZ (MULTI-MEJA STANDALONE) ---
+    // =========================================================================
+
+    /**
+     * Dapatkan nomor antrian santri jika sudah terdaftar hari ini
+     */
+    fun getQueueByStudent(studentId: Int, date: String): JSONObject? {
+        val query = """
+            SELECT q.id, q.student_id, q.class_id, q.teacher_id, q.queue_number, q.date, q.status,
+                   c.name as class_name, s.name as student_name, s.gender as student_gender,
+                   t.name as teacher_name
+            FROM daily_queues q
+            LEFT JOIN classes c ON q.class_id = c.id
+            JOIN students s ON q.student_id = s.id
+            LEFT JOIN teachers t ON q.teacher_id = t.id
+            WHERE q.student_id = ? AND q.date = ?
+            LIMIT 1
+        """
+        val cursor = readableDatabase.rawQuery(query, arrayOf(studentId.toString(), date))
+        cursor.use {
+            if (it.moveToFirst()) {
+                val tName = it.getString(10) ?: it.getString(7) ?: "Ustadz"
+                return JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("student_id", it.getInt(1))
+                    put("class_id", if (it.isNull(2)) 0 else it.getInt(2))
+                    put("teacher_id", if (it.isNull(3)) 0 else it.getInt(3))
+                    put("queue_number", it.getInt(4))
+                    put("date", it.getString(5))
+                    put("status", it.getString(6))
+                    put("class_name", it.getString(7) ?: "")
+                    put("student_name", it.getString(8) ?: "")
+                    put("student_gender", it.getString(9) ?: "L")
+                    put("teacher_name", tName)
+                    put("desk_name", "Meja $tName")
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Daftarkan nomor antrian untuk santri saat presensi datang (Kiosk / manual)
+     */
+    fun assignQueueNumber(studentId: Int, classId: Int, dateStr: String? = null, teacherId: Int? = null): JSONObject? {
+        val date = dateStr ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        if (studentId <= 0) return null
+
+        // 1. Cek apakah sudah ada antrian hari ini
+        val existing = getQueueByStudent(studentId, date)
+        if (existing != null) return existing
+
+        var targetTeacherId = teacherId
+        var targetClassId = classId
+
+        // Cari relasi kelas / guru jika belum disediakan
+        if (targetTeacherId == null || targetTeacherId <= 0) {
+            val studentCursor = readableDatabase.rawQuery(
+                "SELECT s.class_id, c.teacher_id FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE s.id = ?",
+                arrayOf(studentId.toString())
+            )
+            studentCursor.use {
+                if (it.moveToFirst()) {
+                    if (targetClassId <= 0) targetClassId = it.getInt(0)
+                    if (!it.isNull(1)) targetTeacherId = it.getInt(1)
+                }
+            }
+        }
+
+        // Cari nomor antrian berikutnya
+        var nextNumber = 1
+        val numQuery = if (targetTeacherId != null && targetTeacherId!! > 0) {
+            """
+                SELECT COALESCE(MAX(queue_number), 0) + 1 
+                FROM daily_queues 
+                WHERE (teacher_id = ? OR (teacher_id IS NULL AND class_id = ?)) AND date = ?
+            """
+        } else {
+            """
+                SELECT COALESCE(MAX(queue_number), 0) + 1 
+                FROM daily_queues 
+                WHERE class_id = ? AND date = ?
+            """
+        }
+
+        val args = if (targetTeacherId != null && targetTeacherId!! > 0) {
+            arrayOf(targetTeacherId.toString(), targetClassId.toString(), date)
+        } else {
+            arrayOf(targetClassId.toString(), date)
+        }
+
+        val numCursor = readableDatabase.rawQuery(numQuery, args)
+        numCursor.use {
+            if (it.moveToFirst()) {
+                nextNumber = it.getInt(0)
+            }
+        }
+
+        val cv = ContentValues().apply {
+            put("student_id", studentId)
+            put("class_id", if (targetClassId > 0) targetClassId else 1)
+            if (targetTeacherId != null && targetTeacherId!! > 0) {
+                put("teacher_id", targetTeacherId)
+            } else {
+                putNull("teacher_id")
+            }
+            put("date", date)
+            put("queue_number", nextNumber)
+            put("status", "WAITING")
+            put("call_count", 0)
+        }
+
+        val insertedId = writableDatabase.insert("daily_queues", null, cv)
+        if (insertedId > 0) {
+            return getQueueByStudent(studentId, date)
+        }
+        return null
+    }
+
+    /**
+     * Data Panel Panggilan Meja Ustadz (Desk Data)
+     */
+    fun getDeskData(deskId: Int, dateStr: String? = null): JSONObject {
+        val date = dateStr ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        // Coba cari dari guru atau kelas
+        var teacherName = ""
+        var className = ""
+        var targetTeacherId: Int? = null
+        var targetClassId = deskId
+
+        val tCursor = readableDatabase.rawQuery(
+            "SELECT t.id, t.name, c.id, c.name FROM teachers t LEFT JOIN classes c ON c.teacher_id = t.id WHERE t.id = ?",
+            arrayOf(deskId.toString())
+        )
+        var isTeacherFound = false
+        tCursor.use {
+            if (it.moveToFirst()) {
+                isTeacherFound = true
+                targetTeacherId = it.getInt(0)
+                teacherName = it.getString(1) ?: "Ustadz"
+                if (!it.isNull(2)) {
+                    targetClassId = it.getInt(2)
+                    className = it.getString(3) ?: ""
+                }
+            }
+        }
+
+        if (!isTeacherFound) {
+            val cCursor = readableDatabase.rawQuery(
+                "SELECT c.id, c.name, t.id, t.name FROM classes c LEFT JOIN teachers t ON c.teacher_id = t.id WHERE c.id = ?",
+                arrayOf(deskId.toString())
+            )
+            cCursor.use {
+                if (it.moveToFirst()) {
+                    targetClassId = it.getInt(0)
+                    className = it.getString(1) ?: "Kelas"
+                    if (!it.isNull(2)) {
+                        targetTeacherId = it.getInt(2)
+                        teacherName = it.getString(3) ?: ""
+                    }
+                }
+            }
+        }
+
+        val classInfo = JSONObject().apply {
+            put("id", targetClassId)
+            put("name", className.ifEmpty { teacherName })
+            put("teacher_id", targetTeacherId ?: 0)
+            put("teacher_name", teacherName.ifEmpty { "Ustadz Pengajar" })
+        }
+
+        // Santri yang sedang dipanggil / mengaji (CALLING / SERVING)
+        var currentObj: JSONObject? = null
+        val currentQuery = """
+            SELECT q.id, q.queue_number, q.call_count, q.called_at, s.id as student_id, s.name as student_name,
+                   s.nis, s.gender as student_gender, s.photo, s.parent_phone
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            WHERE ((q.teacher_id = ? AND ? > 0) OR (q.teacher_id IS NULL AND q.class_id = ?))
+              AND q.date = ?
+              AND q.status IN ('CALLING', 'SERVING')
+            ORDER BY q.called_at DESC
+            LIMIT 1
+        """
+        val tIdVal = targetTeacherId ?: 0
+        val currentCursor = readableDatabase.rawQuery(currentQuery, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        currentCursor.use {
+            if (it.moveToFirst()) {
+                currentObj = JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", it.getInt(1))
+                    put("call_count", it.getInt(2))
+                    put("called_at", it.getString(3) ?: "")
+                    put("student_id", it.getInt(4))
+                    put("student_name", it.getString(5))
+                    put("nis", it.getString(6) ?: "-")
+                    put("student_gender", it.getString(7) ?: "L")
+                    put("photo", it.getString(8) ?: "")
+                    put("parent_phone", it.getString(9) ?: "")
+                }
+            }
+        }
+
+        // Waiting list
+        val waitingArr = JSONArray()
+        val waitingQuery = """
+            SELECT q.id, q.queue_number, s.id as student_id, s.name as student_name, s.nis, s.photo
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            WHERE ((q.teacher_id = ? AND ? > 0) OR (q.teacher_id IS NULL AND q.class_id = ?))
+              AND q.date = ?
+              AND q.status = 'WAITING'
+            ORDER BY q.queue_number ASC
+        """
+        val waitingCursor = readableDatabase.rawQuery(waitingQuery, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        waitingCursor.use {
+            while (it.moveToNext()) {
+                waitingArr.put(JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", it.getInt(1))
+                    put("student_id", it.getInt(2))
+                    put("student_name", it.getString(3))
+                    put("nis", it.getString(4) ?: "-")
+                    put("photo", it.getString(5) ?: "")
+                })
+            }
+        }
+
+        // Skipped list
+        val skippedArr = JSONArray()
+        val skippedQuery = """
+            SELECT q.id, q.queue_number, s.id as student_id, s.name as student_name, s.nis, s.photo
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            WHERE ((q.teacher_id = ? AND ? > 0) OR (q.teacher_id IS NULL AND q.class_id = ?))
+              AND q.date = ?
+              AND q.status = 'SKIPPED'
+            ORDER BY q.queue_number ASC
+        """
+        val skippedCursor = readableDatabase.rawQuery(skippedQuery, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        skippedCursor.use {
+            while (it.moveToNext()) {
+                skippedArr.put(JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", it.getInt(1))
+                    put("student_id", it.getInt(2))
+                    put("student_name", it.getString(3))
+                    put("nis", it.getString(4) ?: "-")
+                    put("photo", it.getString(5) ?: "")
+                })
+            }
+        }
+
+        // Completed list
+        val completedArr = JSONArray()
+        val completedQuery = """
+            SELECT q.id, q.queue_number, s.id as student_id, s.name as student_name, s.nis, s.photo
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            WHERE ((q.teacher_id = ? AND ? > 0) OR (q.teacher_id IS NULL AND q.class_id = ?))
+              AND q.date = ?
+              AND q.status = 'COMPLETED'
+            ORDER BY q.completed_at DESC
+            LIMIT 15
+        """
+        val completedCursor = readableDatabase.rawQuery(completedQuery, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        completedCursor.use {
+            while (it.moveToNext()) {
+                completedArr.put(JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", it.getInt(1))
+                    put("student_id", it.getInt(2))
+                    put("student_name", it.getString(3))
+                    put("nis", it.getString(4) ?: "-")
+                    put("photo", it.getString(5) ?: "")
+                })
+            }
+        }
+
+        // Stats
+        val statsQuery = """
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN status = 'WAITING' THEN 1 ELSE 0 END), 0) as waiting,
+                COALESCE(SUM(CASE WHEN status IN ('CALLING', 'SERVING') THEN 1 ELSE 0 END), 0) as serving,
+                COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END), 0) as completed,
+                COALESCE(SUM(CASE WHEN status = 'SKIPPED' THEN 1 ELSE 0 END), 0) as skipped
+            FROM daily_queues
+            WHERE ((teacher_id = ? AND ? > 0) OR (teacher_id IS NULL AND class_id = ?))
+              AND date = ?
+        """
+        var statsObj = JSONObject()
+        val statsCursor = readableDatabase.rawQuery(statsQuery, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        statsCursor.use {
+            if (it.moveToFirst()) {
+                statsObj = JSONObject().apply {
+                    put("total", it.getInt(0))
+                    put("waiting", it.getInt(1))
+                    put("serving", it.getInt(2))
+                    put("completed", it.getInt(3))
+                    put("skipped", it.getInt(4))
+                }
+            }
+        }
+
+        return JSONObject().apply {
+            put("classInfo", classInfo)
+            put("current", currentObj ?: JSONObject.NULL)
+            put("waitingList", waitingArr)
+            put("skippedList", skippedArr)
+            put("completedList", completedArr)
+            put("stats", statsObj)
+        }
+    }
+
+    /**
+     * Panggil antrian berikutnya di meja
+     */
+    fun callNextQueue(deskId: Int, dateStr: String? = null): JSONObject {
+        val date = dateStr ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val timeNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
+        var targetTeacherId: Int? = null
+        var targetClassId = deskId
+
+        val tCursor = readableDatabase.rawQuery("SELECT id FROM teachers WHERE id = ?", arrayOf(deskId.toString()))
+        val isTeacher = tCursor.use { it.moveToFirst() }
+        if (isTeacher) {
+            targetTeacherId = deskId
+            val cCursor = readableDatabase.rawQuery("SELECT id FROM classes WHERE teacher_id = ?", arrayOf(deskId.toString()))
+            cCursor.use { if (it.moveToFirst()) targetClassId = it.getInt(0) }
+        } else {
+            val cCursor = readableDatabase.rawQuery("SELECT teacher_id FROM classes WHERE id = ?", arrayOf(deskId.toString()))
+            cCursor.use {
+                if (it.moveToFirst() && !it.isNull(0)) targetTeacherId = it.getInt(0)
+            }
+        }
+
+        val tIdVal = targetTeacherId ?: 0
+
+        // Selesaikan santri yang sedang dipanggil saat ini
+        val finishSql = """
+            UPDATE daily_queues 
+            SET status = 'COMPLETED', completed_at = ? 
+            WHERE ((teacher_id = ? AND ? > 0) OR (teacher_id IS NULL AND class_id = ?))
+              AND date = ? 
+              AND status IN ('CALLING', 'SERVING')
+        """
+        writableDatabase.execSQL(finishSql, arrayOf(timeNow, tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+
+        // Cari antrian urutan teratas yang WAITING
+        val nextSql = """
+            SELECT id, queue_number, student_id 
+            FROM daily_queues 
+            WHERE ((teacher_id = ? AND ? > 0) OR (teacher_id IS NULL AND class_id = ?))
+              AND date = ? 
+              AND status = 'WAITING'
+            ORDER BY queue_number ASC
+            LIMIT 1
+        """
+        var nextId = 0
+        val nextCursor = readableDatabase.rawQuery(nextSql, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+        nextCursor.use {
+            if (it.moveToFirst()) nextId = it.getInt(0)
+        }
+
+        if (nextId <= 0) {
+            return JSONObject().apply {
+                put("success", false)
+                put("message", "Semua antrian santri yang menunggu sudah dipanggil.")
+            }
+        }
+
+        // Update status santri menjadi CALLING
+        writableDatabase.execSQL(
+            "UPDATE daily_queues SET status = 'CALLING', called_at = ?, call_count = 1 WHERE id = ?",
+            arrayOf(timeNow, nextId.toString())
+        )
+
+        val detailQuery = """
+            SELECT q.id, q.queue_number, q.call_count, q.called_at,
+                   s.name as student_name, s.gender as student_gender,
+                   COALESCE(t.name, c.name, 'Ustadz') as teacher_name,
+                   c.name as class_name
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            LEFT JOIN teachers t ON q.teacher_id = t.id
+            LEFT JOIN classes c ON q.class_id = c.id
+            WHERE q.id = ?
+        """
+        val detailCursor = readableDatabase.rawQuery(detailQuery, arrayOf(nextId.toString()))
+        var calledObj = JSONObject()
+        detailCursor.use {
+            if (it.moveToFirst()) {
+                val qNum = it.getInt(1)
+                val sName = it.getString(4)
+                val tName = it.getString(6) ?: "Ustadz"
+                calledObj = JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", qNum)
+                    put("call_count", it.getInt(2))
+                    put("called_at", it.getString(3) ?: "")
+                    put("student_name", sName)
+                    put("student_gender", it.getString(5) ?: "L")
+                    put("teacher_name", tName)
+                    put("class_name", it.getString(7) ?: "")
+                    put("speechSentence", "Nomor antrian $qNum, $sName, silakan menuju $tName.")
+                }
+            }
+        }
+
+        return JSONObject().apply {
+            put("success", true)
+            put("message", "Memanggil ${calledObj.optString("student_name")} (Nomor ${calledObj.optInt("queue_number")})")
+            put("queue", calledObj)
+        }
+    }
+
+    /**
+     * Panggil ulang (Recall)
+     */
+    fun recallQueue(queueId: Int): JSONObject {
+        val timeNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        writableDatabase.execSQL(
+            "UPDATE daily_queues SET status = 'CALLING', called_at = ?, call_count = COALESCE(call_count, 0) + 1 WHERE id = ?",
+            arrayOf(timeNow, queueId.toString())
+        )
+
+        val detailQuery = """
+            SELECT q.id, q.queue_number, q.call_count, q.called_at,
+                   s.name as student_name, s.gender as student_gender,
+                   COALESCE(t.name, c.name, 'Ustadz') as teacher_name,
+                   c.name as class_name
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            LEFT JOIN teachers t ON q.teacher_id = t.id
+            LEFT JOIN classes c ON q.class_id = c.id
+            WHERE q.id = ?
+        """
+        val detailCursor = readableDatabase.rawQuery(detailQuery, arrayOf(queueId.toString()))
+        var calledObj = JSONObject()
+        detailCursor.use {
+            if (it.moveToFirst()) {
+                val qNum = it.getInt(1)
+                val sName = it.getString(4)
+                val tName = it.getString(6) ?: "Ustadz"
+                calledObj = JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queue_number", qNum)
+                    put("call_count", it.getInt(2))
+                    put("called_at", it.getString(3) ?: "")
+                    put("student_name", sName)
+                    put("student_gender", it.getString(5) ?: "L")
+                    put("teacher_name", tName)
+                    put("class_name", it.getString(7) ?: "")
+                    put("speechSentence", "Panggilan ulang. Nomor antrian $qNum, $sName, silakan menuju $tName.")
+                }
+            }
+        }
+
+        return JSONObject().apply {
+            put("success", true)
+            put("called", calledObj)
+        }
+    }
+
+    /**
+     * Lewati antrian (Skip)
+     */
+    fun skipQueue(queueId: Int): JSONObject {
+        val count = writableDatabase.delete("daily_queues", "id = ?", arrayOf(queueId.toString()))
+        val cv = ContentValues().apply {
+            put("status", "SKIPPED")
+            putNull("called_at")
+        }
+        val updated = writableDatabase.update("daily_queues", cv, "id = ?", arrayOf(queueId.toString()))
+        return JSONObject().apply {
+            put("success", updated > 0)
+            put("message", if (updated > 0) "Santri berhasil dilewati sementara." else "Data antrian tidak ditemukan")
+        }
+    }
+
+    /**
+     * Selesaikan antrian (Finish)
+     */
+    fun finishQueue(queueId: Int): JSONObject {
+        val timeNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val cv = ContentValues().apply {
+            put("status", "COMPLETED")
+            put("completed_at", timeNow)
+        }
+        val updated = writableDatabase.update("daily_queues", cv, "id = ?", arrayOf(queueId.toString()))
+        return JSONObject().apply {
+            put("success", updated > 0)
+            put("message", if (updated > 0) "Santri telah selesai mengaji." else "Data antrian tidak ditemukan")
+        }
+    }
+
+    /**
+     * Data Display TV Kiosk Lengkap (/api/display-data)
+     * Langsung disuplai ke UI TV Native Android & Web Remote Display
+     */
+    fun getDisplayData(): JSONObject {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val schoolName = getSetting("school_name", "MUSHOLLA AL MUHAJIRIN")
+        val schoolTagline = getSetting("school_tagline", "Sistem Presensi & Antrian Mengaji Digital")
+        val schoolLogo = getSetting("school_logo", "")
+        val prefix = getSetting("queue_calling_prefix", "Nomor antrian")
+
+        // 1. Ambil seluruh meja (berdasarkan guru atau kelas)
+        val teachers = JSONArray()
+        val tQuery = """
+            SELECT t.id, t.name, c.id as class_id, c.name as class_name
+            FROM teachers t
+            LEFT JOIN classes c ON c.teacher_id = t.id
+            WHERE t.is_active = 1
+            ORDER BY t.name ASC
+        """
+        val tCursor = readableDatabase.rawQuery(tQuery, null)
+        val tablesArr = JSONArray()
+
+        tCursor.use {
+            var deskNum = 1
+            while (it.moveToNext()) {
+                val tId = it.getInt(0)
+                val tName = it.getString(1)
+                val cId = if (it.isNull(2)) tId else it.getInt(2)
+                val cName = it.getString(3) ?: tName
+
+                val deskData = getDeskData(tId, today)
+                val current = deskData.optJSONObject("current")
+                val waitingList = deskData.optJSONArray("waitingList") ?: JSONArray()
+                val stats = deskData.optJSONObject("stats") ?: JSONObject()
+
+                // Batasi waiting list di display TV 4 teratas
+                val displayWaiting = JSONArray()
+                for (w in 0 until minOf(4, waitingList.length())) {
+                    displayWaiting.put(waitingList.getJSONObject(w))
+                }
+
+                val tableObj = JSONObject().apply {
+                    put("deskNumber", deskNum++)
+                    put("tableId", tId)
+                    put("classId", cId)
+                    put("teacherId", tId)
+                    put("tableName", "Meja $tName")
+                    put("className", tName)
+                    put("teacherName", tName)
+                    put("current", current ?: JSONObject.NULL)
+                    put("nextWaiting", displayWaiting)
+                    put("stats", stats)
+                }
+                tablesArr.put(tableObj)
+            }
+        }
+
+        // Jika belum ada guru, fallback ke daftar kelas
+        if (tablesArr.length() == 0) {
+            val cQuery = "SELECT id, name FROM classes ORDER BY name ASC"
+            val cCursor = readableDatabase.rawQuery(cQuery, null)
+            cCursor.use {
+                var deskNum = 1
+                while (it.moveToNext()) {
+                    val cId = it.getInt(0)
+                    val cName = it.getString(1)
+                    val deskData = getDeskData(cId, today)
+                    val current = deskData.optJSONObject("current")
+                    val waitingList = deskData.optJSONArray("waitingList") ?: JSONArray()
+                    val stats = deskData.optJSONObject("stats") ?: JSONObject()
+
+                    val displayWaiting = JSONArray()
+                    for (w in 0 until minOf(4, waitingList.length())) {
+                        displayWaiting.put(waitingList.getJSONObject(w))
+                    }
+
+                    val tableObj = JSONObject().apply {
+                        put("deskNumber", deskNum++)
+                        put("classId", cId)
+                        put("tableName", "Meja $cName")
+                        put("className", cName)
+                        put("teacherName", "Ustadz Pengajar")
+                        put("current", current ?: JSONObject.NULL)
+                        put("nextWaiting", displayWaiting)
+                        put("stats", stats)
+                    }
+                    tablesArr.put(tableObj)
+                }
+            }
+        }
+
+        // 2. Ambil lastCall (Panggilan aktif paling baru)
+        var lastCallObj: JSONObject? = null
+        val lastCallQuery = """
+            SELECT q.id, q.queue_number, q.call_count, q.called_at,
+                   s.name as student_name, s.gender as student_gender,
+                   COALESCE(t.name, c.name, 'Ustadz') as teacher_name,
+                   c.name as class_name
+            FROM daily_queues q
+            JOIN students s ON q.student_id = s.id
+            LEFT JOIN teachers t ON q.teacher_id = t.id
+            LEFT JOIN classes c ON q.class_id = c.id
+            WHERE q.date = ? AND q.status = 'CALLING' AND q.called_at IS NOT NULL
+            ORDER BY q.called_at DESC
+            LIMIT 1
+        """
+        val lastCursor = readableDatabase.rawQuery(lastCallQuery, arrayOf(today))
+        lastCursor.use {
+            if (it.moveToFirst()) {
+                val qNum = it.getInt(1)
+                val sName = it.getString(4)
+                val tName = it.getString(6) ?: "Ustadz"
+                lastCallObj = JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("queueNumber", qNum)
+                    put("queue_number", qNum)
+                    put("callCount", it.getInt(2))
+                    put("call_count", it.getInt(2))
+                    put("calledAt", it.getString(3) ?: "")
+                    put("called_at", it.getString(3) ?: "")
+                    put("studentName", sName)
+                    put("student_name", sName)
+                    put("student_gender", it.getString(5) ?: "L")
+                    put("className", tName)
+                    put("teacherName", tName)
+                    put("speechSentence", "$prefix $qNum, $sName, silakan menuju $tName.")
+                }
+            }
+        }
+
+        // 3. Running Text Marquee
+        val announcement = "Selamat Datang di $schoolName   •••   Santri wajib melakukan presensi kartu RFID sebelum mengaji   •••   Mohon tertib, tenang, dan jaga kebersihan"
+
+        return JSONObject().apply {
+            put("success", true)
+            put("date", today)
+            put("schoolName", schoolName)
+            put("school_name", schoolName)
+            put("schoolTagline", schoolTagline)
+            put("school_tagline", schoolTagline)
+            put("schoolLogo", schoolLogo)
+            put("school_logo", schoolLogo)
+            put("announcement", announcement)
+            put("tables", tablesArr)
+            put("lastCall", lastCallObj ?: JSONObject.NULL)
+        }
+    }
 }
+

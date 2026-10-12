@@ -42,6 +42,7 @@
           <a href="/classes" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="classes">Kelas</a>
           <a href="/teachers" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" data-nav="teachers">Guru / Wali</a>
           <a href="/attendances" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Laporan</a>
+          <a href="/queue/desk" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Antrian Meja</a>
           <a href="/idcard" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">Cetak Kartu</a>
           <a href="/whatsapp" class="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">WhatsApp</a>
           <a href="/settings" class="px-2.5 py-1.5 rounded-lg bg-slate-800 text-teal-300 font-bold border border-slate-700">Pengaturan</a>
@@ -281,7 +282,39 @@
             <input type="time" id="jam_pulang" value="14:00" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
           </div>
         </div>
-      <!-- Kartu 4: Keamanan Akun Admin Web Remote -->
+      </div>
+
+      <!-- Kartu 4: Fitur Antrian Mengaji Meja Ustadz -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Sistem Antrian Mengaji Santri</h3>
+            <p class="text-[11px] text-slate-400">Pengaturan penomoran dan panggilan meja ustadz.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Status Fitur Antrian</label>
+            <select id="queue_enabled" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+              <option value="1">Aktif (Otomatis Beri Nomor Antrian Saat Tap Kartu)</option>
+              <option value="0">Nonaktif (Hanya Presensi Datang Biasa)</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1">Jika aktif, santri otomatis mendapatkan nomor antrian meja pengajar dan mencetak tiket antrian.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Prefix Panggilan Suara TV</label>
+            <input type="text" id="queue_calling_prefix" value="Nomor antrian" placeholder="Contoh: Nomor antrian" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+            <p class="text-[10px] text-slate-400 mt-1">Kata awalan saat TV memanggil: "Nomor antrian 5, Ahmad, silakan menuju..."</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu 5: Keamanan Akun Admin Web Remote -->
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
           <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
@@ -330,6 +363,8 @@
       'jam_masuk',
       'toleransi_telat',
       'jam_pulang',
+      'queue_enabled',
+      'queue_calling_prefix',
       'admin_username',
       'admin_password'
     ];

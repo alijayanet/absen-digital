@@ -16,7 +16,7 @@ import java.util.Locale
 
 class KioskHttpServer(
     private val context: Context,
-    port: Int = 3000
+    port: Int = 8080
 ) : NanoHTTPD("0.0.0.0", port) {
 
     companion object {
@@ -55,8 +55,11 @@ class KioskHttpServer(
                 uri == "/api/attendances/report" && method == Method.GET -> handleAttendanceReport(session)
                 uri == "/api/attendances/export/csv" && method == Method.GET -> handleAttendanceExportCsv(session)
 
-                // 2. API Statistik Dashboard
+                // 2. API Statistik Dashboard & Antrian Display TV
                 uri == "/api/dashboard/stats" && method == Method.GET -> handleDashboardStats()
+                (uri == "/api/display-data" || uri == "/api/queue/display-data") && method == Method.GET -> handleGetDisplayData()
+                uri == "/api/queue/desk-data" && method == Method.GET -> handleGetQueueDeskData(session)
+                uri == "/api/queue/action" && method == Method.POST -> handleQueueAction(session)
 
                 // 3. API Data Santri / Siswa (CRUD + Import/Export)
                 uri == "/api/students" && method == Method.GET -> handleGetStudents()
@@ -87,6 +90,8 @@ class KioskHttpServer(
                 // 8. Halaman Web (HTML)
                 uri == "/login" -> serveAssetHtml("login.html")
                 uri == "/kiosk" -> serveAssetHtml("kiosk.html")
+                uri == "/queue/display" || uri == "/display" -> serveAssetHtml("display.html")
+                uri == "/queue/desk" || uri == "/dashboard/queue/desk" -> serveAssetHtml("desk.html")
                 uri == "/" || uri == "/dashboard" -> serveAssetHtml("dashboard.html")
                 uri == "/students" || uri == "/dashboard/students" -> serveAssetHtml("students.html")
                 uri == "/classes" || uri == "/dashboard/classes" -> serveAssetHtml("classes.html")
@@ -165,18 +170,32 @@ class KioskHttpServer(
 
         val studentId = student.getInt("id")
         val studentName = student.getString("name")
+        val classId = student.optInt("class_id", 0)
         val className = student.optString("class_name", "-")
         val parentPhone = student.optString("parent_phone", "")
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        // Cek fitur antrian mengaji apakah diaktifkan
+        val isQueueEnabled = db.getSetting("queue_enabled", "1") == "1"
+        var studentQueue: JSONObject? = null
+        if (isQueueEnabled) {
+            studentQueue = db.assignQueueNumber(studentId, classId, todayStr)
+        }
 
         // Cek apakah sudah absen hari ini
         val existingAttendance = db.getTodayAttendance(studentId)
         if (existingAttendance != null) {
+            if (studentQueue == null && isQueueEnabled) {
+                studentQueue = db.getQueueByStudent(studentId, todayStr)
+            }
             val res = JSONObject().apply {
                 put("success", false)
                 put("code", "ALREADY_ATTENDED")
                 put("status", existingAttendance.getString("status"))
                 put("timeIn", existingAttendance.getString("time_in"))
                 put("student", student)
+                put("attendance", existingAttendance)
+                if (studentQueue != null) put("queue", studentQueue)
                 put("message", "Santri atas nama $studentName sudah melakukan presensi hari ini.")
             }
             return newFixedLengthResponse(Response.Status.OK, MIME_JSON, res.toString())
@@ -210,6 +229,12 @@ class KioskHttpServer(
             )
         }
 
+        val attendanceObj = JSONObject().apply {
+            put("status", status)
+            put("time_in", timeInFull)
+            put("late_minutes", lateMinutes)
+        }
+
         val res = JSONObject().apply {
             put("success", true)
             put("code", "SUCCESS")
@@ -217,10 +242,47 @@ class KioskHttpServer(
             put("lateMinutes", lateMinutes)
             put("timeIn", timeInFull)
             put("student", student)
+            put("attendance", attendanceObj)
+            if (studentQueue != null) put("queue", studentQueue)
             put("message", if (status == "HADIR") "Presensi berhasil. Hadir tepat waktu!" else "Presensi berhasil tercatat (Terlambat $lateMinutes menit).")
         }
 
         return newFixedLengthResponse(Response.Status.OK, MIME_JSON, res.toString())
+    }
+
+    private fun handleGetDisplayData(): Response {
+        val data = db.getDisplayData()
+        return newFixedLengthResponse(Response.Status.OK, MIME_JSON, data.toString())
+    }
+
+    private fun handleGetQueueDeskData(session: IHTTPSession): Response {
+        val params = session.parameters
+        val classIdParam = params["classId"]?.getOrNull(0)?.toIntOrNull() ?: 1
+        val deskData = db.getDeskData(classIdParam)
+        val res = JSONObject().apply {
+            put("success", true)
+            put("deskData", deskData)
+        }
+        return newFixedLengthResponse(Response.Status.OK, MIME_JSON, res.toString())
+    }
+
+    private fun handleQueueAction(session: IHTTPSession): Response {
+        val body = parseRequestBody(session)
+        val action = body.optString("action", "").uppercase()
+        val classId = body.optInt("classId", 1)
+        val queueId = body.optInt("queueId", 0)
+
+        val result = when (action) {
+            "NEXT" -> db.callNextQueue(classId)
+            "RECALL" -> db.recallQueue(queueId)
+            "SKIP" -> db.skipQueue(queueId)
+            "FINISH" -> db.finishQueue(queueId)
+            else -> JSONObject().apply {
+                put("success", false)
+                put("message", "Aksi antrian tidak valid: $action")
+            }
+        }
+        return newFixedLengthResponse(Response.Status.OK, MIME_JSON, result.toString())
     }
 
     private fun timeToMinutes(timeStr: String): Int {

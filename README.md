@@ -167,25 +167,36 @@ Buka browser Anda dan akses:
 
 ## 📺 Aplikasi Native Android TV / STB
 
-Sistem ini dilengkapi aplikasi Android native (`SmartSchool-TV-Native-RFID-Client.apk`) yang dirancang khusus untuk layar TV Digital / STB tanpa touchscreen, dioperasikan penuh menggunakan **Remote TV** dan **USB RFID Reader**.
+Sistem ini menyediakan 2 pilihan mode implementasi:
+1. **Mode All-in-One Standalone Server (`AbsenDigital-Standalone-Server.apk`) [Rekomendasi Tanpa Komputer/Linux Server]**:
+   - STB Android TV berfungsi langsung sebagai **Server Mandiri + Kiosk Display**.
+   - Menyediakan web server NanoHTTPD & database SQLite di port `8080`.
+   - Admin dan Ustadz cukup membuka browser HP / Laptop via Wi-Fi lokal: `http://[IP-STB]:8080/dashboard`.
+   - Tidak memerlukan server Node.js atau VPS Linux tambahan.
+   - Mengirim notifikasi WhatsApp via Cloud Gateway (Fonnte / Wablas).
+2. **Mode Client Server (`SmartSchool-TV-Native-RFID-Client.apk`)**:
+   - Berfungsi sebagai client display TV yang terhubung ke server Node.js eksternal.
 
 ### Fitur Aplikasi Native TV:
 1. **Layar Tampilan 24/7 Kiosk**: Layar dijaga tetap aktif tanpa sleep (*Keep Screen On*).
-2. **Papan Antrian Meja Ustadz**: Menampilkan nomor antrian santri yang sedang mengaji dan daftar tunggu berdampingan.
-3. **Panggilan Suara Santri**: Suara TTS natural Indonesia dan bel ding-dong bandara otomatis saat ustadz menekan tombol panggil.
-4. **Cetak Tiket Antrian**: Otomatis cetak nomor antrian santri dengan printer bluetooth thermal.
+2. **Embedded Web Server Port 8080**: Menampilkan alamat IP STB di layar (`🟢 Server: http://192.168.x.x:8080`) untuk kemudahan akses remote web admin & panel guru.
+3. **Papan Antrian Meja Ustadz Multi-Meja**: Menampilkan nomor antrian santri yang sedang mengaji dan daftar tunggu berdampingan.
+4. **Panggilan Suara Santri**: Suara TTS natural Indonesia dan bel ding-dong bandara otomatis saat ustadz menekan tombol panggil.
+5. **Cetak Tiket Antrian**: Otomatis cetak nomor antrian santri dengan printer bluetooth thermal.
 
-### Cara Menghubungkan TV ke Server:
-1. Pasang file APK ke Android TV / STB.
-2. Buka aplikasi di TV.
-3. Tekan tombol **MENU** atau **SETTINGS** pada Remote TV (atau klik ikon gear di sudut atas).
-4. Masukkan URL server Anda (contoh: `http://192.168.1.100:3000` atau domain online `https://almuhajirin.ujunggebang.online`).
-5. Klik **Tes Koneksi**, kemudian klik **Simpan & Terapkan**.
+### Cara Penggunaan Mode Standalone Server:
+1. Pasang file `AbsenDigital-Standalone-Server.apk` ke Android TV / STB.
+2. Buka aplikasi di TV. Di header layar TV akan langsung muncul alamat IP server, contoh: `🟢 Server: http://192.168.1.50:8080`.
+3. Buka browser di HP / Laptop TU atau Ustadz (dalam Wi-Fi yang sama), lalu akses:
+   - **Dashboard Admin**: `http://192.168.1.50:8080/dashboard` (User: `admin`, Pass: `admin`)
+   - **Panel Panggilan Ustadz**: `http://192.168.1.50:8080/queue/desk`
+   - **Layar Display TV Web**: `http://192.168.1.50:8080/queue/display`
+4. Hubungkan USB RFID Reader ke port USB TV / STB untuk presensi langsung santri.
 
 ### Cara Setting Printer Bluetooth Thermal:
 1. Hidupkan printer Bluetooth Thermal Anda.
 2. Buka menu **Pengaturan TV $\to$ Remot & Aksesori $\to$ Tambahkan Aksesori**, lalu lakukan *Pairing* ke printer Anda (PIN bawaan biasanya `0000` atau `1234`).
-3. Di dalam aplikasi TV, buka menu pengaturan (tombol Remote TV).
+3. Di dalam aplikasi TV, buka menu pengaturan (tombol MENU/SETTINGS Remote TV).
 4. Aktifkan saklar **Printer Bluetooth Thermal (58mm)**.
 5. Pilih nama printer Anda dari daftar dropdown (atau masukkan MAC address printer secara manual).
 6. Tekan tombol **Tes Cetak** untuk menguji printer.

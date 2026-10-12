@@ -517,14 +517,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDisplayUI(data: DisplayResponse, baseUrl: String) {
-        // Status Server
-        val host = try {
-            val uri = android.net.Uri.parse(baseUrl)
-            uri.host ?: baseUrl
-        } catch (_: Exception) {
-            baseUrl
-        }
-        binding.tvConnectionStatus.text = "🟢 Online ($host)"
+        // Status Server & URL Akses Web Remote
+        val localIp = com.alijaya.smartschool.util.NetworkUtils.getLocalIpAddress(this)
+        val serverDisplayUrl = if (localIp != "127.0.0.1") "http://$localIp:8080" else baseUrl
+        binding.tvConnectionStatus.text = "🟢 Server: $serverDisplayUrl"
         binding.tvConnectionStatus.setBackgroundResource(R.drawable.bg_badge_success)
         binding.tvConnectionStatus.setTextColor(Color.parseColor("#34D399"))
 

@@ -22,12 +22,12 @@ class SessionManager(context: Context) {
 
         const val MODE_STANDALONE = "standalone" // STB All-in-One: Server mandiri di STB
         const val MODE_CLIENT = "client"         // Client mode: Hubungkan ke server Node.js eksternal
-        const val DEFAULT_PORT = 3000
-        const val DEFAULT_SERVER_URL = "https://almuhajirin.ujunggebang.online"
+        const val DEFAULT_PORT = 8080
+        const val DEFAULT_SERVER_URL = "http://127.0.0.1:8080"
     }
 
     fun getAppMode(): String {
-        return prefs.getString(KEY_APP_MODE, MODE_CLIENT) ?: MODE_CLIENT
+        return prefs.getString(KEY_APP_MODE, MODE_STANDALONE) ?: MODE_STANDALONE
     }
 
     fun setAppMode(mode: String) {
