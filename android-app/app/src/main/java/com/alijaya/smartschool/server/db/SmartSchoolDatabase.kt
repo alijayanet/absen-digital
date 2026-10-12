@@ -19,6 +19,9 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         @Volatile
         private var instance: SmartSchoolDatabase? = null
 
+        private var lastRecallQueueId = -1
+        private var lastRecallTimestamp = 0L
+
         fun getInstance(context: Context): SmartSchoolDatabase {
             return instance ?: synchronized(this) {
                 instance ?: SmartSchoolDatabase(context.applicationContext).also { instance = it }
@@ -1354,11 +1357,17 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
      * Panggil ulang (Recall)
      */
     fun recallQueue(queueId: Int): JSONObject {
-        val timeNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        writableDatabase.execSQL(
-            "UPDATE daily_queues SET status = 'CALLING', called_at = ?, call_count = COALESCE(call_count, 0) + 1 WHERE id = ?",
-            arrayOf(timeNow, queueId.toString())
-        )
+        val now = System.currentTimeMillis()
+        val isDuplicate = (queueId == lastRecallQueueId && (now - lastRecallTimestamp < 2500L))
+        if (!isDuplicate) {
+            lastRecallQueueId = queueId
+            lastRecallTimestamp = now
+            val timeNow = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+            writableDatabase.execSQL(
+                "UPDATE daily_queues SET status = 'CALLING', called_at = ?, call_count = COALESCE(call_count, 0) + 1 WHERE id = ?",
+                arrayOf(timeNow, queueId.toString())
+            )
+        }
 
         val detailQuery = """
             SELECT q.id, q.queue_number, q.call_count, q.called_at,

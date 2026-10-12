@@ -395,8 +395,19 @@
       }
     }
 
+    let isActionBusy = false;
+
     // Eksekusi Aksi Panggilan
     async function doAction(action, queueId = null) {
+      if (isActionBusy) return;
+      isActionBusy = true;
+
+      const actionButtons = document.querySelectorAll('button[onclick*="doAction"]');
+      actionButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'pointer-events-none');
+      });
+
       try {
         const body = {
           action,
@@ -419,9 +430,19 @@
           }, 350);
         } else {
           alert(data.message || 'Gagal menjalankan aksi antrian.');
+          isActionBusy = false;
+          actionButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'pointer-events-none');
+          });
         }
       } catch (err) {
         alert('Terjadi kendala jaringan: ' + err.message);
+        isActionBusy = false;
+        actionButtons.forEach(btn => {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'pointer-events-none');
+        });
       }
     }
 

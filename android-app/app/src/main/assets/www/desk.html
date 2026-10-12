@@ -364,7 +364,34 @@
       lucide.createIcons();
     }
 
+    let isActionBusy = false;
+
     async function actionQueue(actionType) {
+      if (isActionBusy) return;
+      isActionBusy = true;
+
+      const btnNext = document.getElementById('btnNext');
+      const btnRecall = document.getElementById('btnRecall');
+      const btnSkip = document.getElementById('btnSkip');
+      const btnFinish = document.getElementById('btnFinish');
+
+      if (btnNext) {
+        btnNext.disabled = true;
+        btnNext.classList.add('opacity-50', 'pointer-events-none');
+      }
+      if (btnRecall) {
+        btnRecall.disabled = true;
+        btnRecall.classList.add('opacity-50', 'pointer-events-none');
+      }
+      if (btnSkip) {
+        btnSkip.disabled = true;
+        btnSkip.classList.add('opacity-50', 'pointer-events-none');
+      }
+      if (btnFinish) {
+        btnFinish.disabled = true;
+        btnFinish.classList.add('opacity-50', 'pointer-events-none');
+      }
+
       try {
         const payload = {
           action: actionType,
@@ -385,6 +412,26 @@
         }
       } catch (e) {
         showToast('Gagal menghubungi server: ' + e.message, 'error');
+      } finally {
+        setTimeout(() => {
+          isActionBusy = false;
+          if (btnNext) {
+            btnNext.disabled = false;
+            btnNext.classList.remove('opacity-50', 'pointer-events-none');
+          }
+          if (btnRecall && currentActiveQueueId) {
+            btnRecall.disabled = false;
+            btnRecall.classList.remove('opacity-50', 'pointer-events-none');
+          }
+          if (btnSkip && currentActiveQueueId) {
+            btnSkip.disabled = false;
+            btnSkip.classList.remove('opacity-50', 'pointer-events-none');
+          }
+          if (btnFinish && currentActiveQueueId) {
+            btnFinish.disabled = false;
+            btnFinish.classList.remove('opacity-50', 'pointer-events-none');
+          }
+        }, 3000);
       }
     }
 

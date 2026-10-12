@@ -228,6 +228,10 @@ class BeepTtsHelper(
     // METODE PEMANGGILAN TEXT-TO-SPEECH
     // =========================================================================
 
+    private var activeMediaPlayer: MediaPlayer? = null
+    @Volatile
+    private var isAudioCancelled = false
+
     /**
      * Masukkan teks ke antrian bicara (Queue)
      */
@@ -235,16 +239,21 @@ class BeepTtsHelper(
     fun speak(text: String, isMale: Boolean = true) {
         if (text.isBlank()) return
         val clean = formatIndonesianSpokenText(text)
+        isAudioCancelled = false
         queue.add(SpeechTask(text = clean, isMale = isMale, playChime = false))
         triggerQueueProcessing()
     }
 
     /**
-     * Mainkan Chime Bel Bandara lalu ucapkan kalimat (Queue)
+     * Mainkan Chime Bel Bandara lalu ucapkan kalimat (Queue).
+     * Panggilan antrian meja ustadz harus langsung menghentikan suara sebelumnya
+     * agar tidak terjadi penumpukan atau pengucapan double berulang-ulang.
      */
     @Synchronized
     fun playChimeAndSpeak(text: String, isMale: Boolean = true, delayMs: Long = 400L) {
         if (text.isBlank()) return
+        clearQueueAndStop()
+        isAudioCancelled = false
         val clean = formatIndonesianSpokenText(text)
         queue.add(SpeechTask(text = clean, isMale = isMale, playChime = true))
         triggerQueueProcessing()
@@ -255,7 +264,17 @@ class BeepTtsHelper(
      */
     @Synchronized
     fun clearQueueAndStop() {
+        isAudioCancelled = true
         queue.clear()
+        try {
+            activeMediaPlayer?.let {
+                if (it.isPlaying) {
+                    it.stop()
+                }
+                it.release()
+            }
+            activeMediaPlayer = null
+        } catch (_: Throwable) {}
         try {
             tts?.stop()
         } catch (_: Throwable) {}
@@ -282,28 +301,31 @@ class BeepTtsHelper(
         isProcessingQueue = true
         try {
             while (true) {
+                if (isAudioCancelled) break
                 val task = synchronized(queue) {
                     if (queue.isEmpty()) null else queue.removeAt(0)
                 } ?: break
 
                 // Bunyikan bel airport chime jika diinstruksikan
-                if (task.playChime) {
+                if (task.playChime && !isAudioCancelled) {
                     playAirportChime()
-                    delay(200)
+                    delay(150)
                 }
+
+                if (isAudioCancelled) break
 
                 // Coba Online Natural Human TTS (Google Translate Neural Audio)
                 var spoken = false
-                if (voiceMode == MODE_ONLINE_NATURAL) {
+                if (voiceMode == MODE_ONLINE_NATURAL && !isAudioCancelled) {
                     spoken = speakOnlineNatural(task.text, task.isMale)
                 }
 
-                // Fallback ke Offline System TTS jika online gagal atau mode offline
-                if (!spoken) {
+                // Fallback ke Offline System TTS HANYA jika online gagal dan tidak dibatalkan
+                if (!spoken && !isAudioCancelled) {
                     speakOfflineTts(task.text, task.isMale)
                 }
 
-                delay(300)
+                delay(250)
             }
         } finally {
             isProcessingQueue = false
@@ -315,8 +337,10 @@ class BeepTtsHelper(
     // =========================================================================
     private suspend fun speakOnlineNatural(fullText: String, isMale: Boolean): Boolean = withContext(Dispatchers.IO) {
         try {
+            if (isAudioCancelled) return@withContext false
             val sentences = splitIntoSentences(fullText)
             for (sentence in sentences) {
+                if (isAudioCancelled) return@withContext false
                 val ok = playSentenceOnline(sentence)
                 if (!ok) return@withContext false
             }
@@ -328,21 +352,29 @@ class BeepTtsHelper(
     }
 
     private fun splitIntoSentences(text: String): List<String> {
-        val raw = text.split(Regex("(?<=[.!?])\\s+"))
+        val trimmed = text.trim()
+        // Jika kalimat <= 160 karakter (standar panggilan antrian), jangan dipecah-pecah
+        // agar tidak memicu fragmentasi audio atau partial playback
+        if (trimmed.length <= 160) {
+            return listOf(trimmed)
+        }
+        val raw = trimmed.split(Regex("(?<=[.!?])\\s+"))
         val result = mutableListOf<String>()
         for (item in raw) {
-            val trimmed = item.trim()
-            if (trimmed.length > 150) {
-                val sub = trimmed.split(Regex("(?<=,)\\s+"))
+            val subTrimmed = item.trim()
+            if (subTrimmed.length > 150) {
+                val sub = subTrimmed.split(Regex("(?<=,)\\s+"))
                 result.addAll(sub.filter { it.isNotBlank() })
-            } else if (trimmed.isNotBlank()) {
-                result.add(trimmed)
+            } else if (subTrimmed.isNotBlank()) {
+                result.add(subTrimmed)
             }
         }
-        return if (result.isEmpty()) listOf(text) else result
+        return if (result.isEmpty()) listOf(trimmed) else result
     }
 
     private suspend fun playSentenceOnline(sentence: String): Boolean = withContext(Dispatchers.IO) {
+        if (isAudioCancelled) return@withContext false
+        var mp: MediaPlayer? = null
         try {
             val cacheDir = File(context.cacheDir, "tts_cache").apply { mkdirs() }
             val md5Name = md5(sentence) + ".mp3"
@@ -368,7 +400,9 @@ class BeepTtsHelper(
                 }
             }
 
-            val mp = MediaPlayer().apply {
+            if (isAudioCancelled) return@withContext false
+
+            mp = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -378,6 +412,8 @@ class BeepTtsHelper(
                 setDataSource(audioFile.absolutePath)
                 prepare()
             }
+
+            activeMediaPlayer = mp
 
             val finished = CompletableDeferred<Unit>()
             mp.setOnCompletionListener {
@@ -389,18 +425,27 @@ class BeepTtsHelper(
             }
 
             mp.start()
-            withTimeoutOrNull(30000L) {
+            withTimeoutOrNull(25000L) {
                 finished.await()
             }
 
             try {
-                mp.stop()
+                if (mp.isPlaying) mp.stop()
                 mp.release()
             } catch (_: Throwable) {}
+            if (activeMediaPlayer == mp) {
+                activeMediaPlayer = null
+            }
 
-            true
+            !isAudioCancelled
         } catch (e: Throwable) {
             Log.w(TAG, "playSentenceOnline error: ${e.message}")
+            try {
+                mp?.release()
+            } catch (_: Throwable) {}
+            if (activeMediaPlayer == mp) {
+                activeMediaPlayer = null
+            }
             false
         }
     }

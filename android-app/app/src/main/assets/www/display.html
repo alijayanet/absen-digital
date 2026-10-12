@@ -163,6 +163,9 @@
     lucide.createIcons();
 
     let lastKnownCallKey = '';
+    let isFirstWebDisplayLoad = true;
+    const urlParams = new URLSearchParams(window.location.search);
+    let isWebAudioEnabled = urlParams.get('audio') !== '0';
     let currentPrayerSchedule = null;
 
     // Helper parse jam "HH:mm" ke objek Date
@@ -307,13 +310,21 @@
         document.getElementById('txtBannerTeacherTarget').innerText = `Silakan Menuju ${lastCall.teacherName || 'Ustadz'}`;
         banner.classList.remove('hidden');
 
-        // Mainkan TTS Web Audio jika ada panggilan baru
-        if (currentKey !== lastKnownCallKey) {
+        // Mainkan TTS Web Audio jika ada panggilan baru (bukan load pertama)
+        if (isFirstWebDisplayLoad) {
           lastKnownCallKey = currentKey;
-          speakCall(lastCall.speechSentence || `Nomor antrian ${lastCall.queueNumber}, ${lastCall.studentName}, silakan menuju ${lastCall.teacherName}`);
+          isFirstWebDisplayLoad = false;
+        } else if (currentKey !== lastKnownCallKey) {
+          lastKnownCallKey = currentKey;
+          if (isWebAudioEnabled) {
+            speakCall(lastCall.speechSentence || `Nomor antrian ${lastCall.queueNumber}, ${lastCall.studentName}, silakan menuju ${lastCall.teacherName}`);
+          }
         }
       } else {
         banner.classList.add('hidden');
+        if (isFirstWebDisplayLoad) {
+          isFirstWebDisplayLoad = false;
+        }
       }
 
       // Render Tables Grid

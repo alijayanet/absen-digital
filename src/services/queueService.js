@@ -538,11 +538,18 @@ class QueueService {
     const target = db.prepare(`SELECT * FROM daily_queues WHERE id = ?`).get(queueId);
     if (!target) return { success: false, message: 'Data antrian tidak ditemukan.' };
 
-    db.prepare(`
-      UPDATE daily_queues 
-      SET status = 'CALLING', called_at = CURRENT_TIMESTAMP, call_count = COALESCE(call_count, 0) + 1 
-      WHERE id = ?
-    `).run(queueId);
+    const now = Date.now();
+    if (this._lastRecallId === queueId && (now - (this._lastRecallTime || 0) < 2500)) {
+      // Abaikan duplicate recall dalam 2.5 detik
+    } else {
+      this._lastRecallId = queueId;
+      this._lastRecallTime = now;
+      db.prepare(`
+        UPDATE daily_queues 
+        SET status = 'CALLING', called_at = CURRENT_TIMESTAMP, call_count = COALESCE(call_count, 0) + 1 
+        WHERE id = ?
+      `).run(queueId);
+    }
 
     const called = db.prepare(`
       SELECT q.*, s.name as student_name, c.name as class_name

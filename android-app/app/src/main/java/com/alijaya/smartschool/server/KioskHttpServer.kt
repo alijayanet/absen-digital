@@ -104,8 +104,8 @@ class KioskHttpServer(
                 uri == "/whatsapp" || uri == "/dashboard/whatsapp" -> serveAssetHtml("whatsapp.html")
                 uri == "/settings" || uri == "/dashboard/settings" -> serveAssetHtml("settings.html")
 
-                // 9. Static Assets (JS / CSS)
-                uri.startsWith("/static/") || uri.startsWith("/public/") || uri.startsWith("/js/") || uri.startsWith("/css/") -> serveStaticFile(uri)
+                // 9. Static Assets (JS / CSS / Uploaded Photos)
+                uri.startsWith("/static/") || uri.startsWith("/public/") || uri.startsWith("/js/") || uri.startsWith("/css/") || uri.startsWith("/uploads/") -> serveStaticFile(uri)
 
                 else -> serveAssetHtml("dashboard.html")
             }
@@ -700,15 +700,31 @@ class KioskHttpServer(
     }
 
     private fun serveStaticFile(uri: String): Response {
-        val cleanPath = uri.removePrefix("/static/").removePrefix("/public/").trimStart('/')
+        // Cek file upload di direktori internal aplikasi
+        if (uri.startsWith("/uploads/")) {
+            val relPath = uri.removePrefix("/uploads/").trimStart('/')
+            val uploadFile = java.io.File(context.filesDir, "uploads/$relPath")
+            if (uploadFile.exists() && uploadFile.isFile) {
+                val mime = when {
+                    relPath.endsWith(".png", true) -> "image/png"
+                    relPath.endsWith(".jpg", true) || relPath.endsWith(".jpeg", true) -> "image/jpeg"
+                    relPath.endsWith(".webp", true) -> "image/webp"
+                    else -> "application/octet-stream"
+                }
+                return newFixedLengthResponse(Response.Status.OK, mime, uploadFile.inputStream(), uploadFile.length())
+            }
+        }
+
+        val cleanPath = uri.removePrefix("/static/").removePrefix("/public/").removePrefix("/uploads/").trimStart('/')
         return try {
             val stream = context.assets.open("www/$cleanPath")
             val mime = when {
-                cleanPath.endsWith(".js") -> MIME_JS
-                cleanPath.endsWith(".css") -> MIME_CSS
-                cleanPath.endsWith(".png") -> "image/png"
-                cleanPath.endsWith(".jpg") || cleanPath.endsWith(".jpeg") -> "image/jpeg"
-                cleanPath.endsWith(".svg") -> "image/svg+xml"
+                cleanPath.endsWith(".js", true) -> MIME_JS
+                cleanPath.endsWith(".css", true) -> MIME_CSS
+                cleanPath.endsWith(".png", true) -> "image/png"
+                cleanPath.endsWith(".jpg", true) || cleanPath.endsWith(".jpeg", true) -> "image/jpeg"
+                cleanPath.endsWith(".svg", true) -> "image/svg+xml"
+                cleanPath.endsWith(".webp", true) -> "image/webp"
                 else -> "application/octet-stream"
             }
             newChunkedResponse(Response.Status.OK, mime, stream)

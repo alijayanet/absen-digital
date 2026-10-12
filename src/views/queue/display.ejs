@@ -1079,6 +1079,9 @@
     // H. LIVE DISPLAY ANTRIAN TV (DATA POLLING)
     // ------------------------------------------
     let lastCallSignature = null;
+    let isInitialDisplayLoad = true;
+    const urlDisplayParams = new URLSearchParams(window.location.search);
+    const isDisplayWebAudioEnabled = urlDisplayParams.get('audio') !== '0';
     const callingPrefix = "<%= settings.queue_calling_prefix || 'Nomor antrian' %>";
 
     async function fetchTablesData() {
@@ -1206,6 +1209,12 @@
       if (signature !== lastCallSignature) {
         lastCallSignature = signature;
 
+        // Jika halaman web baru dimuat/refresh, jangan bunyikan audio panggilan lama
+        if (isInitialDisplayLoad) {
+          isInitialDisplayLoad = false;
+          return;
+        }
+
         // Tampilkan Banner Panggilan
         const banner = document.getElementById('callBanner');
         const textEl = document.getElementById('callBannerText');
@@ -1221,17 +1230,19 @@
           banner.classList.remove('opacity-0', '-translate-y-2', 'pointer-events-none');
         }
 
-        // Mainkan Ding-Dong Chime & Panggilan Suara TTS
-        playChime();
+        if (isDisplayWebAudioEnabled) {
+          // Mainkan Ding-Dong Chime & Panggilan Suara TTS
+          playChime();
 
-        // Ucapkan nomor dan nama santri secara utuh dan alami menuju Ustadz/Guru
-        let speechSentence = lastCall.speechSentence;
-        if (!speechSentence) {
-          const numWords = numberToIndoWords(qNum);
-          const cleanName = formatStudentNameForSpeech(sName);
-          speechSentence = `${callingPrefix} ${numWords}, ${cleanName}, silakan menuju ${targetTeacher}.`;
+          // Ucapkan nomor dan nama santri secara utuh dan alami menuju Ustadz/Guru
+          let speechSentence = lastCall.speechSentence;
+          if (!speechSentence) {
+            const numWords = numberToIndoWords(qNum);
+            const cleanName = formatStudentNameForSpeech(sName);
+            speechSentence = `${callingPrefix} ${numWords}, ${cleanName}, silakan menuju ${targetTeacher}.`;
+          }
+          speakCall(speechSentence);
         }
-        speakCall(speechSentence);
 
         // Tutup banner setelah 8 detik
         clearTimeout(window.bannerTimer);

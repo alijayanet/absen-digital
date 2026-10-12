@@ -40,18 +40,74 @@ object ImageLoader {
             return
         }
 
-        val cached = memoryCache.get(url)
+        val cleanUrl = url.trim()
+
+        val cached = memoryCache.get(cleanUrl)
         if (cached != null) {
             imageView.setImageBitmap(cached)
             return
         }
 
         fallbackResId?.let { imageView.setImageResource(it) }
-        imageView.tag = url
+        imageView.tag = cleanUrl
 
+        // 1. Cek apakah ini Base64 Data URL (data:image/jpeg;base64,...) atau raw Base64
+        val isBase64 = cleanUrl.startsWith("data:image", ignoreCase = true) ||
+                cleanUrl.contains(";base64,") ||
+                (cleanUrl.length > 200 && !cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://") && !cleanUrl.startsWith("/"))
+
+        if (isBase64) {
+            executor.execute {
+                try {
+                    val rawBase64 = if (cleanUrl.contains(",")) cleanUrl.substringAfter(",") else cleanUrl
+                    val decodedBytes = android.util.Base64.decode(rawBase64, android.util.Base64.DEFAULT)
+                    var bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+                    if (bitmap != null) {
+                        if (circleCrop) {
+                            bitmap = getCircularBitmap(bitmap)
+                        }
+                        memoryCache.put(cleanUrl, bitmap)
+                        mainHandler.post {
+                            if (imageView.tag == cleanUrl) {
+                                imageView.setImageBitmap(bitmap)
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Fallback to placeholder
+                }
+            }
+            return
+        }
+
+        // 2. Cek apakah ini Path File Lokal di Perangkat
+        if (cleanUrl.startsWith("/") && !cleanUrl.startsWith("//")) {
+            val localFile = java.io.File(cleanUrl)
+            if (localFile.exists() && localFile.isFile) {
+                executor.execute {
+                    try {
+                        var bitmap = BitmapFactory.decodeFile(localFile.absolutePath)
+                        if (bitmap != null) {
+                            if (circleCrop) {
+                                bitmap = getCircularBitmap(bitmap)
+                            }
+                            memoryCache.put(cleanUrl, bitmap)
+                            mainHandler.post {
+                                if (imageView.tag == cleanUrl) {
+                                    imageView.setImageBitmap(bitmap)
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+                return
+            }
+        }
+
+        // 3. Muat via HTTP/HTTPS URL
         executor.execute {
             try {
-                val request = Request.Builder().url(url).build()
+                val request = Request.Builder().url(cleanUrl).build()
                 val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
                     val bytes = response.body?.bytes()
@@ -61,9 +117,9 @@ object ImageLoader {
                             if (circleCrop) {
                                 bitmap = getCircularBitmap(bitmap)
                             }
-                            memoryCache.put(url, bitmap)
+                            memoryCache.put(cleanUrl, bitmap)
                             mainHandler.post {
-                                if (imageView.tag == url) {
+                                if (imageView.tag == cleanUrl) {
                                     imageView.setImageBitmap(bitmap)
                                 }
                             }

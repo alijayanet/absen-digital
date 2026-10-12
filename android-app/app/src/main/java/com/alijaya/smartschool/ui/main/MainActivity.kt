@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
 
     // Track last audio call to avoid repeating
     private var lastCallUniqueKey: String = ""
+    private var lastQueueCallTimestamp = 0L
     private var isCallBannerActive = false
     private val callBannerHandler = Handler(Looper.getMainLooper())
     private val hideCallBannerRunnable = Runnable {
@@ -356,12 +357,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvScanTimeStatus.text = "Waktu: ${attendance?.timeIn ?: "-"} WIB  •  Status: $statusText"
 
             // 3. Foto Santri
-            if (!student.photo.isNullOrBlank()) {
-                val photoUrl = if (student.photo.startsWith("http")) student.photo else "$baseUrl${student.photo}"
-                ImageLoader.load(photoUrl, binding.ivStudentPhoto, R.drawable.ic_user_avatar, circleCrop = true)
-            } else {
-                binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
-            }
+            renderStudentPhoto(student.photo, baseUrl)
 
             // 4. Nomor Antrian Mengaji
             if (queue?.queueNumber != null) {
@@ -438,12 +434,7 @@ class MainActivity : AppCompatActivity() {
                 binding.layoutQueueAssigned.visibility = View.GONE
             }
 
-            if (!student.photo.isNullOrBlank()) {
-                val photoUrl = if (student.photo.startsWith("http")) student.photo else "$baseUrl${student.photo}"
-                ImageLoader.load(photoUrl, binding.ivStudentPhoto, R.drawable.ic_user_avatar, circleCrop = true)
-            } else {
-                binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
-            }
+            renderStudentPhoto(student.photo, baseUrl)
 
             val isMale = isStudentMale(student.gender, student.className, student.name)
             audioHelper.playBeepWarning()
@@ -627,10 +618,19 @@ class MainActivity : AppCompatActivity() {
         val lastCall = data.lastCall
         if (lastCall != null && lastCall.queueNumber > 0) {
             val uniqueKey = "${lastCall.id}_${lastCall.queueNumber}_${lastCall.callCount}_${lastCall.calledAt}"
-            if (uniqueKey != lastCallUniqueKey) {
+            if (isFirstDisplayLoad) {
+                // Pada pemuatan pertama TV baru menyala, simpan status panggilan yang ada
+                // agar tidak membunyikan panggilan lama / basi dari sesi sebelumnya
+                lastCallUniqueKey = uniqueKey
+            } else if (uniqueKey != lastCallUniqueKey) {
                 lastCallUniqueKey = uniqueKey
                 triggerQueueCall(lastCall)
             }
+        }
+
+        // Tandai initial load selesai
+        if (isFirstDisplayLoad) {
+            isFirstDisplayLoad = false
         }
     }
 
@@ -638,6 +638,13 @@ class MainActivity : AppCompatActivity() {
     // 5. TRIGGER PANGGILAN SUARA (AUDIO CHIME + NATIVE TTS) & BANNER PANGGILAN
     // =========================================================================
     private fun triggerQueueCall(lastCall: com.alijaya.smartschool.data.model.QueueCallItem) {
+        val now = System.currentTimeMillis()
+        // Debounce: cegah pemanggilan berulang dalam rentang 3.5 detik
+        if (now - lastQueueCallTimestamp < 3500L) {
+            return
+        }
+        lastQueueCallTimestamp = now
+
         val qNum = String.format("%02d", lastCall.queueNumber)
         val studentName = lastCall.studentName ?: "Santri"
         val targetTeacher = lastCall.teacherName ?: lastCall.className ?: "Ustadz"
@@ -990,6 +997,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Memuat foto santri dengan dukungan penuh:
+     * 1. Data URL Base64 (data:image/jpeg;base64,...)
+     * 2. Raw Base64 string dari SQLite
+     * 3. Path file lokal di storage perangkat
+     * 4. Path URL HTTP / HTTPS dari server Node.js atau Kiosk Server
+     */
+    private fun renderStudentPhoto(rawPhoto: String?, baseUrl: String) {
+        if (rawPhoto.isNullOrBlank()) {
+            binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
+            return
+        }
+        val photoStr = rawPhoto.trim()
+        val target = when {
+            photoStr.startsWith("data:image", ignoreCase = true) || photoStr.contains(";base64,") -> {
+                photoStr
+            }
+            photoStr.startsWith("http://", ignoreCase = true) || photoStr.startsWith("https://", ignoreCase = true) -> {
+                photoStr
+            }
+            photoStr.startsWith("/") -> {
+                val cleanBase = baseUrl.trimEnd('/')
+                "$cleanBase$photoStr"
+            }
+            photoStr.length > 200 && !photoStr.contains(" ") -> {
+                photoStr
+            }
+            else -> {
+                val cleanBase = baseUrl.trimEnd('/')
+                "$cleanBase/uploads/photos/$photoStr"
+            }
+        }
+        ImageLoader.load(target, binding.ivStudentPhoto, R.drawable.ic_user_avatar, circleCrop = true)
+    }
+
     // =========================================================================
     // 7. SINKRONISASI PRESENSI EKSTERNAL DARI WEB KIOSK / REMOTE BROWSER
     // =========================================================================
@@ -1012,12 +1054,8 @@ class MainActivity : AppCompatActivity() {
         binding.tvStudentClassNis.text = "NIS: ${scan.nis ?: "-"}  •  ${scan.className ?: "Kelas Santri"}"
         binding.tvScanTimeStatus.text = "Waktu: ${scan.timeIn ?: "-"} WIB  •  Status: $statusText"
 
-        if (!scan.photo.isNullOrBlank()) {
-            val photoUrl = if (scan.photo.startsWith("http")) scan.photo else "$baseUrl${scan.photo}"
-            ImageLoader.load(photoUrl, binding.ivStudentPhoto, R.drawable.ic_user_avatar, circleCrop = true)
-        } else {
-            binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
-        }
+        // Foto Santri (Mendukung Base64, Local File, dan HTTP URL)
+        renderStudentPhoto(scan.photo, baseUrl)
 
         if (scan.queueNumber != null && scan.queueNumber > 0) {
             binding.layoutQueueAssigned.visibility = View.VISIBLE
