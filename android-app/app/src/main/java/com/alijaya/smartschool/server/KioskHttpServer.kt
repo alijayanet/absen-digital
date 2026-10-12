@@ -291,6 +291,11 @@ class KioskHttpServer(
                 put("message", "Aksi antrian tidak valid: $action")
             }
         }
+
+        if (result.optBoolean("success", false)) {
+            com.alijaya.smartschool.SmartSchoolApplication.notifyQueueChanged()
+        }
+
         return newFixedLengthResponse(Response.Status.OK, MIME_JSON, result.toString())
     }
 

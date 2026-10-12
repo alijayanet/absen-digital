@@ -721,8 +721,11 @@ class SmartSchoolTelegramManager(
             val sName = q?.optString("student_name", "Santri") ?: "Santri"
             val tName = q?.optString("teacher_name", "Ustadz") ?: "Ustadz"
 
-            // Bunyikan TTS lokal TV
-            if (sentence.isNotBlank()) {
+            // Delegasikan pemutaran suara Chime + TTS & banner visual ke layar TV utama
+            if (com.alijaya.smartschool.SmartSchoolApplication.onQueueChangedListener != null) {
+                com.alijaya.smartschool.SmartSchoolApplication.notifyQueueChanged()
+            } else if (sentence.isNotBlank()) {
+                // Fallback hanya jika MainActivity sedang tidak aktif
                 audioHelper.playChimeAndSpeak(sentence, isMale = true)
             }
 
@@ -753,8 +756,11 @@ class SmartSchoolTelegramManager(
             val sName = called?.optString("student_name", "Santri") ?: "Santri"
             val qNum = called?.optInt("queue_number", 0) ?: 0
 
-            // Bunyikan TTS lokal TV
-            if (sentence.isNotBlank()) {
+            // Delegasikan pemutaran suara Chime + TTS & banner visual ke layar TV utama
+            if (com.alijaya.smartschool.SmartSchoolApplication.onQueueChangedListener != null) {
+                com.alijaya.smartschool.SmartSchoolApplication.notifyQueueChanged()
+            } else if (sentence.isNotBlank()) {
+                // Fallback hanya jika MainActivity sedang tidak aktif
                 audioHelper.playChimeAndSpeak(sentence, isMale = true)
             }
 
@@ -772,6 +778,7 @@ class SmartSchoolTelegramManager(
         val msg = result.optString("message", "Santri dilewati.")
 
         if (success) {
+            com.alijaya.smartschool.SmartSchoolApplication.notifyQueueChanged()
             sendMessage(botToken, chatId, "⏭️ $msg")
         } else {
             sendMessage(botToken, chatId, "❌ $msg")
@@ -786,6 +793,7 @@ class SmartSchoolTelegramManager(
         val msg = result.optString("message", "Santri telah selesai.")
 
         if (success) {
+            com.alijaya.smartschool.SmartSchoolApplication.notifyQueueChanged()
             sendMessage(botToken, chatId, "✅ $msg")
         } else {
             sendMessage(botToken, chatId, "❌ $msg")

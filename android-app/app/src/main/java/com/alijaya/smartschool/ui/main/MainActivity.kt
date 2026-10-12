@@ -114,7 +114,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        audioHelper = BeepTtsHelper(this)
+        audioHelper = SmartSchoolApplication.globalAudioHelper ?: BeepTtsHelper(this)
+
+        // Daftarkan listener agar panggilan antrian dari Telegram & Web langsung direspon instan oleh TV
+        SmartSchoolApplication.onQueueChangedListener = {
+            lifecycleScope.launch(Dispatchers.Main) {
+                fetchDisplayData()
+            }
+        }
 
         setupRecyclerView()
         setupListeners()
@@ -136,6 +143,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        SmartSchoolApplication.onQueueChangedListener = null
         pollingJob?.cancel()
         clockJob?.cancel()
         bufferResetHandler.removeCallbacks(resetBufferRunnable)

@@ -34,6 +34,17 @@ class SmartSchoolApplication : Application() {
         var globalAudioHelper: BeepTtsHelper? = null
             private set
 
+        @Volatile
+        var onQueueChangedListener: (() -> Unit)? = null
+
+        fun notifyQueueChanged() {
+            try {
+                onQueueChangedListener?.invoke()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error invoking onQueueChangedListener: ${e.message}")
+            }
+        }
+
         private val appScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
         fun startHttpServer(context: Context, port: Int = 8080) {
