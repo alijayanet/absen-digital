@@ -312,6 +312,15 @@
           </div>
 
           <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Mode Penomoran Antrian</label>
+            <select id="queue_per_teacher" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+              <option value="1">Terpisah Per Meja / Ustadz (Santri Ust A nomor 1, Santri Ust B nomor 1)</option>
+              <option value="0">Digabungkan (Nomor Urut Global Semua Santri Hari Ini: 1, 2, 3, ...)</option>
+            </select>
+            <p class="text-[10px] text-slate-400 mt-1">Pilih apakah nomor antrian dihitung terpisah per meja ustadz atau digabung satu urutan nomor.</p>
+          </div>
+
+          <div>
             <label class="block text-xs font-bold text-slate-700 mb-1">Prefix Panggilan Suara TV</label>
             <input type="text" id="queue_calling_prefix" value="Nomor antrian" placeholder="Contoh: Nomor antrian" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
             <p class="text-[10px] text-slate-400 mt-1">Kata awalan saat TV memanggil: "Nomor antrian 5, Ahmad, silakan menuju..."</p>
@@ -503,6 +512,7 @@
       'toleransi_telat',
       'jam_pulang',
       'queue_enabled',
+      'queue_per_teacher',
       'queue_calling_prefix',
       'running_text',
       'telegram_enabled',

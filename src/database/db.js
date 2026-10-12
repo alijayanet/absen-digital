@@ -134,6 +134,7 @@ const defaultSettings = [
   { key: 'school_principal_signature', value: '' },
   { key: 'school_principal_stamp', value: '' },
   { key: 'queue_enabled', value: '1' },
+  { key: 'queue_per_teacher', value: '1' },
   { key: 'queue_sound_enabled', value: '1' },
   { key: 'queue_calling_prefix', value: 'Nomor antrian' },
   { key: 'prayer_enabled', value: '1' },

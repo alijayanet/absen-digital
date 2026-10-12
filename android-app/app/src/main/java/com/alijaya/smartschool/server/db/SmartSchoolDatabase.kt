@@ -125,6 +125,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             "toleransi_telat" to "07:15",
             "jam_pulang" to "14:00",
             "queue_enabled" to "1",
+            "queue_per_teacher" to "1",
             "queue_calling_prefix" to "Nomor antrian",
             "wa_provider" to "fonnte",
             "wa_fonnte_token" to "",
@@ -981,26 +982,44 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             }
         }
 
+        // Mode penomoran antrian:
+        // "1" (Aktif) => Pisah per Meja / Ustadz (Santri Ust A nomor 1, Santri Ust B nomor 1)
+        // "0" (Nonaktif) => Digabungkan / Global seluruh santri hari ini (1, 2, 3, ...)
+        val isPerTeacher = getSetting("queue_per_teacher", "1") == "1"
+
         // Cari nomor antrian berikutnya
         var nextNumber = 1
-        val numQuery = if (targetTeacherId != null && targetTeacherId!! > 0) {
-            """
-                SELECT COALESCE(MAX(queue_number), 0) + 1 
-                FROM daily_queues 
-                WHERE (teacher_id = ? OR (teacher_id IS NULL AND class_id = ?)) AND date = ?
-            """
+        val numQuery = if (isPerTeacher) {
+            if (targetTeacherId != null && targetTeacherId!! > 0) {
+                """
+                    SELECT COALESCE(MAX(queue_number), 0) + 1 
+                    FROM daily_queues 
+                    WHERE (teacher_id = ? OR (teacher_id IS NULL AND class_id = ?)) AND date = ?
+                """
+            } else {
+                """
+                    SELECT COALESCE(MAX(queue_number), 0) + 1 
+                    FROM daily_queues 
+                    WHERE class_id = ? AND date = ?
+                """
+            }
         } else {
+            // Mode Gabungan: Nomor antrian berurutan global untuk semua meja hari ini
             """
                 SELECT COALESCE(MAX(queue_number), 0) + 1 
                 FROM daily_queues 
-                WHERE class_id = ? AND date = ?
+                WHERE date = ?
             """
         }
 
-        val args = if (targetTeacherId != null && targetTeacherId!! > 0) {
-            arrayOf(targetTeacherId.toString(), targetClassId.toString(), date)
+        val args = if (isPerTeacher) {
+            if (targetTeacherId != null && targetTeacherId!! > 0) {
+                arrayOf(targetTeacherId.toString(), targetClassId.toString(), date)
+            } else {
+                arrayOf(targetClassId.toString(), date)
+            }
         } else {
-            arrayOf(targetClassId.toString(), date)
+            arrayOf(date)
         }
 
         val numCursor = readableDatabase.rawQuery(numQuery, args)

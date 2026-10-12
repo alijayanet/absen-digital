@@ -257,10 +257,11 @@ router.post('/dashboard/cms/whatsapp', isAuthenticated, isAdmin, (req, res) => {
 // 9. Simpan Pengaturan Antrian Mengaji Santri
 router.post('/dashboard/cms/queue', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { queue_enabled, queue_sound_enabled, queue_calling_prefix } = req.body;
+    const { queue_enabled, queue_per_teacher, queue_sound_enabled, queue_calling_prefix } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
     upsert.run('queue_enabled', queue_enabled === '1' ? '1' : '0');
+    upsert.run('queue_per_teacher', queue_per_teacher === '1' ? '1' : '0');
     upsert.run('queue_sound_enabled', queue_sound_enabled === '1' ? '1' : '0');
     if (queue_calling_prefix) upsert.run('queue_calling_prefix', queue_calling_prefix.trim());
 

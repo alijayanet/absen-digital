@@ -606,6 +606,17 @@
 
           <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
+              <span class="font-bold text-slate-800">Nomor Antrian Terpisah Per Meja / Ustadz</span>
+              <p class="text-[11px] text-slate-500">Jika aktif (ON), nomor antrian dihitung terpisah per meja (Santri Ust A mulai #01, Santri Ust B mulai #01). Jika nonaktif (OFF), nomor antrian digabungkan secara urut seluruh santri.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="queue_per_teacher" value="1" <%= (settings.queue_per_teacher || '1') === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
               <span class="font-bold text-slate-800">Aktifkan Suara Bel & Panggilan Suara di Layar TV</span>
               <p class="text-[11px] text-slate-500">Membunyikan nada bel (Ding-Dong) dan menyebutkan nomor antrian serta nama meja secara otomatis saat ustadz menekan tombol panggil.</p>
             </div>

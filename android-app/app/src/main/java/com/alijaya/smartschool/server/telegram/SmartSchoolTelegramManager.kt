@@ -439,6 +439,15 @@ class SmartSchoolTelegramManager(
                     sendSchoolProfileMenu(targetChatId)
                 }
 
+                callbackData == "toggle_queue_per_teacher" -> {
+                    val currentVal = database.getSetting("queue_per_teacher", "1")
+                    val newVal = if (currentVal == "1") "0" else "1"
+                    database.setSetting("queue_per_teacher", newVal)
+                    val modeName = if (newVal == "1") "✅ Terpisah Per Meja / Ustadz (Santri Ust A nomor 1, Ust B nomor 1)" else "🌐 Digabungkan Global (1, 2, 3, ...)"
+                    sendMessage(botToken, targetChatId, "🔢 *Pengaturan Berhasil Diubah!*\nMode Nomor Antrian sekarang: *$modeName*")
+                    sendSchoolProfileMenu(targetChatId)
+                }
+
                 callbackData == "set_school_name" -> {
                     pendingSchoolName[targetChatId] = true
                     val curName = database.getSetting("school_name", "-")
@@ -523,9 +532,11 @@ class SmartSchoolTelegramManager(
         val schoolTagline = database.getSetting("school_tagline", "Sistem Presensi & Antrian Mengaji Digital")
         val entityType = database.getSetting("entity_type", "santri")
         val principal = database.getSetting("school_principal_name", "-")
+        val queuePerTeacher = database.getSetting("queue_per_teacher", "1") == "1"
+        val queueModeStr = if (queuePerTeacher) "✅ Pisah Per Meja (Mulai #01 per Ustadz)" else "🌐 Gabungan Global (1, 2, 3, ...)"
 
         val msg = """
-            🏫 *PROFIL LEMBAGA & LAYAR TV*
+            🏫 *PROFIL LEMBAGA & PENGATURAN*
             ━━━━━━━━━━━━━━━━━━━━
             🏛️ *Nama Lembaga:*
             *$schoolName*
@@ -535,9 +546,12 @@ class SmartSchoolTelegramManager(
             
             👤 *Pimpinan:* $principal
             🕌 *Mode Istilah:* ${entityType.uppercase()}
+            🔢 *Mode Nomor Antrian:* $queueModeStr
             ━━━━━━━━━━━━━━━━━━━━
-            Silakan pilih pengaturan profil yang ingin Anda ubah:
+            Silakan pilih pengaturan yang ingin Anda ubah:
         """.trimIndent()
+
+        val toggleLabel = if (queuePerTeacher) "🔄 Ubah ke Mode: Gabungan Global" else "🔄 Ubah ke Mode: Pisah Per Meja"
 
         val rows = JSONArray().apply {
             put(JSONArray().apply {
@@ -545,6 +559,9 @@ class SmartSchoolTelegramManager(
             })
             put(JSONArray().apply {
                 put(JSONObject().apply { put("text", "✏️ Ubah Slogan / Tagline"); put("callback_data", "set_school_tagline") })
+            })
+            put(JSONArray().apply {
+                put(JSONObject().apply { put("text", toggleLabel); put("callback_data", "toggle_queue_per_teacher") })
             })
             put(JSONArray().apply {
                 put(JSONObject().apply { put("text", "🏠 Menu Utama"); put("callback_data", "menu_main") })

@@ -64,20 +64,34 @@ class QueueService {
       return existing;
     }
 
-    // Ambil nomor antrian urutan berikutnya untuk Ustadz / Guru ini hari ini
+    // Cek pengaturan mode penomoran antrian:
+    // "1" (Aktif) => Pisah per Meja / Ustadz (Santri Ust A nomor 1, Santri Ust B nomor 1)
+    // "0" (Nonaktif) => Digabungkan / Global seluruh santri hari ini (1, 2, 3, ...)
+    const isPerTeacher = (db.prepare("SELECT value FROM settings WHERE key = 'queue_per_teacher'").get()?.value || '1') === '1';
+
+    // Ambil nomor antrian urutan berikutnya
     let nextRow;
-    if (targetTeacherId) {
-      nextRow = db.prepare(`
-        SELECT COALESCE(MAX(queue_number), 0) + 1 AS next_num 
-        FROM daily_queues 
-        WHERE (teacher_id = ? OR (teacher_id IS NULL AND class_id = ?)) AND date = ?
-      `).get(targetTeacherId, targetClassId, date);
+    if (isPerTeacher) {
+      if (targetTeacherId) {
+        nextRow = db.prepare(`
+          SELECT COALESCE(MAX(queue_number), 0) + 1 AS next_num 
+          FROM daily_queues 
+          WHERE (teacher_id = ? OR (teacher_id IS NULL AND class_id = ?)) AND date = ?
+        `).get(targetTeacherId, targetClassId, date);
+      } else {
+        nextRow = db.prepare(`
+          SELECT COALESCE(MAX(queue_number), 0) + 1 AS next_num 
+          FROM daily_queues 
+          WHERE class_id = ? AND date = ?
+        `).get(targetClassId || 1, date);
+      }
     } else {
+      // Mode Gabungan: Nomor antrian global untuk seluruh santri hari ini
       nextRow = db.prepare(`
         SELECT COALESCE(MAX(queue_number), 0) + 1 AS next_num 
         FROM daily_queues 
-        WHERE class_id = ? AND date = ?
-      `).get(targetClassId || 1, date);
+        WHERE date = ?
+      `).get(date);
     }
 
     const queueNumber = nextRow ? nextRow.next_num : 1;
