@@ -197,22 +197,35 @@
 
     async function loadClasses() {
       try {
-        const res = await fetch('/api/classes');
-        const classes = await res.json();
+        const resDisplay = await fetch('/api/display-data');
+        const displayData = await resDisplay.json();
         const sel = document.getElementById('selectDesk');
         sel.innerHTML = '';
-        if (classes && classes.length > 0) {
-          classes.forEach(c => {
+
+        if (displayData.tables && displayData.tables.length > 0) {
+          displayData.tables.forEach(t => {
             const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.innerText = `Meja ${c.name} (${c.teacher_name || 'Ustadz'})`;
+            opt.value = t.tableId || t.classId;
+            opt.innerText = `${t.tableName || 'Meja ' + t.deskNumber} (${t.teacherName || t.className || 'Ustadz'})`;
             sel.appendChild(opt);
           });
-          currentSelectedDeskId = classes[0].id;
+          currentSelectedDeskId = displayData.tables[0].tableId || displayData.tables[0].classId;
+        } else {
+          const res = await fetch('/api/classes');
+          const classes = await res.json();
+          if (classes && classes.length > 0) {
+            classes.forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c.id;
+              opt.innerText = `Meja ${c.name} (${c.teacher_name || 'Ustadz'})`;
+              sel.appendChild(opt);
+            });
+            currentSelectedDeskId = classes[0].id;
+          }
         }
         await refreshDeskData();
       } catch (e) {
-        console.error('Error loading classes:', e);
+        console.error('Error loading desk options:', e);
       }
     }
 

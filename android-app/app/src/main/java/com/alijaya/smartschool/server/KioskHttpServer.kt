@@ -221,6 +221,8 @@ class KioskHttpServer(
 
         // Kirim Notifikasi WhatsApp ke Wali Santri via Cloud Gateway (Fonnte / Wablas)
         if (parentPhone.isNotEmpty()) {
+            val qNum = studentQueue?.optInt("queue_number", 0)
+            val tName = studentQueue?.optString("teacher_name", "")
             CloudWhatsAppClient.sendAttendanceNotification(
                 db = db,
                 parentPhone = parentPhone,
@@ -228,7 +230,9 @@ class KioskHttpServer(
                 className = className,
                 timeIn = timeInFull,
                 status = status,
-                lateMinutes = lateMinutes
+                lateMinutes = lateMinutes,
+                queueNumber = if (qNum != null && qNum > 0) qNum else null,
+                teacherName = if (!tName.isNullOrBlank()) tName else null
             )
         }
 

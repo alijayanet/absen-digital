@@ -1402,7 +1402,6 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
      * Lewati antrian (Skip)
      */
     fun skipQueue(queueId: Int): JSONObject {
-        val count = writableDatabase.delete("daily_queues", "id = ?", arrayOf(queueId.toString()))
         val cv = ContentValues().apply {
             put("status", "SKIPPED")
             putNull("called_at")

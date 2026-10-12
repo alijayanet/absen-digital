@@ -39,7 +39,9 @@ object CloudWhatsAppClient {
         className: String,
         timeIn: String,
         status: String,
-        lateMinutes: Int = 0
+        lateMinutes: Int = 0,
+        queueNumber: Int? = null,
+        teacherName: String? = null
     ) {
         val enabled = db.getSetting("wa_enabled", "1")
         if (enabled != "1") {
@@ -74,6 +76,13 @@ object CloudWhatsAppClient {
             )
         }
 
+        val queueText = if (queueNumber != null && queueNumber > 0) {
+            val tName = if (!teacherName.isNullOrBlank()) " ($teacherName)" else ""
+            "\n📋 *Nomor Antrian Mengaji:* #$queueNumber$tName"
+        } else {
+            ""
+        }
+
         val message = """
             📢 *$headerTitle*
             _${schoolName}_
@@ -82,7 +91,7 @@ object CloudWhatsAppClient {
             👤 *Nama:* $studentName
             🏷️ *$groupLabel:* $className
             ⏰ *Waktu:* $timeIn WIB
-            📊 *Status:* *$statusText*
+            📊 *Status:* *$statusText*$queueText
             
             $footerText
             _Pesan otomatis dikirim oleh Sistem Presensi Mandiri._
