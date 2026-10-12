@@ -502,7 +502,10 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     fun findStudentByCode(code: String): JSONObject? {
         val clean = code.trim()
-        val query = """
+        if (clean.isEmpty()) return null
+
+        // 1. Coba pencarian tepat berdasarkan RFID UID, NIS, atau QR Code Token
+        val exactQuery = """
             SELECT s.id, s.nis, s.name, s.gender, s.pob, s.dob, s.class_id, c.name as class_name, 
                    s.rfid_uid, s.parent_name, s.parent_phone, s.photo,
                    t.name as teacher_name
@@ -512,8 +515,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             WHERE s.rfid_uid = ? OR s.nis = ? OR s.qr_code_token = ?
             LIMIT 1
         """
-        val cursor = readableDatabase.rawQuery(query, arrayOf(clean, clean, clean))
-        cursor.use {
+        val cursorExact = readableDatabase.rawQuery(exactQuery, arrayOf(clean, clean, clean))
+        cursorExact.use {
             if (it.moveToFirst()) {
                 return JSONObject().apply {
                     put("id", it.getInt(0))
@@ -532,6 +535,47 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                 }
             }
         }
+
+        // 2. Fallback pencarian fleksibel berdasarkan NAMA santri (Case-Insensitive Exact atau Prefix Match)
+        val nameQuery = """
+            SELECT s.id, s.nis, s.name, s.gender, s.pob, s.dob, s.class_id, c.name as class_name, 
+                   s.rfid_uid, s.parent_name, s.parent_phone, s.photo,
+                   t.name as teacher_name
+            FROM students s
+            LEFT JOIN classes c ON s.class_id = c.id
+            LEFT JOIN teachers t ON c.teacher_id = t.id
+            WHERE LOWER(TRIM(s.name)) = LOWER(?) 
+               OR LOWER(s.name) LIKE LOWER(? || '%')
+               OR LOWER(s.name) LIKE LOWER('%' || ? || '%')
+            ORDER BY 
+               CASE 
+                   WHEN LOWER(TRIM(s.name)) = LOWER(?) THEN 1
+                   WHEN LOWER(s.name) LIKE LOWER(? || '%') THEN 2
+                   ELSE 3
+               END
+            LIMIT 1
+        """
+        val cursorName = readableDatabase.rawQuery(nameQuery, arrayOf(clean, clean, clean, clean, clean))
+        cursorName.use {
+            if (it.moveToFirst()) {
+                return JSONObject().apply {
+                    put("id", it.getInt(0))
+                    put("nis", it.getString(1))
+                    put("name", it.getString(2))
+                    put("gender", it.getString(3) ?: "L")
+                    put("pob", it.getString(4) ?: "")
+                    put("dob", it.getString(5) ?: "")
+                    put("class_id", it.getInt(6))
+                    put("class_name", it.getString(7) ?: "-")
+                    put("rfid_uid", it.getString(8) ?: "")
+                    put("parent_name", it.getString(9) ?: "")
+                    put("parent_phone", it.getString(10) ?: "")
+                    put("photo", it.getString(11) ?: "")
+                    put("teacher_name", it.getString(12) ?: "-")
+                }
+            }
+        }
+
         return null
     }
 

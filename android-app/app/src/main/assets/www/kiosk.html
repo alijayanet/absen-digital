@@ -162,6 +162,18 @@
             class="bg-transparent border-none text-xs text-emerald-400 font-mono focus:outline-none w-full"
           >
         </div>
+
+        <!-- Tombol Input Presensi Manual (Bila Kartu RFID Tertinggal / Lupa Dibawa / Hilang) -->
+        <div class="w-full mt-3 pt-3 border-t border-slate-700/60">
+          <button 
+            type="button" 
+            onclick="openManualAttendanceModal(event)" 
+            class="w-full py-2.5 px-3 rounded-2xl bg-slate-700/70 hover:bg-teal-600/80 text-slate-200 hover:text-white border border-slate-600 hover:border-teal-400/80 text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
+          >
+            <i data-lucide="keyboard" class="w-4 h-4 text-teal-400"></i>
+            <span>Lupa Bawa Kartu? Absen dengan Nama / NIS</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -219,6 +231,66 @@
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
         <span id="kioskParentWaNotice">Notifikasi WhatsApp terkirim ke wali santri via Cloud Gateway</span>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Pop-Up Input Presensi Manual (Bila Kartu Tertinggal / Hilang) -->
+  <div id="manualAttendanceModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="manualAttendanceCard" class="bg-slate-800 border-2 border-slate-700 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl text-left transform scale-95 transition-transform duration-300 relative">
+      
+      <!-- Tombol Tutup -->
+      <button onclick="closeManualAttendanceModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-700/80 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold transition">
+        ✕
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-2xl bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0 border border-teal-500/30">
+          <i data-lucide="user-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="text-base sm:text-lg font-black text-white leading-tight">Presensi Manual</h3>
+          <p class="text-xs text-slate-400">Masukkan Nama Lengkap atau Nomor Induk Santri (NIS).</p>
+        </div>
+      </div>
+
+      <form onsubmit="submitManualAttendance(event)" class="space-y-4">
+        <div>
+          <label for="manualInputCode" class="block text-xs font-bold text-slate-300 mb-1.5">
+            Nama Santri atau NIS:
+          </label>
+          <div class="relative">
+            <input 
+              type="text" 
+              id="manualInputCode" 
+              placeholder="Contoh: 1001 atau Ahmad Fauzi..." 
+              autocomplete="off"
+              class="w-full bg-slate-900 border border-slate-700 focus:border-teal-400 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition font-medium"
+            >
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+            <span>💡</span>
+            <span>Ketik minimal 3 huruf nama santri atau angka NIS, lalu klik tombol Proses Presensi.</span>
+          </p>
+        </div>
+
+        <div class="flex gap-2.5 pt-2">
+          <button 
+            type="button" 
+            onclick="closeManualAttendanceModal()" 
+            class="flex-1 py-3 px-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold transition"
+          >
+            Batal
+          </button>
+          <button 
+            type="submit" 
+            id="btnSubmitManual" 
+            class="flex-1 py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-lg shadow-teal-950 transition flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>Proses Presensi</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -367,13 +439,19 @@
       } catch (e) {}
     }
 
-    // 4. Hitung Jadwal Sholat Kemenag Falakiyah Offline (Standar Indonesia)
+    // 4. Hitung & Sinkronisasi Jadwal Sholat Kemenag Falakiyah Offline
     let currentPrayerTimes = null;
     let nextPrayerInfo = null;
     let lastAlertedPrayer = null;
     let iqomahInterval = null;
+    let serverPrayerConfig = {
+      lat: -6.3263,
+      lng: 108.3200,
+      timezone: 7.0,
+      ihtiyat: 2
+    };
 
-    function calculateFalakPrayerTimes(date, lat = -6.2088, lng = 106.8456, timezone = 7) {
+    function calculateFalakPrayerTimes(date, lat = serverPrayerConfig.lat, lng = serverPrayerConfig.lng, timezone = serverPrayerConfig.timezone, ihtiyatMin = serverPrayerConfig.ihtiyat) {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       const day = date.getDate();
@@ -398,8 +476,9 @@
       while (EqT > 20) EqT -= 24 * 60;
       while (EqT < -20) EqT += 24 * 60;
 
-      // Dzuhur + 2 menit ihtiyat
-      const dzuhurDec = 12 + timezone - (lng / 15) - (EqT / 60) + (2 / 60);
+      // Dzuhur + ihtiyat
+      const ihtHours = ihtiyatMin / 60;
+      const dzuhurDec = 12 + timezone - (lng / 15) - (EqT / 60) + ihtHours;
 
       const rad = Math.PI / 180;
       const latRad = lat * rad;
@@ -411,28 +490,28 @@
         return (Math.acos(cosHA) * 180 / Math.PI) / 15;
       }
 
-      // Subuh: -20° (+2m)
+      // Subuh: -20° (+ihtiyat)
       const haSubuh = getHourAngle(-20);
-      const subuhDec = haSubuh ? dzuhurDec - haSubuh : dzuhurDec - 1.75;
+      const subuhDec = haSubuh ? (dzuhurDec - haSubuh) : (dzuhurDec - 1.75);
 
-      // Syuruq: -1°
-      const haSyuruq = getHourAngle(-1.0);
-      const syuruqDec = haSyuruq ? dzuhurDec - haSyuruq : dzuhurDec - 1.0;
+      // Syuruq/Terbit: -0.833°
+      const haSyuruq = getHourAngle(-0.833);
+      const syuruqDec = haSyuruq ? (dzuhurDec - haSyuruq - ihtHours) : (dzuhurDec - 1.0);
 
-      // Ashar: bayangan = 1 + tan(|lat - dec|)
+      // Ashar: bayangan = 1 + tan(|lat - dec|) (+ihtiyat)
       const deltaLat = Math.abs(lat - decDeg);
       const asharAltRad = Math.atan(1 / (1 + Math.tan(deltaLat * rad)));
       const asharAltDeg = asharAltRad * 180 / Math.PI;
       const haAshar = getHourAngle(asharAltDeg);
-      const asharDec = haAshar ? dzuhurDec + haAshar : dzuhurDec + 3.25;
+      const asharDec = haAshar ? (dzuhurDec + haAshar) : (dzuhurDec + 3.25);
 
-      // Maghrib: -1° (+2m)
-      const haMaghrib = getHourAngle(-1.0);
-      const maghribDec = haMaghrib ? dzuhurDec + haMaghrib : dzuhurDec + 6.0;
+      // Maghrib: -0.833° (+ihtiyat)
+      const haMaghrib = getHourAngle(-0.833);
+      const maghribDec = haMaghrib ? (dzuhurDec + haMaghrib) : (dzuhurDec + 6.0);
 
-      // Isya: -18° (+2m)
+      // Isya: -18° (+ihtiyat)
       const haIsya = getHourAngle(-18.0);
-      const isyaDec = haIsya ? dzuhurDec + haIsya : dzuhurDec + 7.2;
+      const isyaDec = haIsya ? (dzuhurDec + haIsya) : (dzuhurDec + 7.2);
 
       function formatTime(decHours) {
         let totalMinutes = Math.round(decHours * 60);
@@ -666,7 +745,7 @@
       showPrayerAlert('Dzuhur', `${h}:${m}`);
     }
 
-    // 5. Muat Data Settings & Remote URL
+    // 5. Muat Data Settings & Sinkronisasi Jadwal Sholat Kemenag
     async function loadSettings() {
       try {
         const res = await fetch('/api/settings');
@@ -677,9 +756,33 @@
         if (cfg.toleransi_telat) {
           document.getElementById('toleransiBadge').innerText = cfg.toleransi_telat;
         }
+        if (cfg.prayer_latitude && cfg.prayer_longitude) {
+          serverPrayerConfig.lat = parseFloat(cfg.prayer_latitude) || -6.3263;
+          serverPrayerConfig.lng = parseFloat(cfg.prayer_longitude) || 108.3200;
+          serverPrayerConfig.timezone = parseFloat(cfg.prayer_timezone) || 7.0;
+          serverPrayerConfig.ihtiyat = parseInt(cfg.prayer_ihtiyat, 10) || 2;
+        }
       } catch (e) {}
+
+      // Sinkronkan juga langsung dengan hasil hisab PrayerCalculator server SQLite
+      try {
+        const dRes = await fetch('/api/display-data');
+        const dData = await dRes.json();
+        if (dData.prayer && dData.prayer.schedule) {
+          const s = dData.prayer.schedule;
+          if (s.subuh) document.getElementById('ptSubuh').innerText = s.subuh;
+          if (s.terbit) document.getElementById('ptSyuruq').innerText = s.terbit;
+          if (s.dzuhur) document.getElementById('ptDzuhur').innerText = s.dzuhur;
+          if (s.ashar) document.getElementById('ptAshar').innerText = s.ashar;
+          if (s.maghrib) document.getElementById('ptMaghrib').innerText = s.maghrib;
+          if (s.isya) document.getElementById('ptIsya').innerText = s.isya;
+        }
+      } catch (e) {}
+
+      updateClock();
     }
     loadSettings();
+    setInterval(loadSettings, 60000); // Sinkronisasi otomatis setiap 1 menit
 
     // 6. Muat Scan Terkini
     async function loadRecentScans() {
@@ -728,9 +831,14 @@
     const rfidInput = document.getElementById('rfidInput');
     let isProcessing = false;
     let modalTimer = null;
+    let isManualModalOpen = false;
 
-    // Pastikan kursor selalu fokus di input RFID
-    window.addEventListener('click', () => rfidInput.focus());
+    // Pastikan kursor selalu fokus di input RFID HANYA JIKA modal manual sedang tidak terbuka
+    window.addEventListener('click', (e) => {
+      if (isManualModalOpen) return;
+      if (document.activeElement && (document.activeElement.id === 'manualInputCode' || document.activeElement.tagName === 'INPUT')) return;
+      rfidInput.focus();
+    });
 
     rfidInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -742,9 +850,55 @@
       }
     });
 
+    // 8. Penanganan Presensi Manual dengan Nama atau NIS
+    function openManualAttendanceModal(e) {
+      if (e) e.stopPropagation();
+      isManualModalOpen = true;
+      const modal = document.getElementById('manualAttendanceModal');
+      const card = document.getElementById('manualAttendanceCard');
+      const input = document.getElementById('manualInputCode');
+
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      card.classList.remove('scale-95');
+      card.classList.add('scale-100');
+
+      input.value = '';
+      setTimeout(() => input.focus(), 150);
+      lucide.createIcons();
+    }
+
+    function closeManualAttendanceModal() {
+      isManualModalOpen = false;
+      const modal = document.getElementById('manualAttendanceModal');
+      const card = document.getElementById('manualAttendanceCard');
+
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      card.classList.add('scale-95');
+      card.classList.remove('scale-100');
+
+      setTimeout(() => rfidInput.focus(), 200);
+    }
+
+    async function submitManualAttendance(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('manualInputCode');
+      const val = (input.value || '').trim();
+
+      if (!val) {
+        input.focus();
+        return;
+      }
+
+      closeManualAttendanceModal();
+      await processAttendance(val);
+    }
+
     // Bridge fungsi global untuk Android MainActivity dispatchKeyEvent
     window.processAttendance = processAttendance;
     window.handleRfidCard = processAttendance;
+    window.openManualAttendanceModal = openManualAttendanceModal;
+    window.closeManualAttendanceModal = closeManualAttendanceModal;
+    window.submitManualAttendance = submitManualAttendance;
 
     async function processAttendance(code) {
       isProcessing = true;

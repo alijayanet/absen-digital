@@ -44,6 +44,8 @@ class SmartSchoolTelegramManager(
     // Conversational state tracking per chat
     private val pendingRunningText = ConcurrentHashMap<Long, Boolean>() // chatId -> true
     private val pendingBroadcastTts = ConcurrentHashMap<Long, Boolean>() // chatId -> true
+    private val pendingSchoolName = ConcurrentHashMap<Long, Boolean>() // chatId -> true
+    private val pendingSchoolTagline = ConcurrentHashMap<Long, Boolean>() // chatId -> true
 
     init {
         scope.launch(Dispatchers.IO) {
@@ -132,6 +134,8 @@ class SmartSchoolTelegramManager(
             if (cmd == "batal" || cmd == "/batal" || cmd == "cancel") {
                 pendingRunningText.remove(targetChatId)
                 pendingBroadcastTts.remove(targetChatId)
+                pendingSchoolName.remove(targetChatId)
+                pendingSchoolTagline.remove(targetChatId)
                 sendMessage(botToken, targetChatId, "↩️ Tindakan dibatalkan.", replyMarkupJson = buildMainMenuKeyboard())
                 return@withContext
             }
@@ -163,6 +167,32 @@ class SmartSchoolTelegramManager(
                 return@withContext
             }
 
+            // Conversational step 3: Pending Ganti Nama Sekolah / Lembaga
+            if (pendingSchoolName.remove(targetChatId) == true) {
+                database.setSetting("school_name", text)
+                val reply = """
+                    ✅ *Nama Lembaga / Sekolah Berhasil Diperbarui!*
+                    ━━━━━━━━━━━━━━━━━━━━
+                    🏫 Nama Baru: *$text*
+                    
+                    📺 *Nama lembaga telah langsung berubah di Layar TV Kiosk & Web Remote.*
+                """.trimIndent()
+                sendMessage(botToken, targetChatId, reply, replyMarkupJson = buildMainMenuKeyboard())
+                return@withContext
+            }
+
+            // Conversational step 4: Pending Ganti Tagline Instansi
+            if (pendingSchoolTagline.remove(targetChatId) == true) {
+                database.setSetting("school_tagline", text)
+                val reply = """
+                    ✅ *Tagline Lembaga Berhasil Diperbarui!*
+                    ━━━━━━━━━━━━━━━━━━━━
+                    📌 Tagline Baru: *$text*
+                """.trimIndent()
+                sendMessage(botToken, targetChatId, reply, replyMarkupJson = buildMainMenuKeyboard())
+                return@withContext
+            }
+
             when {
                 // Menu Utama
                 cmd == "/start" || cmd == "/menu" || cmd == "menu" -> {
@@ -182,6 +212,81 @@ class SmartSchoolTelegramManager(
                 // Info Status TV & Server
                 cmd == "/status" || cmd == "status" -> {
                     sendStatusInfo(targetChatId)
+                }
+
+                // Submenu / Profil Sekolah
+                cmd == "/profil" || cmd == "/sekolah" || cmd == "sekolah" || cmd == "/profile" -> {
+                    sendSchoolProfileMenu(targetChatId)
+                }
+
+                // Ganti nama sekolah command: /setnama <nama baru>
+                cmd.startsWith("/setnama") || cmd.startsWith("/namasekolah") -> {
+                    val newName = if (cmd.startsWith("/setnama")) {
+                        text.removePrefix("/setnama").trim()
+                    } else {
+                        text.removePrefix("/namasekolah").trim()
+                    }
+
+                    if (newName.isBlank()) {
+                        pendingSchoolName[targetChatId] = true
+                        val curName = database.getSetting("school_name", "-")
+                        val prompt = """
+                            🏫 *GANTI NAMA LEMBAGA / SEKOLAH*
+                            ━━━━━━━━━━━━━━━━━━━━
+                            📌 *Nama saat ini:* *$curName*
+                            
+                            Silakan ketik nama lembaga/sekolah yang baru:
+                            _Contoh:_ `TPQ & MADIN AL-IKHLAS`
+                            
+                            _(Ketik 'batal' untuk membatalkan)_
+                        """.trimIndent()
+                        sendMessage(botToken, targetChatId, prompt)
+                        return@withContext
+                    }
+
+                    database.setSetting("school_name", newName)
+                    val reply = """
+                        ✅ *Nama Lembaga / Sekolah Berhasil Diperbarui!*
+                        ━━━━━━━━━━━━━━━━━━━━
+                        🏫 Nama Baru: *$newName*
+                        
+                        📺 *Nama lembaga telah langsung berubah di Layar TV Kiosk & Web Remote.*
+                    """.trimIndent()
+                    sendMessage(botToken, targetChatId, reply, replyMarkupJson = buildMainMenuKeyboard())
+                }
+
+                // Ganti tagline sekolah command: /settagline <tagline baru>
+                cmd.startsWith("/settagline") || cmd.startsWith("/tagline") -> {
+                    val newTagline = if (cmd.startsWith("/settagline")) {
+                        text.removePrefix("/settagline").trim()
+                    } else {
+                        text.removePrefix("/tagline").trim()
+                    }
+
+                    if (newTagline.isBlank()) {
+                        pendingSchoolTagline[targetChatId] = true
+                        val curTagline = database.getSetting("school_tagline", "-")
+                        val prompt = """
+                            📌 *GANTI TAGLINE LEMBAGA*
+                            ━━━━━━━━━━━━━━━━━━━━
+                            📌 *Tagline saat ini:* _${curTagline}_
+                            
+                            Silakan ketik slogan/tagline instansi yang baru:
+                            _Contoh:_ `Membentuk Generasi Qur'ani, Cerdas dan Berakhlak Mulia`
+                            
+                            _(Ketik 'batal' untuk membatalkan)_
+                        """.trimIndent()
+                        sendMessage(botToken, targetChatId, prompt)
+                        return@withContext
+                    }
+
+                    database.setSetting("school_tagline", newTagline)
+                    val reply = """
+                        ✅ *Tagline Lembaga Berhasil Diperbarui!*
+                        ━━━━━━━━━━━━━━━━━━━━
+                        📌 Tagline Baru: *$newTagline*
+                    """.trimIndent()
+                    sendMessage(botToken, targetChatId, reply, replyMarkupJson = buildMainMenuKeyboard())
                 }
 
                 // Running text command langsung: /runningtext <teks>
@@ -329,6 +434,42 @@ class SmartSchoolTelegramManager(
                 callbackData == "cmd_status" -> {
                     sendStatusInfo(targetChatId)
                 }
+
+                callbackData == "menu_profile" -> {
+                    sendSchoolProfileMenu(targetChatId)
+                }
+
+                callbackData == "set_school_name" -> {
+                    pendingSchoolName[targetChatId] = true
+                    val curName = database.getSetting("school_name", "-")
+                    val prompt = """
+                        🏫 *GANTI NAMA LEMBAGA / SEKOLAH*
+                        ━━━━━━━━━━━━━━━━━━━━
+                        📌 *Nama saat ini:* *$curName*
+                        
+                        Silakan ketik nama lembaga/sekolah yang baru:
+                        _Contoh:_ `TPQ & MADIN AL-IKHLAS`
+                        
+                        _(Ketik 'batal' untuk membatalkan)_
+                    """.trimIndent()
+                    sendMessage(botToken, targetChatId, prompt)
+                }
+
+                callbackData == "set_school_tagline" -> {
+                    pendingSchoolTagline[targetChatId] = true
+                    val curTagline = database.getSetting("school_tagline", "-")
+                    val prompt = """
+                        📌 *GANTI TAGLINE LEMBAGA*
+                        ━━━━━━━━━━━━━━━━━━━━
+                        📌 *Tagline saat ini:* _${curTagline}_
+                        
+                        Silakan ketik slogan/tagline instansi yang baru:
+                        _Contoh:_ `Membentuk Generasi Qur'ani, Cerdas dan Berakhlak Mulia`
+                        
+                        _(Ketik 'batal' untuk membatalkan)_
+                    """.trimIndent()
+                    sendMessage(botToken, targetChatId, prompt)
+                }
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Error handling callback query: ${t.message}", t)
@@ -367,11 +508,50 @@ class SmartSchoolTelegramManager(
                 put(JSONObject().apply { put("text", "🎙️ Pengumuman Suara"); put("callback_data", "menu_tts") })
             })
             put(JSONArray().apply {
+                put(JSONObject().apply { put("text", "🏫 Profil Lembaga / TV"); put("callback_data", "menu_profile") })
                 put(JSONObject().apply { put("text", "🔔 Bunyikan Bel TV"); put("callback_data", "cmd_chime") })
+            })
+            put(JSONArray().apply {
                 put(JSONObject().apply { put("text", "ℹ️ Status Server TV"); put("callback_data", "cmd_status") })
             })
         }
         return JSONObject().apply { put("inline_keyboard", rows) }.toString()
+    }
+
+    private suspend fun sendSchoolProfileMenu(chatId: Long) {
+        val schoolName = database.getSetting("school_name", "MUSHOLLA AL MUHAJIRIN")
+        val schoolTagline = database.getSetting("school_tagline", "Sistem Presensi & Antrian Mengaji Digital")
+        val entityType = database.getSetting("entity_type", "santri")
+        val principal = database.getSetting("school_principal_name", "-")
+
+        val msg = """
+            🏫 *PROFIL LEMBAGA & LAYAR TV*
+            ━━━━━━━━━━━━━━━━━━━━
+            🏛️ *Nama Lembaga:*
+            *$schoolName*
+            
+            📌 *Slogan / Tagline:*
+            _${schoolTagline}_
+            
+            👤 *Pimpinan:* $principal
+            🕌 *Mode Istilah:* ${entityType.uppercase()}
+            ━━━━━━━━━━━━━━━━━━━━
+            Silakan pilih pengaturan profil yang ingin Anda ubah:
+        """.trimIndent()
+
+        val rows = JSONArray().apply {
+            put(JSONArray().apply {
+                put(JSONObject().apply { put("text", "✏️ Ubah Nama Lembaga"); put("callback_data", "set_school_name") })
+            })
+            put(JSONArray().apply {
+                put(JSONObject().apply { put("text", "✏️ Ubah Slogan / Tagline"); put("callback_data", "set_school_tagline") })
+            })
+            put(JSONArray().apply {
+                put(JSONObject().apply { put("text", "🏠 Menu Utama"); put("callback_data", "menu_main") })
+            })
+        }
+
+        sendMessage(botToken, chatId, msg, replyMarkupJson = JSONObject().apply { put("inline_keyboard", rows) }.toString())
     }
 
     private suspend fun sendMejaList(chatId: Long) {
