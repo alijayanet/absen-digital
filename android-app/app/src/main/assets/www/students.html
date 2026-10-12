@@ -624,6 +624,30 @@
       reader.readAsText(file);
     }
 
+    function splitCsvRow(row, delim) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') {
+          if (inQuotes && row[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === delim && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
     function parseCsvText(csvText) {
       const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
       if (lines.length < 2) {
@@ -633,21 +657,21 @@
 
       const firstLine = lines[0];
       const delim = firstLine.includes(';') ? ';' : ',';
-      const headers = firstLine.split(delim).map(h => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+      const headers = splitCsvRow(firstLine, delim).map(h => h.replace(/^["']|["']$/g, '').toLowerCase());
       const students = [];
 
-      let idxNis = headers.findIndex(h => h === 'nis' || h === 'nik' || h === 'nip');
-      let idxName = headers.findIndex(h => h === 'nama' || h === 'name');
+      let idxNis = headers.findIndex(h => h === 'nis' || h === 'nik' || h === 'nip' || h.includes('nomor induk'));
+      let idxName = headers.findIndex(h => h === 'nama' || h === 'name' || h.includes('nama lengkap'));
       let idxPob = headers.findIndex(h => h.includes('tempat lahir') || h === 'pob');
-      let idxDob = headers.findIndex(h => h.includes('tanggal lahir') || h === 'dob');
+      let idxDob = headers.findIndex(h => h.includes('tanggal lahir') || h === 'dob' || h.includes('tgl lahir'));
       let idxClass = headers.findIndex(h => h === 'kelas' || h === 'divisi' || h === 'unit' || h === 'class');
-      let idxGender = headers.findIndex(h => h.includes('kelamin') || h === 'gender');
+      let idxGender = headers.findIndex(h => h.includes('kelamin') || h === 'gender' || h === 'jk');
       let idxRfid = headers.findIndex(h => h.includes('rfid') || h.includes('uid'));
       let idxParent = headers.findIndex(h => h.includes('wali') || h.includes('orang tua') || h.includes('kontak') || h.includes('parent'));
-      let idxPhone = headers.findIndex(h => h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp'));
+      let idxPhone = headers.findIndex(h => h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp') || h.includes('kontak'));
 
       for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(delim).map(p => p.trim().replace(/^["']|["']$/g, ''));
+        const parts = splitCsvRow(lines[i], delim).map(p => p.replace(/^["']|["']$/g, '').trim());
         if (parts.length < 2) continue;
 
         let nis = '', name = '', pob = '', dob = '', className = '', gender = 'L', rfidUid = '', parentName = '', parentPhone = '';
