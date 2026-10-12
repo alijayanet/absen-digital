@@ -76,13 +76,17 @@ class MainActivity : AppCompatActivity() {
     // Track external scans from Web Kiosk
     private var lastHandledAttendanceId = -1
     private var isFirstDisplayLoad = true
+    private var lastLocalScanTimestamp = 0L
 
-    // Hardware Keyboard Wedge (USB RFID Reader) Buffer
+    // Hardware Keyboard Wedge (USB RFID Reader) Buffer & Debounce
     private val rfidBuffer = StringBuilder()
     private var lastKeyTimestamp = 0L
     private val SCAN_TIMEOUT_MS = 600L
     private val bufferResetHandler = Handler(Looper.getMainLooper())
     private val resetBufferRunnable = Runnable { rfidBuffer.clear() }
+    private var isScanProcessing = false
+    private var lastScannedCardCode = ""
+    private var lastCardScanTimestamp = 0L
 
     // RFID Result Dismissal
     private val resultDismissHandler = Handler(Looper.getMainLooper())
@@ -244,6 +248,16 @@ class MainActivity : AppCompatActivity() {
                 bufferResetHandler.removeCallbacks(resetBufferRunnable)
 
                 if (cardCode.length >= 3) {
+                    val currentTime = System.currentTimeMillis()
+                    // Debounce hardware scanner: jika sedang memproses atau kartu sama ditap dalam 2.5 detik
+                    if (isScanProcessing) {
+                        return true
+                    }
+                    if (cardCode == lastScannedCardCode && (currentTime - lastCardScanTimestamp) < 2500L) {
+                        return true
+                    }
+                    lastScannedCardCode = cardCode
+                    lastCardScanTimestamp = currentTime
                     processAttendanceScan(cardCode)
                     return true // Telah ditangani, jangan teruskan event enter
                 }
@@ -265,6 +279,8 @@ class MainActivity : AppCompatActivity() {
         val session = SmartSchoolApplication.sessionManager
         val baseUrl = session.getServerBaseUrl().trimEnd('/')
         val url = "$baseUrl/api/attendance/scan"
+
+        isScanProcessing = true
 
         // Tampilkan indikasi proses
         binding.layoutRfidStandby.visibility = View.GONE
@@ -298,10 +314,12 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 withContext(Dispatchers.Main) {
+                    isScanProcessing = false
                     renderScanResult(scanResult, cardCode, baseUrl)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    isScanProcessing = false
                     renderScanError("Gagal terhubung: ${e.message ?: "Koneksi terputus"}", cardCode)
                 }
             }
@@ -310,6 +328,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderScanResult(result: ScanResponse, cardCode: String, baseUrl: String) {
         val session = SmartSchoolApplication.sessionManager
+
+        // Catat timestamp scan lokal dan ID presensi agar display-data polling tidak memproses ulang (mencegah double TTS)
+        lastLocalScanTimestamp = System.currentTimeMillis()
+        if (result.attendance?.id != null && result.attendance.id > 0) {
+            lastHandledAttendanceId = maxOf(lastHandledAttendanceId, result.attendance.id)
+        }
 
         // Reset dismiss countdown
         resultDismissHandler.removeCallbacksAndMessages(null)
@@ -570,7 +594,11 @@ class MainActivity : AppCompatActivity() {
                 isFirstDisplayLoad = false
             } else if (latest.id > lastHandledAttendanceId) {
                 lastHandledAttendanceId = latest.id
-                renderExternalScanResult(latest, baseUrl)
+                val timeSinceLocalScan = System.currentTimeMillis() - lastLocalScanTimestamp
+                // Hanya trigger popup & TTS eksternal jika BUKAN berasal dari scan lokal yang baru selesai (< 4 detik)
+                if (timeSinceLocalScan > 4000L) {
+                    renderExternalScanResult(latest, baseUrl)
+                }
             }
         }
 

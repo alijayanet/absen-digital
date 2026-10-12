@@ -127,6 +127,7 @@ data class StudentScanInfo(
 )
 
 data class AttendanceInfo(
+    val id: Int? = null,
     val status: String? = null,
     @SerializedName("time_in") val timeIn: String? = null
 )

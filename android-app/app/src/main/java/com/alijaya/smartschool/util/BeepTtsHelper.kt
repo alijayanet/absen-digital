@@ -251,10 +251,22 @@ class BeepTtsHelper(
     }
 
     /**
+     * Hentikan pemutaran audio/TTS yang sedang berjalan dan kosongkan antrian suara
+     */
+    @Synchronized
+    fun clearQueueAndStop() {
+        queue.clear()
+        try {
+            tts?.stop()
+        } catch (_: Throwable) {}
+    }
+
+    /**
      * Mainkan Beep Singkat lalu ucapkan kalimat
      */
     @Synchronized
     fun playBeepAndSpeak(text: String, isMale: Boolean = true, delayMs: Long = 250L) {
+        clearQueueAndStop()
         playBeepSuccess()
         speak(text, isMale)
     }

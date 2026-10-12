@@ -217,7 +217,7 @@ class KioskHttpServer(
         val timeInFull = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
         // Catat ke Database SQLite
-        db.recordAttendance(studentId, status, lateMinutes)
+        val insertedAttendanceId = db.recordAttendance(studentId, status, lateMinutes)
 
         // Kirim Notifikasi WhatsApp ke Wali Santri via Cloud Gateway (Fonnte / Wablas)
         if (parentPhone.isNotEmpty()) {
@@ -237,6 +237,7 @@ class KioskHttpServer(
         }
 
         val attendanceObj = JSONObject().apply {
+            put("id", insertedAttendanceId)
             put("status", status)
             put("time_in", timeInFull)
             put("late_minutes", lateMinutes)
@@ -245,6 +246,7 @@ class KioskHttpServer(
         val res = JSONObject().apply {
             put("success", true)
             put("code", "SUCCESS")
+            put("id", insertedAttendanceId)
             put("status", status)
             put("lateMinutes", lateMinutes)
             put("timeIn", timeInFull)
