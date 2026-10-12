@@ -142,9 +142,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateTableLayoutManager(tableCount: Int) {
+        // Pada layar TV (Landscape 16:9), split 68% lebar cocok untuk 2 kolom (jika 2 atau 4 meja)
+        // atau 3 kolom (jika 3, 5, atau 6 meja) agar card meja tidak terjepit
         val spanCount = when {
             tableCount <= 1 -> 1
-            tableCount in 2..4 -> tableCount // 2, 3, atau 4 meja tampil berdampingan penuh
+            tableCount in 2..2 -> 2
+            tableCount == 3 -> 3
+            tableCount == 4 -> 2 // 4 meja tampil 2x2 (sangat rapi, lapang, dan proporsional)
             tableCount in 5..6 -> 3
             else -> 4
         }
@@ -664,6 +668,16 @@ class MainActivity : AppCompatActivity() {
         val currentUrl = session.getServerBaseUrl()
         dialogBinding.etServerUrl.setText(currentUrl)
 
+        // Inisialisasi Teks Berjalan (Running Text)
+        val standaloneDb = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this)
+        val currentRunningText = standaloneDb.getSetting("running_text", binding.tvMarqueeAnnouncement.text.toString())
+            .ifBlank { binding.tvMarqueeAnnouncement.text.toString() }
+        dialogBinding.etRunningText.setText(currentRunningText)
+
+        // Inisialisasi Kordinat Jadwal Sholat
+        dialogBinding.etPrayerLat.setText(standaloneDb.getSetting("prayer_latitude", "-6.3263"))
+        dialogBinding.etPrayerLng.setText(standaloneDb.getSetting("prayer_longitude", "108.3200"))
+
         val dialog = AlertDialog.Builder(this)
             .setView(dialogBinding.root)
             .setCancelable(true)
@@ -831,6 +845,20 @@ class MainActivity : AppCompatActivity() {
             // Simpan Pengaturan TTS Voice
             val isTtsOn = dialogBinding.switchTts.isChecked
             session.setTtsEnabled(isTtsOn)
+
+            // Simpan Running Text
+            val newRunningText = dialogBinding.etRunningText.text.toString().trim()
+            if (newRunningText.isNotBlank()) {
+                standaloneDb.setSetting("running_text", newRunningText)
+                binding.tvMarqueeAnnouncement.text = newRunningText
+                binding.tvMarqueeAnnouncement.isSelected = true
+            }
+
+            // Simpan Kordinat Jadwal Sholat
+            val newLat = dialogBinding.etPrayerLat.text.toString().trim()
+            val newLng = dialogBinding.etPrayerLng.text.toString().trim()
+            if (newLat.isNotBlank()) standaloneDb.setSetting("prayer_latitude", newLat)
+            if (newLng.isNotBlank()) standaloneDb.setSetting("prayer_longitude", newLng)
 
             dialog.dismiss()
             hideSoftKeyboard()

@@ -13,9 +13,14 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="/js/terms.js"></script>
 
+  <!-- Leaflet Map CSS & JS untuk Pemilih Titik Kordinat Jadwal Sholat -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
+    #prayerMap { height: 280px; width: 100%; border-radius: 1rem; z-index: 10; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -314,7 +319,78 @@
         </div>
       </div>
 
-      <!-- Kartu 5: Keamanan Akun Admin Web Remote -->
+      <!-- Kartu 5: Pengumuman Running Text (Teks Berjalan Layar TV / Kiosk) -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+            <i data-lucide="megaphone" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Teks Berjalan Display TV (Running Text)</h3>
+            <p class="text-[11px] text-slate-400">Pesan pengumuman atau instruksi yang bergerak di bagian bawah layar TV Kiosk.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Isi Teks Pengumuman (Marquee)</label>
+            <textarea id="running_text" rows="3" placeholder="Contoh: Selamat Datang di Musholla Al-Muhajirin • Santri wajib tap kartu RFID sebelum mengaji • Mohon tenang dan tertib." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500"></textarea>
+            <p class="text-[10px] text-slate-400 mt-1">Teks ini langsung muncul dan berjalan di bagian footer layar TV Kiosk Android dan web display.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu 6: Lokasi Kordinat Jadwal Sholat Falakiyah (Peta Interaktif) -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Lokasi &amp; Kordinat Jadwal Sholat</h3>
+              <p class="text-[11px] text-slate-400">Pilih titik masjid/sekolah di peta agar perhitungan hisab astronomi Kemenag 100% presisi.</p>
+            </div>
+          </div>
+          <button type="button" onclick="detectCurrentLocation()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200 transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+            <span>Deteksi Lokasi GPS Saya</span>
+          </button>
+        </div>
+
+        <!-- Wadah Peta Leaflet -->
+        <div>
+          <div id="prayerMap" class="border border-slate-200 shadow-inner"></div>
+          <p class="text-[10px] text-slate-400 mt-1.5">
+            💡 <strong>Petunjuk:</strong> Klik atau geser pin marker pada peta untuk menentukan lokasi instansi Anda.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Latitude (Lintang)</label>
+            <input type="text" id="prayer_latitude" value="-6.3263" onchange="updateMarkerFromInputs()" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Longitude (Bujur)</label>
+            <input type="text" id="prayer_longitude" value="108.3200" onchange="updateMarkerFromInputs()" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Zona Waktu</label>
+            <select id="prayer_timezone" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
+              <option value="7.0">WIB (UTC+7)</option>
+              <option value="8.0">WITA (UTC+8)</option>
+              <option value="9.0">WIT (UTC+9)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Ihtiyat (Pengaman Menit)</label>
+            <input type="number" id="prayer_ihtiyat" value="2" min="0" max="10" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-teal-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu 7: Keamanan Akun Admin Web Remote -->
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
           <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
@@ -365,6 +441,11 @@
       'jam_pulang',
       'queue_enabled',
       'queue_calling_prefix',
+      'running_text',
+      'prayer_latitude',
+      'prayer_longitude',
+      'prayer_timezone',
+      'prayer_ihtiyat',
       'admin_username',
       'admin_password'
     ];
@@ -492,6 +573,80 @@
       }
     }
 
+    // --- Leaflet Map Prayer Coordinates Picker ---
+    let prayerMap = null;
+    let prayerMarker = null;
+
+    function initPrayerMap(lat, lng) {
+      const initialLat = parseFloat(lat) || -6.3263;
+      const initialLng = parseFloat(lng) || 108.3200;
+
+      if (!prayerMap) {
+        prayerMap = L.map('prayerMap').setView([initialLat, initialLng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(prayerMap);
+
+        prayerMarker = L.marker([initialLat, initialLng], { draggable: true }).addTo(prayerMap);
+
+        prayerMarker.on('dragend', function (e) {
+          const coord = e.target.getLatLng();
+          setCoordinates(coord.lat, coord.lng);
+        });
+
+        prayerMap.on('click', function (e) {
+          const coord = e.latlng;
+          prayerMarker.setLatLng(coord);
+          setCoordinates(coord.lat, coord.lng);
+        });
+      } else {
+        prayerMap.setView([initialLat, initialLng], 15);
+        if (prayerMarker) {
+          prayerMarker.setLatLng([initialLat, initialLng]);
+        }
+      }
+      setTimeout(() => { if (prayerMap) prayerMap.invalidateSize(); }, 300);
+    }
+
+    function setCoordinates(lat, lng) {
+      document.getElementById('prayer_latitude').value = Number(lat).toFixed(6);
+      document.getElementById('prayer_longitude').value = Number(lng).toFixed(6);
+    }
+
+    function updateMarkerFromInputs() {
+      const lat = parseFloat(document.getElementById('prayer_latitude').value);
+      const lng = parseFloat(document.getElementById('prayer_longitude').value);
+      if (!isNaN(lat) && !isNaN(lng) && prayerMap && prayerMarker) {
+        prayerMarker.setLatLng([lat, lng]);
+        prayerMap.panTo([lat, lng]);
+      }
+    }
+
+    function detectCurrentLocation() {
+      if (!navigator.geolocation) {
+        showAlert('Browser Anda tidak mendukung deteksi lokasi Geolocation.', 'error');
+        return;
+      }
+      showAlert('Sedang mendeteksi kordinat GPS Anda...', 'success');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setCoordinates(lat, lng);
+          if (prayerMap && prayerMarker) {
+            prayerMarker.setLatLng([lat, lng]);
+            prayerMap.setView([lat, lng], 16);
+          }
+          showAlert('✅ Berhasil mendeteksi lokasi GPS Anda: ' + lat.toFixed(5) + ', ' + lng.toFixed(5), 'success');
+        },
+        (err) => {
+          showAlert('Gagal mendeteksi lokasi GPS: ' + err.message + '. Silakan klik langsung titik pada peta.', 'error');
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
     async function loadSettings() {
       try {
         const res = await fetch('/api/settings');
@@ -513,6 +668,11 @@
         } else {
           setLogoPreview('');
         }
+
+        // Inisialisasi Peta Jadwal Sholat
+        const lat = data.prayer_latitude || '-6.3263';
+        const lng = data.prayer_longitude || '108.3200';
+        initPrayerMap(lat, lng);
       } catch (err) {
         console.error('Error loading settings:', err);
       }

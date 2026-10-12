@@ -132,6 +132,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             "wa_wablas_domain" to "https://api.wablas.com",
             "entity_type" to "santri",
             "wa_enabled" to "1",
+            "running_text" to "Selamat Datang di MUSHOLLA AL MUHAJIRIN • Santri wajib melakukan presensi kartu RFID sebelum mengaji • Mohon tertib, tenang, dan jaga kebersihan",
             "admin_username" to "admin",
             "admin_password" to "admin"
         )
@@ -1461,7 +1462,15 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         }
 
         // 3. Running Text Marquee
-        val announcement = "Selamat Datang di $schoolName   •••   Santri wajib melakukan presensi kartu RFID sebelum mengaji   •••   Mohon tertib, tenang, dan jaga kebersihan"
+        val defaultAnnouncement = "Selamat Datang di $schoolName   •••   Santri wajib melakukan presensi kartu RFID sebelum mengaji   •••   Mohon tertib, tenang, dan jaga kebersihan"
+        val announcement = getSetting("running_text", defaultAnnouncement).ifBlank { defaultAnnouncement }
+
+        // 4. Jadwal Sholat Kemenag Falakiyah Offline
+        val lat = getSetting("prayer_latitude", "-6.3263").toDoubleOrNull() ?: -6.3263
+        val lng = getSetting("prayer_longitude", "108.3200").toDoubleOrNull() ?: 108.3200
+        val tz = getSetting("prayer_timezone", "7.0").toDoubleOrNull() ?: 7.0
+        val iht = getSetting("prayer_ihtiyat", "2").toIntOrNull() ?: 2
+        val prayerObj = com.alijaya.smartschool.server.prayer.PrayerCalculator.calculateTodayPrayer(lat, lng, tz, iht)
 
         return JSONObject().apply {
             put("success", true)
@@ -1475,6 +1484,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             put("announcement", announcement)
             put("tables", tablesArr)
             put("lastCall", lastCallObj ?: JSONObject.NULL)
+            put("prayer", prayerObj)
         }
     }
 }

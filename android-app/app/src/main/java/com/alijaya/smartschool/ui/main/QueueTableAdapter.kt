@@ -68,6 +68,9 @@ class QueueTableAdapter : RecyclerView.Adapter<QueueTableAdapter.ViewHolder>() {
             }
 
             val waiting = table.nextWaiting
+            val waitingCount = table.stats?.waiting ?: (waiting?.size ?: 0)
+            binding.tvWaitingCounter.text = "$waitingCount Santri"
+
             if (!waiting.isNullOrEmpty()) {
                 val formatted = waiting.joinToString("   •   ") { item ->
                     "#${String.format("%02d", item.queueNumber)} (${item.studentName ?: "-"})"
@@ -80,9 +83,9 @@ class QueueTableAdapter : RecyclerView.Adapter<QueueTableAdapter.ViewHolder>() {
             }
 
             val stats = table.stats
-            binding.tvStatWaiting.text = "Menunggu: ${stats?.waiting ?: 0}"
-            binding.tvStatCompleted.text = "Selesai: ${stats?.completed ?: 0}"
-            binding.tvStatTotal.text = "Total Hari Ini: ${stats?.total ?: 0}"
+            binding.tvStatWaiting.text = "${stats?.waiting ?: 0}"
+            binding.tvStatCompleted.text = "${stats?.completed ?: 0}"
+            binding.tvStatTotal.text = "${stats?.total ?: 0}"
         }
     }
 }

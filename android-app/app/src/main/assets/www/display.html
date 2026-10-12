@@ -62,6 +62,23 @@
     </div>
   </header>
 
+  <!-- JADWAL SHOLAT DIGITAL SIGNAGE STRIP -->
+  <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-teal-900/40 px-4 sm:px-6 py-1.5 flex items-center justify-between text-xs shrink-0 shadow-inner">
+    <div class="flex items-center gap-2">
+      <span class="text-emerald-400 font-bold flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+        <span>🕌</span>
+        <span>Jadwal Sholat:</span>
+      </span>
+      <span id="txtPrayerTimes" class="text-slate-300 text-[11px] font-mono">
+        Subuh: --:--  •  Dzuhur: --:--  •  Ashar: --:--  •  Maghrib: --:--  •  Isya: --:--
+      </span>
+    </div>
+    <div id="badgeNextPrayer" class="px-2.5 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-bold text-emerald-300 font-mono hidden sm:flex items-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+      <span id="txtNextPrayerCountdown">Menghitung...</span>
+    </div>
+  </div>
+
   <!-- BANNER PANGGILAN AKTIF POP-UP -->
   <div id="bannerActiveCall" class="hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white px-6 py-3 shadow-2xl flex items-center justify-between z-20 shrink-0 border-b border-emerald-400 animate-pulse">
     <div class="flex items-center gap-4">
@@ -129,6 +146,24 @@
       if (data.schoolTagline) document.getElementById('txtSchoolTagline').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>${data.schoolTagline}</span>`;
       if (data.announcement) document.getElementById('txtMarquee').innerText = data.announcement;
 
+      // Update Jadwal Sholat Strip
+      if (data.prayer && data.prayer.schedule) {
+        const s = data.prayer.schedule;
+        const prayerStr = `Subuh: ${s.subuh || '--:--'}  •  Dzuhur: ${s.dzuhur || '--:--'}  •  Ashar: ${s.ashar || '--:--'}  •  Maghrib: ${s.maghrib || '--:--'}  •  Isya: ${s.isya || '--:--'}`;
+        const elPrayerTimes = document.getElementById('txtPrayerTimes');
+        if (elPrayerTimes) elPrayerTimes.innerText = prayerStr;
+
+        const nextInfo = data.prayer.nextInfo;
+        const elCountdown = document.getElementById('txtNextPrayerCountdown');
+        const badgeNextPrayer = document.getElementById('badgeNextPrayer');
+        if (nextInfo && nextInfo.next && nextInfo.formattedCountdown) {
+          if (elCountdown) elCountdown.innerText = `Menuju ${nextInfo.next.label}: ${nextInfo.formattedCountdown}`;
+          if (badgeNextPrayer) badgeNextPrayer.classList.remove('hidden');
+        } else if (badgeNextPrayer) {
+          badgeNextPrayer.classList.add('hidden');
+        }
+      }
+
       // Handle Last Call Banner
       const lastCall = data.lastCall;
       const banner = document.getElementById('bannerActiveCall');
@@ -184,15 +219,17 @@
           `;
         }
 
+        const stats = t.stats || { waiting: 0, completed: 0, total: 0 };
+
         let waitingHtml = '';
         if (nextWaiting.length > 0) {
-          waitingHtml = nextWaiting.map(w => `
-            <span class="px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-teal-300">
-              #${w.queue_number}
+          waitingHtml = nextWaiting.slice(0, 5).map(w => `
+            <span class="px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-mono font-bold text-teal-300 shadow-sm">
+              #${String(w.queue_number).padStart(2, '0')}
             </span>
           `).join('');
         } else {
-          waitingHtml = '<span class="text-[10px] text-slate-500">Tidak ada antrian menunggu</span>';
+          waitingHtml = '<span class="text-[10px] text-slate-500 italic">Tidak ada antrian menunggu</span>';
         }
 
         card.innerHTML = `
@@ -203,10 +240,32 @@
             </div>
             ${currentHtml}
           </div>
-          <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Berikutnya Menunggu:</div>
-            <div class="flex flex-wrap gap-1.5">
-              ${waitingHtml}
+          <div class="space-y-2 mt-2">
+            <!-- Box Antrian Berikutnya -->
+            <div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Antrian Berikutnya:</span>
+                <span class="text-[9px] font-mono font-bold text-amber-400">${nextWaiting.length} Menunggu</span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${waitingHtml}
+              </div>
+            </div>
+
+            <!-- Box Statistik 3 Kolom Kompak -->
+            <div class="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 text-[9px] font-medium">Menunggu</span>
+                <strong class="text-amber-400 font-mono text-xs font-black">${stats.waiting || 0}</strong>
+              </div>
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 text-[9px] font-medium">Mengaji</span>
+                <strong class="text-emerald-400 font-mono text-xs font-black">${stats.serving || (current ? 1 : 0)}</strong>
+              </div>
+              <div class="bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800 flex items-center justify-between shadow-inner">
+                <span class="text-slate-400 text-[9px] font-medium">Selesai</span>
+                <strong class="text-teal-400 font-mono text-xs font-black">${stats.completed || 0}</strong>
+              </div>
             </div>
           </div>
         `;

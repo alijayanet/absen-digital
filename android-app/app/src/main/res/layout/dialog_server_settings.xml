@@ -240,6 +240,129 @@
         android:textColor="#94A3B8"
         android:textSize="12sp" />
 
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="#334155" />
+
+    <!-- Running Text Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📢 Pengumuman Teks Berjalan (Running Text)"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Pesan teks berjalan yang ditampilkan di bagian bawah layar TV Kiosk:"
+        android:textColor="#94A3B8"
+        android:textSize="12sp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilRunningText"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="Isi Running Text"
+        android:textColorHint="#94A3B8"
+        app:boxStrokeColor="#38BDF8"
+        app:boxStrokeWidthFocused="1.5dp"
+        app:hintTextColor="#38BDF8">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etRunningText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine"
+            android:lines="2"
+            android:textColor="@android:color/white"
+            android:textSize="13sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="#334155" />
+
+    <!-- Prayer Coordinates Section -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🕌 Kordinat Jadwal Sholat (Lintang / Bujur)"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Kordinat lokasi instansi (bisa juga diatur via web admin dengan peta interaktif):"
+        android:textColor="#94A3B8"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPrayerLat"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:hint="Latitude"
+            android:textColorHint="#94A3B8"
+            app:boxStrokeColor="#38BDF8"
+            app:hintTextColor="#38BDF8">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPrayerLat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberSigned|numberDecimal"
+                android:text="-6.3263"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPrayerLng"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:hint="Longitude"
+            android:textColorHint="#94A3B8"
+            app:boxStrokeColor="#38BDF8"
+            app:hintTextColor="#38BDF8">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPrayerLng"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberSigned|numberDecimal"
+                android:text="108.3200"
+                android:textColor="@android:color/white"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
     <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
