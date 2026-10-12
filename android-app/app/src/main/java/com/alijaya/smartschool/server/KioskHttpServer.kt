@@ -5,6 +5,8 @@ import android.util.Log
 import com.alijaya.smartschool.server.db.SmartSchoolDatabase
 import com.alijaya.smartschool.server.whatsapp.CloudWhatsAppClient
 import fi.iki.elonen.NanoHTTPD
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -79,10 +81,11 @@ class KioskHttpServer(
                 uri == "/api/teachers" && method == Method.POST -> handleSaveTeacher(session)
                 uri.startsWith("/api/teachers/delete") && method == Method.POST -> handleDeleteTeacher(session)
 
-                // 6. API Pengaturan & WhatsApp
+                // 6. API Pengaturan, WhatsApp & Telegram Bot
                 uri == "/api/settings" && method == Method.GET -> handleGetSettings()
                 uri == "/api/settings" && method == Method.POST -> handleSaveSettings(session)
                 uri == "/api/whatsapp/test" && method == Method.POST -> handleTestWhatsApp(session)
+                uri == "/api/telegram/test" && method == Method.POST -> handleTestTelegram(session)
 
                 // 7. Backup Database SQLite
                 uri == "/api/backup" && method == Method.GET -> handleBackupDatabase()
@@ -565,11 +568,63 @@ class KioskHttpServer(
             val k = keys.next()
             db.setSetting(k, body.getString(k))
         }
+
+        // Reload Telegram config jika token atau status berubah
+        try {
+            com.alijaya.smartschool.SmartSchoolApplication.initTelegramManager(context)
+        } catch (_: Exception) {}
+
         val res = JSONObject().apply {
             put("success", true)
             put("message", "Pengaturan berhasil disimpan")
         }
         return newFixedLengthResponse(Response.Status.OK, MIME_JSON, res.toString())
+    }
+
+    private fun handleTestTelegram(session: IHTTPSession): Response {
+        val body = parseRequestBody(session)
+        val token = body.optString("bot_token", "").trim().ifBlank {
+            db.getSetting("telegram_bot_token", "").trim()
+        }
+        val chatId = body.optString("chat_id", "").trim().ifBlank {
+            db.getSetting("telegram_chat_id", "").trim()
+        }
+
+        if (token.isBlank() || chatId.isBlank()) {
+            val err = JSONObject().apply {
+                put("success", false)
+                put("message", "Bot Token dan Chat ID wajib diisi terlebih dahulu")
+            }
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, MIME_JSON, err.toString())
+        }
+
+        val tm = com.alijaya.smartschool.SmartSchoolApplication.telegramManager
+        if (tm == null) {
+            com.alijaya.smartschool.SmartSchoolApplication.initTelegramManager(context)
+        }
+
+        val activeTm = com.alijaya.smartschool.SmartSchoolApplication.telegramManager
+        if (activeTm == null) {
+            val err = JSONObject().apply {
+                put("success", false)
+                put("message", "Telegram Manager belum terinisialisasi di sistem Android")
+            }
+            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_JSON, err.toString())
+        }
+
+        return runBlocking(Dispatchers.IO) {
+            val testResult = activeTm.testTelegramMessage(token, chatId)
+            val res = JSONObject().apply {
+                if (testResult.isSuccess) {
+                    put("success", true)
+                    put("message", testResult.getOrNull() ?: "Pesan berhasil terkirim ke Telegram!")
+                } else {
+                    put("success", false)
+                    put("message", testResult.exceptionOrNull()?.message ?: "Gagal mengirim ke Telegram")
+                }
+            }
+            newFixedLengthResponse(Response.Status.OK, MIME_JSON, res.toString())
+        }
     }
 
     private fun handleTestWhatsApp(session: IHTTPSession): Response {

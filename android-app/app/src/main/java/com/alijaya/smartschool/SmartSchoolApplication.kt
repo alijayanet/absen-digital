@@ -5,7 +5,14 @@ import android.content.Context
 import android.util.Log
 import com.alijaya.smartschool.data.pref.SessionManager
 import com.alijaya.smartschool.server.KioskHttpServer
+import com.alijaya.smartschool.server.db.SmartSchoolDatabase
+import com.alijaya.smartschool.server.telegram.SmartSchoolTelegramManager
+import com.alijaya.smartschool.util.BeepTtsHelper
 import fi.iki.elonen.NanoHTTPD
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SmartSchoolApplication : Application() {
 
@@ -18,6 +25,16 @@ class SmartSchoolApplication : Application() {
         @Volatile
         var httpServer: KioskHttpServer? = null
             private set
+
+        @Volatile
+        var telegramManager: SmartSchoolTelegramManager? = null
+            private set
+
+        @Volatile
+        var globalAudioHelper: BeepTtsHelper? = null
+            private set
+
+        private val appScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
         fun startHttpServer(context: Context, port: Int = 8080) {
             try {
@@ -47,6 +64,29 @@ class SmartSchoolApplication : Application() {
             stopHttpServer()
             startHttpServer(context, port)
         }
+
+        fun initTelegramManager(context: Context) {
+            try {
+                if (globalAudioHelper == null) {
+                    globalAudioHelper = BeepTtsHelper(context.applicationContext)
+                }
+                val db = SmartSchoolDatabase.getInstance(context.applicationContext)
+                if (telegramManager == null) {
+                    telegramManager = SmartSchoolTelegramManager(
+                        context.applicationContext,
+                        db,
+                        globalAudioHelper!!,
+                        appScope
+                    )
+                } else {
+                    appScope.launch(Dispatchers.IO) {
+                        telegramManager?.reloadConfig()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to init TelegramManager: ${e.message}", e)
+            }
+        }
     }
 
     override fun onCreate() {
@@ -57,5 +97,9 @@ class SmartSchoolApplication : Application() {
         if (sessionManager.isStandaloneMode()) {
             startHttpServer(this, sessionManager.getServerPort())
         }
+
+        // Inisialisasi Bot Telegram Long-Polling
+        initTelegramManager(this)
     }
 }
+

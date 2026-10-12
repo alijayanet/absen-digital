@@ -14,7 +14,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
 
     companion object {
         const val DATABASE_NAME = "smartschool.db"
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
 
         @Volatile
         private var instance: SmartSchoolDatabase? = null
@@ -132,6 +132,9 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             "wa_wablas_domain" to "https://api.wablas.com",
             "entity_type" to "santri",
             "wa_enabled" to "1",
+            "telegram_bot_token" to "",
+            "telegram_chat_id" to "",
+            "telegram_enabled" to "0",
             "running_text" to "Selamat Datang di MUSHOLLA AL MUHAJIRIN • Santri wajib melakukan presensi kartu RFID sebelum mengaji • Mohon tertib, tenang, dan jaga kebersihan",
             "admin_username" to "admin",
             "admin_password" to "admin"
@@ -274,6 +277,23 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     }
                     db.insertWithOnConflict("teachers", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
                 }
+            }
+        } catch (_: Exception) {}
+
+        // Migrasi & Inisialisasi Setting Baru (Telegram dsb) jika belum ada di database lama
+        try {
+            val defaultSettings = mapOf(
+                "telegram_bot_token" to "",
+                "telegram_chat_id" to "",
+                "telegram_enabled" to "0",
+                "running_text" to "Selamat Datang di MUSHOLLA AL MUHAJIRIN • Santri wajib melakukan presensi kartu RFID sebelum mengaji • Mohon tertib, tenang, dan jaga kebersihan"
+            )
+            for ((k, v) in defaultSettings) {
+                val cv = ContentValues().apply {
+                    put("key", k)
+                    put("value", v)
+                }
+                db.insertWithOnConflict("settings", null, cv, SQLiteDatabase.CONFLICT_IGNORE)
             }
         } catch (_: Exception) {}
     }
