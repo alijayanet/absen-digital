@@ -716,6 +716,7 @@
         const className = getVal(['kelas', 'divisi', 'unit', 'class']);
         const rawGender = getVal(['l/p', 'jenis kelamin', 'gender', 'jk']);
         const gender = rawGender.toUpperCase().startsWith('P') ? 'P' : 'L';
+        const rfidUid = getVal(['uid rfid', 'rfid_uid', 'rfid', 'uid']) || nis;
         // Pencarian Nama Wali (hindari cocok dengan kolom No WA/HP)
         const parentName = getVal(['nama wali', 'wali santri', 'wali murid', 'wali', 'orang tua', 'nama orang tua', 'parent_name', 'parent']);
         
