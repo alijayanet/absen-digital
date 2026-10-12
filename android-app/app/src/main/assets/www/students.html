@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="/js/terms.js"></script>
 
   <style>
@@ -282,14 +283,14 @@
 
       <div class="space-y-3 text-xs">
         <p class="text-slate-600">
-          Gunakan fitur impor untuk memasukkan data secara massal sekaligus dari berkas <strong>CSV / Excel</strong> lengkap dengan Tempat dan Tanggal Lahir.
+          Gunakan fitur impor untuk memasukkan data secara massal sekaligus dari berkas <strong>Excel (.xlsx / .xls) hasil export server Node.js</strong> maupun berkas <strong>CSV</strong>.
         </p>
 
         <!-- Download Template Link -->
         <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between">
           <div>
-            <div class="font-bold text-indigo-900">Format Berkas CSV</div>
-            <div class="text-[11px] text-indigo-700">Unduh berkas contoh agar susunan kolom sesuai.</div>
+            <div class="font-bold text-indigo-900">Format Berkas Impor</div>
+            <div class="text-[11px] text-indigo-700">Mendukung file Excel Node.js maupun CSV. Unduh contoh jika perlu:</div>
           </div>
           <a href="/api/students/template/csv" download="Template_Import_Data.csv" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-xl transition flex items-center gap-1">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -299,10 +300,10 @@
 
         <!-- File Upload Area -->
         <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-teal-500 transition cursor-pointer" onclick="document.getElementById('csvFileInput').click()">
-          <i data-lucide="file-spreadsheet" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
-          <p class="font-bold text-slate-800" id="importFileName">Pilih berkas CSV (.csv)</p>
-          <p class="text-[10px] text-slate-400 mt-1">Klik di sini untuk memilih file dari komputer / HP Anda</p>
-          <input type="file" id="csvFileInput" accept=".csv,text/csv" onchange="handleCsvSelected(event)" class="hidden">
+          <i data-lucide="file-spreadsheet" class="w-10 h-10 text-emerald-600 mx-auto mb-2"></i>
+          <p class="font-bold text-slate-800" id="importFileName">Pilih berkas Excel (.xlsx) atau CSV (.csv)</p>
+          <p class="text-[10px] text-slate-400 mt-1">Kompatibel langsung dengan file unduhan dari Server Node.js lama</p>
+          <input type="file" id="csvFileInput" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onchange="handleFileSelected(event)" class="hidden">
         </div>
 
         <!-- Preview Impor -->
@@ -611,17 +612,43 @@
       document.getElementById('importModal').classList.add('hidden');
     }
 
-    function handleCsvSelected(e) {
+    function handleFileSelected(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       document.getElementById('importFileName').innerText = file.name;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const text = evt.target.result;
-        parseCsvText(text);
-      };
-      reader.readAsText(file);
+      const fileNameLower = file.name.toLowerCase();
+
+      // Jika file Excel (.xlsx atau .xls)
+      if (fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls')) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            if (typeof XLSX === 'undefined') {
+              alert('Library pembaca Excel sedang dimuat. Harap coba beberapa saat lagi.');
+              return;
+            }
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            processImportRows(rows);
+          } catch (err) {
+            console.error('Error reading Excel:', err);
+            alert('Gagal membaca file Excel: ' + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        // File CSV
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const text = evt.target.result;
+          parseCsvText(text);
+        };
+        reader.readAsText(file);
+      }
     }
 
     function splitCsvRow(row, delim) {
@@ -648,6 +675,54 @@
       return result;
     }
 
+    // Pemrosesan objek baris (baik dari Excel Node.js maupun CSV)
+    function processImportRows(rows) {
+      if (!rows || rows.length === 0) {
+        alert('Berkas Excel tidak memiliki baris data.');
+        return;
+      }
+
+      const students = [];
+      for (const row of rows) {
+        // Normalisasi key dictionary agar tidak sensitif huruf besar/kecil
+        const getVal = (possibleKeys) => {
+          for (const key of Object.keys(row)) {
+            const normalizedKey = key.trim().toLowerCase();
+            for (const pk of possibleKeys) {
+              if (normalizedKey === pk.toLowerCase() || normalizedKey.includes(pk.toLowerCase())) {
+                return String(row[key] || '').trim();
+              }
+            }
+          }
+          return '';
+        };
+
+        const nis = getVal(['nis', 'nik', 'nip', 'nomor induk']);
+        const name = getVal(['nama siswa', 'nama santri', 'nama lengkap', 'nama', 'name']);
+        if (!nis || !name) continue;
+
+        const pob = getVal(['tempat lahir', 'pob']);
+        const dob = getVal(['tanggal lahir', 'tgl lahir', 'dob']);
+        const className = getVal(['kelas', 'divisi', 'unit', 'class']);
+        const rawGender = getVal(['l/p', 'jenis kelamin', 'gender', 'jk']);
+        const gender = rawGender.toUpperCase().startsWith('P') ? 'P' : 'L';
+        const rfidUid = getVal(['uid rfid', 'rfid', 'uid']) || nis;
+        const parentName = getVal(['nama wali', 'wali', 'orang tua', 'parent']);
+        const parentPhone = getVal(['no wa wali', 'no wa', 'wa', 'telepon', 'phone', 'hp']);
+
+        students.push({
+          nis, name, pob, dob,
+          class_name: className,
+          gender,
+          rfid_uid: rfidUid,
+          parent_name: parentName,
+          parent_phone: parentPhone
+        });
+      }
+
+      applyParsedData(students);
+    }
+
     function parseCsvText(csvText) {
       const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
       if (lines.length < 2) {
@@ -661,14 +736,14 @@
       const students = [];
 
       let idxNis = headers.findIndex(h => h === 'nis' || h === 'nik' || h === 'nip' || h.includes('nomor induk'));
-      let idxName = headers.findIndex(h => h === 'nama' || h === 'name' || h.includes('nama lengkap'));
+      let idxName = headers.findIndex(h => h === 'nama siswa' || h === 'nama' || h === 'name' || h.includes('nama lengkap'));
       let idxPob = headers.findIndex(h => h.includes('tempat lahir') || h === 'pob');
       let idxDob = headers.findIndex(h => h.includes('tanggal lahir') || h === 'dob' || h.includes('tgl lahir'));
       let idxClass = headers.findIndex(h => h === 'kelas' || h === 'divisi' || h === 'unit' || h === 'class');
-      let idxGender = headers.findIndex(h => h.includes('kelamin') || h === 'gender' || h === 'jk');
-      let idxRfid = headers.findIndex(h => h.includes('rfid') || h.includes('uid'));
+      let idxGender = headers.findIndex(h => h === 'l/p' || h.includes('kelamin') || h === 'gender' || h === 'jk');
+      let idxRfid = headers.findIndex(h => h.includes('uid rfid') || h.includes('rfid') || h.includes('uid'));
       let idxParent = headers.findIndex(h => h.includes('wali') || h.includes('orang tua') || h.includes('kontak') || h.includes('parent'));
-      let idxPhone = headers.findIndex(h => h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp') || h.includes('kontak'));
+      let idxPhone = headers.findIndex(h => h.includes('no wa') || h.includes('wa') || h.includes('telepon') || h.includes('phone') || h.includes('hp'));
 
       for (let i = 1; i < lines.length; i++) {
         const parts = splitCsvRow(lines[i], delim).map(p => p.replace(/^["']|["']$/g, '').trim());
@@ -718,6 +793,10 @@
         }
       }
 
+      applyParsedData(students);
+    }
+
+    function applyParsedData(students) {
       parsedImportData = students;
       const previewBox = document.getElementById('importPreviewBox');
       const btn = document.getElementById('btnExecuteImport');
@@ -727,7 +806,7 @@
         previewBox.classList.remove('hidden');
         btn.disabled = false;
       } else {
-        alert('Tidak ada baris data yang valid di dalam file CSV.');
+        alert('Tidak ada baris data santri yang valid di dalam file.');
         previewBox.classList.add('hidden');
         btn.disabled = true;
       }
