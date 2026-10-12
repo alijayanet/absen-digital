@@ -150,16 +150,16 @@
           Tap Kartu RFID Santri atau scan QR Code pada mesin scanner USB.
         </p>
 
-        <!-- Input Tersembunyi (Auto-focus untuk USB RFID Reader Wedge) -->
-        <div class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2.5 flex items-center gap-2.5">
+        <!-- Input Utama Kiosk (Mendukung Tap Kartu RFID, Scan QR, atau Ketik Nama / NIS Santri) -->
+        <div class="w-full bg-slate-900/90 border border-slate-700/80 focus-within:border-teal-400 rounded-2xl p-2.5 flex items-center gap-2.5 transition">
           <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
           <input 
             type="text" 
             id="rfidInput" 
-            placeholder="Reader USB Standby (Siap Tap)..." 
+            placeholder="Tap Kartu / Ketik Nama / NIS + Enter..." 
             autocomplete="off"
             autofocus
-            class="bg-transparent border-none text-xs text-emerald-400 font-mono focus:outline-none w-full"
+            class="bg-transparent border-none text-xs text-emerald-400 placeholder-slate-500 font-mono focus:outline-none w-full"
           >
         </div>
 
@@ -168,7 +168,7 @@
           <button 
             type="button" 
             onclick="openManualAttendanceModal(event)" 
-            class="w-full py-2.5 px-3 rounded-2xl bg-slate-700/70 hover:bg-teal-600/80 text-slate-200 hover:text-white border border-slate-600 hover:border-teal-400/80 text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
+            class="w-full py-2.5 px-3 rounded-2xl bg-slate-700/80 hover:bg-teal-600/90 text-slate-200 hover:text-white border border-slate-600 hover:border-teal-400 text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm"
           >
             <i data-lucide="keyboard" class="w-4 h-4 text-teal-400"></i>
             <span>Lupa Bawa Kartu? Absen dengan Nama / NIS</span>
@@ -235,11 +235,11 @@
   </div>
 
   <!-- Modal Pop-Up Input Presensi Manual (Bila Kartu Tertinggal / Hilang) -->
-  <div id="manualAttendanceModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
-    <div id="manualAttendanceCard" class="bg-slate-800 border-2 border-slate-700 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl text-left transform scale-95 transition-transform duration-300 relative">
+  <div id="manualAttendanceModal" onclick="closeManualAttendanceModal()" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="manualAttendanceCard" onclick="event.stopPropagation()" class="bg-slate-800 border-2 border-slate-700 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl text-left transform scale-95 transition-transform duration-300 relative">
       
       <!-- Tombol Tutup -->
-      <button onclick="closeManualAttendanceModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-700/80 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold transition">
+      <button type="button" onclick="closeManualAttendanceModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-700/80 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold transition">
         ✕
       </button>
 
@@ -249,11 +249,11 @@
         </div>
         <div>
           <h3 class="text-base sm:text-lg font-black text-white leading-tight">Presensi Manual</h3>
-          <p class="text-xs text-slate-400">Masukkan Nama Lengkap atau Nomor Induk Santri (NIS).</p>
+          <p class="text-xs text-slate-400">Ketik Nama Santri atau Nomor Induk Santri (NIS)</p>
         </div>
       </div>
 
-      <form onsubmit="submitManualAttendance(event)" class="space-y-4">
+      <div class="space-y-4">
         <div>
           <label for="manualInputCode" class="block text-xs font-bold text-slate-300 mb-1.5">
             Nama Santri atau NIS:
@@ -262,14 +262,14 @@
             <input 
               type="text" 
               id="manualInputCode" 
-              placeholder="Contoh: 1001 atau Ahmad Fauzi..." 
+              placeholder="Contoh: Ahmad Fauzi atau 1001..." 
               autocomplete="off"
               class="w-full bg-slate-900 border border-slate-700 focus:border-teal-400 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition font-medium"
             >
           </div>
           <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
             <span>💡</span>
-            <span>Ketik minimal 3 huruf nama santri atau angka NIS, lalu klik tombol Proses Presensi.</span>
+            <span>Bisa ketik nama santri (contoh: Ahmad) atau NIS (contoh: 1001), lalu tekan Enter atau klik tombol Proses.</span>
           </p>
         </div>
 
@@ -282,15 +282,16 @@
             Batal
           </button>
           <button 
-            type="submit" 
+            type="button" 
             id="btnSubmitManual" 
+            onclick="submitManualAttendance()"
             class="flex-1 py-3 px-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-lg shadow-teal-950 transition flex items-center justify-center gap-2"
           >
             <i data-lucide="check-circle" class="w-4 h-4"></i>
-            <span>Proses Presensi</span>
+            <span id="btnSubmitManualText">Proses Presensi</span>
           </button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -366,25 +367,26 @@
   </footer>
 
   <script>
-    lucide.createIcons();
+    // 0. State & Global Configuration
+    let serverPrayerConfig = {
+      lat: -6.3263,
+      lng: 108.3200,
+      timezone: 7.0,
+      ihtiyat: 2
+    };
+    let serverPrayerSchedule = null;
+    let currentPrayerTimes = null;
+    let nextPrayerInfo = null;
+    let lastAlertedPrayer = null;
+    let iqomahInterval = null;
+    let isManualModalOpen = false;
+    let isProcessing = false;
+    let modalTimer = null;
 
-    // 1. Digital Clock & Date
-    function updateClock() {
-      const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('liveClock').innerText = `${h}:${m}:${s}`;
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('liveDate').innerText = now.toLocaleDateString('id-ID', options);
-      if (typeof updatePrayerSchedule === 'function') {
-        updatePrayerSchedule(now);
-      }
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+    const rfidInput = document.getElementById('rfidInput');
+    const manualInput = document.getElementById('manualInputCode');
 
-    // 2. Web Audio API Synthesizer (Chime D5/A5 tanpa dependensi file eksternal)
+    // 1. Web Audio API Synthesizer (Chime D5/A5 tanpa dependensi file eksternal)
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
@@ -426,7 +428,7 @@
       } catch (e) {}
     }
 
-    // 3. Text-to-Speech (Panggil Nama Santri dalam Bahasa Indonesia)
+    // 2. Text-to-Speech (Panggil Nama Santri dalam Bahasa Indonesia)
     function speakName(name, status) {
       if (!('speechSynthesis' in window)) return;
       try {
@@ -439,191 +441,205 @@
       } catch (e) {}
     }
 
-    // 4. Hitung & Sinkronisasi Jadwal Sholat Kemenag Falakiyah Offline
-    let currentPrayerTimes = null;
-    let nextPrayerInfo = null;
-    let lastAlertedPrayer = null;
-    let iqomahInterval = null;
-    let serverPrayerConfig = {
-      lat: -6.3263,
-      lng: 108.3200,
-      timezone: 7.0,
-      ihtiyat: 2
-    };
-
+    // 3. Hitung Jadwal Sholat Falakiyah Offline & Parsing Waktu
     function calculateFalakPrayerTimes(date, lat = serverPrayerConfig.lat, lng = serverPrayerConfig.lng, timezone = serverPrayerConfig.timezone, ihtiyatMin = serverPrayerConfig.ihtiyat) {
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
+      try {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
 
-      const a = Math.floor((14 - month) / 12);
-      const y = year + 4800 - a;
-      const m = month + 12 * a - 3;
-      const jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
-      const d = jd - 2451545.0;
+        const a = Math.floor((14 - month) / 12);
+        const y = year + 4800 - a;
+        const m = month + 12 * a - 3;
+        const jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+        const d = jd - 2451545.0;
 
-      const g = (357.529 + 0.98560028 * d) % 360;
-      const q = (280.459 + 0.98564736 * d) % 360;
-      const L = (q + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180)) % 360;
+        const g = (357.529 + 0.98560028 * d) % 360;
+        const q = (280.459 + 0.98564736 * d) % 360;
+        const L = (q + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180)) % 360;
 
-      const e = 23.439 - 0.00000036 * d;
-      const sinDec = Math.sin(e * Math.PI / 180) * Math.sin(L * Math.PI / 180);
-      const dec = Math.asin(sinDec);
-      const decDeg = dec * 180 / Math.PI;
+        const e = 23.439 - 0.00000036 * d;
+        const sinDec = Math.sin(e * Math.PI / 180) * Math.sin(L * Math.PI / 180);
+        const dec = Math.asin(sinDec);
+        const decDeg = dec * 180 / Math.PI;
 
-      const RA = Math.atan2(Math.cos(e * Math.PI / 180) * Math.sin(L * Math.PI / 180), Math.cos(L * Math.PI / 180)) * 180 / Math.PI;
-      let EqT = (q / 15 - RA / 15) * 60;
-      while (EqT > 20) EqT -= 24 * 60;
-      while (EqT < -20) EqT += 24 * 60;
+        const RA = Math.atan2(Math.cos(e * Math.PI / 180) * Math.sin(L * Math.PI / 180), Math.cos(L * Math.PI / 180)) * 180 / Math.PI;
+        let EqT = (q / 15 - RA / 15) * 60;
+        while (EqT > 20) EqT -= 24 * 60;
+        while (EqT < -20) EqT += 24 * 60;
 
-      // Dzuhur + ihtiyat
-      const ihtHours = ihtiyatMin / 60;
-      const dzuhurDec = 12 + timezone - (lng / 15) - (EqT / 60) + ihtHours;
+        const ihtHours = ihtiyatMin / 60;
+        const dzuhurDec = 12 + timezone - (lng / 15) - (EqT / 60) + ihtHours;
 
-      const rad = Math.PI / 180;
-      const latRad = lat * rad;
+        const rad = Math.PI / 180;
+        const latRad = lat * rad;
 
-      function getHourAngle(altDeg) {
-        const altRad = altDeg * rad;
-        const cosHA = (Math.sin(altRad) - Math.sin(latRad) * Math.sin(dec)) / (Math.cos(latRad) * Math.cos(dec));
-        if (cosHA > 1 || cosHA < -1) return null;
-        return (Math.acos(cosHA) * 180 / Math.PI) / 15;
-      }
-
-      // Subuh: -20° (+ihtiyat)
-      const haSubuh = getHourAngle(-20);
-      const subuhDec = haSubuh ? (dzuhurDec - haSubuh) : (dzuhurDec - 1.75);
-
-      // Syuruq/Terbit: -0.833°
-      const haSyuruq = getHourAngle(-0.833);
-      const syuruqDec = haSyuruq ? (dzuhurDec - haSyuruq - ihtHours) : (dzuhurDec - 1.0);
-
-      // Ashar: bayangan = 1 + tan(|lat - dec|) (+ihtiyat)
-      const deltaLat = Math.abs(lat - decDeg);
-      const asharAltRad = Math.atan(1 / (1 + Math.tan(deltaLat * rad)));
-      const asharAltDeg = asharAltRad * 180 / Math.PI;
-      const haAshar = getHourAngle(asharAltDeg);
-      const asharDec = haAshar ? (dzuhurDec + haAshar) : (dzuhurDec + 3.25);
-
-      // Maghrib: -0.833° (+ihtiyat)
-      const haMaghrib = getHourAngle(-0.833);
-      const maghribDec = haMaghrib ? (dzuhurDec + haMaghrib) : (dzuhurDec + 6.0);
-
-      // Isya: -18° (+ihtiyat)
-      const haIsya = getHourAngle(-18.0);
-      const isyaDec = haIsya ? (dzuhurDec + haIsya) : (dzuhurDec + 7.2);
-
-      function formatTime(decHours) {
-        let totalMinutes = Math.round(decHours * 60);
-        let h = Math.floor(totalMinutes / 60) % 24;
-        let m = totalMinutes % 60;
-        if (h < 0) h += 24;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      }
-
-      function toDate(decHours, targetDate) {
-        let totalSeconds = Math.round(decHours * 3600);
-        let h = Math.floor(totalSeconds / 3600) % 24;
-        let rem = totalSeconds % 3600;
-        let m = Math.floor(rem / 60);
-        let s = rem % 60;
-        const d = new Date(targetDate);
-        d.setHours(h, m, s, 0);
-        return d;
-      }
-
-      return {
-        subuh: formatTime(subuhDec),
-        syuruq: formatTime(syuruqDec),
-        dzuhur: formatTime(dzuhurDec),
-        ashar: formatTime(asharDec),
-        maghrib: formatTime(maghribDec),
-        isya: formatTime(isyaDec),
-        dates: {
-          Subuh: toDate(subuhDec, date),
-          Syuruq: toDate(syuruqDec, date),
-          Dzuhur: toDate(dzuhurDec, date),
-          Ashar: toDate(asharDec, date),
-          Maghrib: toDate(maghribDec, date),
-          Isya: toDate(isyaDec, date)
+        function getHourAngle(altDeg) {
+          const altRad = altDeg * rad;
+          const cosHA = (Math.sin(altRad) - Math.sin(latRad) * Math.sin(dec)) / (Math.cos(latRad) * Math.cos(dec));
+          if (cosHA > 1 || cosHA < -1) return null;
+          return (Math.acos(cosHA) * 180 / Math.PI) / 15;
         }
-      };
-    }
 
-    function updatePrayerSchedule(now) {
-      currentPrayerTimes = calculateFalakPrayerTimes(now);
-      
-      document.getElementById('ptSubuh').innerText = currentPrayerTimes.subuh;
-      document.getElementById('ptSyuruq').innerText = currentPrayerTimes.syuruq;
-      document.getElementById('ptDzuhur').innerText = currentPrayerTimes.dzuhur;
-      document.getElementById('ptAshar').innerText = currentPrayerTimes.ashar;
-      document.getElementById('ptMaghrib').innerText = currentPrayerTimes.maghrib;
-      document.getElementById('ptIsya').innerText = currentPrayerTimes.isya;
+        const haSubuh = getHourAngle(-20);
+        const subuhDec = haSubuh ? (dzuhurDec - haSubuh) : (dzuhurDec - 1.75);
 
-      // Cari sholat berikutnya
-      const prayers = [
-        { name: 'Subuh', key: 'Subuh', date: currentPrayerTimes.dates.Subuh, time: currentPrayerTimes.subuh, isFardhu: true },
-        { name: 'Syuruq', key: 'Syuruq', date: currentPrayerTimes.dates.Syuruq, time: currentPrayerTimes.syuruq, isFardhu: false },
-        { name: 'Dzuhur', key: 'Dzuhur', date: currentPrayerTimes.dates.Dzuhur, time: currentPrayerTimes.dzuhur, isFardhu: true },
-        { name: 'Ashar', key: 'Ashar', date: currentPrayerTimes.dates.Ashar, time: currentPrayerTimes.ashar, isFardhu: true },
-        { name: 'Maghrib', key: 'Maghrib', date: currentPrayerTimes.dates.Maghrib, time: currentPrayerTimes.maghrib, isFardhu: true },
-        { name: 'Isya', key: 'Isya', date: currentPrayerTimes.dates.Isya, time: currentPrayerTimes.isya, isFardhu: true }
-      ];
+        const haSyuruq = getHourAngle(-0.833);
+        const syuruqDec = haSyuruq ? (dzuhurDec - haSyuruq - ihtHours) : (dzuhurDec - 1.0);
 
-      let nextP = null;
-      for (const p of prayers) {
-        if (p.date > now) {
-          nextP = p;
-          break;
+        const deltaLat = Math.abs(lat - decDeg);
+        const asharAltRad = Math.atan(1 / (1 + Math.tan(deltaLat * rad)));
+        const asharAltDeg = asharAltRad * 180 / Math.PI;
+        const haAshar = getHourAngle(asharAltDeg);
+        const asharDec = haAshar ? (dzuhurDec + haAshar) : (dzuhurDec + 3.25);
+
+        const haMaghrib = getHourAngle(-0.833);
+        const maghribDec = haMaghrib ? (dzuhurDec + haMaghrib) : (dzuhurDec + 6.0);
+
+        const haIsya = getHourAngle(-18.0);
+        const isyaDec = haIsya ? (dzuhurDec + haIsya) : (dzuhurDec + 7.2);
+
+        function formatTime(decHours) {
+          let totalMinutes = Math.round(decHours * 60);
+          let h = Math.floor(totalMinutes / 60) % 24;
+          let m = totalMinutes % 60;
+          if (h < 0) h += 24;
+          return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
-      }
 
-      // Jika semua sudah lewat hari ini, targetkan Subuh esok hari
-      if (!nextP) {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomTimes = calculateFalakPrayerTimes(tomorrow);
-        nextP = {
-          name: 'Subuh (Besok)',
-          key: 'Subuh',
-          date: tomTimes.dates.Subuh,
-          time: tomTimes.subuh,
-          isFardhu: true
+        return {
+          subuh: formatTime(subuhDec),
+          syuruq: formatTime(syuruqDec),
+          dzuhur: formatTime(dzuhurDec),
+          ashar: formatTime(asharDec),
+          maghrib: formatTime(maghribDec),
+          isya: formatTime(isyaDec)
+        };
+      } catch (err) {
+        return {
+          subuh: '04:30',
+          syuruq: '05:45',
+          dzuhur: '11:55',
+          ashar: '15:10',
+          maghrib: '17:58',
+          isya: '19:07'
         };
       }
+    }
 
-      nextPrayerInfo = nextP;
+    function parsePrayerTimeToDate(timeStr, baseDate) {
+      if (!timeStr || !timeStr.includes(':')) return null;
+      const parts = timeStr.split(':');
+      const h = parseInt(parts[0], 10) || 0;
+      const m = parseInt(parts[1], 10) || 0;
+      const d = new Date(baseDate);
+      d.setHours(h, m, 0, 0);
+      return d;
+    }
 
-      // Reset style kartu
-      const allCards = ['cardPrayerSubuh', 'cardPrayerSyuruq', 'cardPrayerDzuhur', 'cardPrayerAshar', 'cardPrayerMaghrib', 'cardPrayerIsya'];
-      allCards.forEach(cid => {
-        const el = document.getElementById(cid);
-        if (el) {
-          el.className = 'px-2.5 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[58px] sm:min-w-[72px]';
+    // 4. Update Tampilan Jadwal Sholat & Countdown Real-Time
+    function updatePrayerSchedule(now) {
+      try {
+        let scheduleTimes = serverPrayerSchedule;
+        if (!scheduleTimes || !scheduleTimes.subuh) {
+          scheduleTimes = calculateFalakPrayerTimes(now);
         }
-      });
 
-      // Highlight kartu sholat berikutnya
-      const activeCardId = 'cardPrayer' + nextP.key;
-      const activeCard = document.getElementById(activeCardId);
-      if (activeCard) {
-        activeCard.className = 'px-2.5 py-1.5 rounded-xl bg-emerald-950/70 border-2 border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-900/50 transition-all duration-300 flex flex-col items-center min-w-[58px] sm:min-w-[72px] scale-105';
+        const subuhStr = scheduleTimes.subuh || '04:30';
+        const syuruqStr = scheduleTimes.terbit || scheduleTimes.syuruq || '05:45';
+        const dzuhurStr = scheduleTimes.dzuhur || '11:55';
+        const asharStr = scheduleTimes.ashar || '15:10';
+        const maghribStr = scheduleTimes.maghrib || '17:58';
+        const isyaStr = scheduleTimes.isya || '19:07';
+
+        const elSubuh = document.getElementById('ptSubuh');
+        const elSyuruq = document.getElementById('ptSyuruq');
+        const elDzuhur = document.getElementById('ptDzuhur');
+        const elAshar = document.getElementById('ptAshar');
+        const elMaghrib = document.getElementById('ptMaghrib');
+        const elIsya = document.getElementById('ptIsya');
+
+        if (elSubuh) elSubuh.innerText = subuhStr;
+        if (elSyuruq) elSyuruq.innerText = syuruqStr;
+        if (elDzuhur) elDzuhur.innerText = dzuhurStr;
+        if (elAshar) elAshar.innerText = asharStr;
+        if (elMaghrib) elMaghrib.innerText = maghribStr;
+        if (elIsya) elIsya.innerText = isyaStr;
+
+        const prayers = [
+          { name: 'Subuh', key: 'Subuh', date: parsePrayerTimeToDate(subuhStr, now), time: subuhStr, isFardhu: true },
+          { name: 'Syuruq', key: 'Syuruq', date: parsePrayerTimeToDate(syuruqStr, now), time: syuruqStr, isFardhu: false },
+          { name: 'Dzuhur', key: 'Dzuhur', date: parsePrayerTimeToDate(dzuhurStr, now), time: dzuhurStr, isFardhu: true },
+          { name: 'Ashar', key: 'Ashar', date: parsePrayerTimeToDate(asharStr, now), time: asharStr, isFardhu: true },
+          { name: 'Maghrib', key: 'Maghrib', date: parsePrayerTimeToDate(maghribStr, now), time: maghribStr, isFardhu: true },
+          { name: 'Isya', key: 'Isya', date: parsePrayerTimeToDate(isyaStr, now), time: isyaStr, isFardhu: true }
+        ];
+
+        let nextP = null;
+        for (const p of prayers) {
+          if (p.date && p.date > now) {
+            nextP = p;
+            break;
+          }
+        }
+
+        // Jika semua sholat hari ini sudah lewat, sholat berikutnya adalah Subuh besok
+        if (!nextP) {
+          const tomorrow = new Date(now);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          let tomSubuhStr = subuhStr;
+          if (!serverPrayerSchedule) {
+            const tomTimes = calculateFalakPrayerTimes(tomorrow);
+            tomSubuhStr = tomTimes.subuh;
+          }
+          nextP = {
+            name: 'Subuh (Besok)',
+            key: 'Subuh',
+            date: parsePrayerTimeToDate(tomSubuhStr, tomorrow),
+            time: tomSubuhStr,
+            isFardhu: true
+          };
+        }
+
+        nextPrayerInfo = nextP;
+
+        // Reset visual kartu sholat
+        const allCards = ['cardPrayerSubuh', 'cardPrayerSyuruq', 'cardPrayerDzuhur', 'cardPrayerAshar', 'cardPrayerMaghrib', 'cardPrayerIsya'];
+        allCards.forEach(cid => {
+          const el = document.getElementById(cid);
+          if (el) {
+            el.className = 'px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px]';
+          }
+        });
+
+        // Highlight kartu sholat berikutnya
+        if (nextP && nextP.key) {
+          const activeCard = document.getElementById('cardPrayer' + nextP.key);
+          if (activeCard) {
+            activeCard.className = 'px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-emerald-950/80 border-2 border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-900/50 transition-all duration-300 flex flex-col items-center min-w-[54px] sm:min-w-[68px] scale-105';
+          }
+        }
+
+        // Hitung selisih countdown detik menuju waktu sholat berikutnya
+        const badgeLabel = document.getElementById('nextPrayerBadgeLabel');
+        if (badgeLabel && nextP && nextP.date) {
+          const diffMs = nextP.date.getTime() - now.getTime();
+          if (diffMs > 0) {
+            const diffSec = Math.floor(diffMs / 1000);
+            const hh = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+            const mm = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+            const ss = String(diffSec % 60).padStart(2, '0');
+            badgeLabel.innerText = `Menuju ${nextP.name}: -${hh}:${mm}:${ss}`;
+          } else {
+            badgeLabel.innerText = `Waktu ${nextP.name} Tiba`;
+          }
+        }
+
+        // Cek kedatangan waktu adzan
+        checkPrayerArrival(now, prayers);
+      } catch (e) {
+        console.error('Error updatePrayerSchedule:', e);
       }
-
-      // Hitung selisih waktu
-      const diffMs = nextP.date - now;
-      if (diffMs > 0) {
-        const diffSec = Math.floor(diffMs / 1000);
-        const hh = String(Math.floor(diffSec / 3600)).padStart(2, '0');
-        const mm = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
-        const ss = String(diffSec % 60).padStart(2, '0');
-        document.getElementById('nextPrayerBadgeLabel').innerText = `Menuju ${nextP.name}: -${hh}:${mm}:${ss}`;
-      } else {
-        document.getElementById('nextPrayerBadgeLabel').innerText = `Waktu ${nextP.name} Tiba`;
-      }
-
-      // Periksa apakah waktu sholat fardhu tiba detik ini
-      checkPrayerArrival(now, prayers);
     }
 
     function checkPrayerArrival(now, prayers) {
@@ -633,7 +649,7 @@
       const nowSec = now.getSeconds();
 
       for (const p of prayers) {
-        if (!p.isFardhu) continue; // Notifikasi adzan khusus sholat fardhu
+        if (!p.isFardhu) continue;
         if (p.time === nowHM && nowSec <= 2) {
           const alertKey = `${now.toDateString()}_${p.name}`;
           if (lastAlertedPrayer !== alertKey) {
@@ -644,7 +660,7 @@
       }
     }
 
-    // Nada Adzan Islami Syahdu (Web Audio Harmonic Chime 100% Offline)
+    // 5. Nada Harmonis Adzan Islami Syahdu (Offline Web Audio)
     function playAdzanChime() {
       try {
         if (!audioCtx) audioCtx = new AudioContext();
@@ -692,7 +708,6 @@
       sub.innerText = `Saatnya menghentikan aktivitas sejenak dan bersiap menunaikan sholat fardhu ${prayerName} berjamaah.`;
       timeEl.innerText = prayerTime;
 
-      // Bunyikan Nada Adzan & TTS
       playAdzanChime();
       if ('speechSynthesis' in window) {
         try {
@@ -705,12 +720,10 @@
         } catch (e) {}
       }
 
-      // Animasi Tampil Modal
       modal.classList.remove('opacity-0', 'pointer-events-none');
       card.classList.remove('scale-95');
       card.classList.add('scale-100');
 
-      // Countdown Iqomah (10 menit)
       let remainSec = 10 * 60;
       clearInterval(iqomahInterval);
       iqomahInterval = setInterval(() => {
@@ -737,7 +750,6 @@
       }
     }
 
-    // Tombol Uji Coba Cepat untuk Admin/User
     function testPrayerAlertModal() {
       const now = new Date();
       const h = String(now.getHours()).padStart(2, '0');
@@ -745,16 +757,36 @@
       showPrayerAlert('Dzuhur', `${h}:${m}`);
     }
 
-    // 5. Muat Data Settings & Sinkronisasi Jadwal Sholat Kemenag
+    // 6. Jam Digital Realtime Kiosk
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      const clockEl = document.getElementById('liveClock');
+      if (clockEl) clockEl.innerText = `${h}:${m}:${s}`;
+
+      const dateEl = document.getElementById('liveDate');
+      if (dateEl) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        dateEl.innerText = now.toLocaleDateString('id-ID', options);
+      }
+
+      updatePrayerSchedule(now);
+    }
+
+    // 7. Muat Pengaturan & Sinkronisasi Jadwal Sholat dari Server Android
     async function loadSettings() {
       try {
         const res = await fetch('/api/settings');
         const cfg = await res.json();
         if (cfg.school_name) {
-          document.getElementById('schoolNameHeader').innerText = cfg.school_name;
+          const el = document.getElementById('schoolNameHeader');
+          if (el) el.innerText = cfg.school_name;
         }
         if (cfg.toleransi_telat) {
-          document.getElementById('toleransiBadge').innerText = cfg.toleransi_telat;
+          const el = document.getElementById('toleransiBadge');
+          if (el) el.innerText = cfg.toleransi_telat;
         }
         if (cfg.prayer_latitude && cfg.prayer_longitude) {
           serverPrayerConfig.lat = parseFloat(cfg.prayer_latitude) || -6.3263;
@@ -764,27 +796,19 @@
         }
       } catch (e) {}
 
-      // Sinkronkan juga langsung dengan hasil hisab PrayerCalculator server SQLite
+      // Sinkronkan langsung dengan perhitungan PrayerCalculator server SQLite
       try {
         const dRes = await fetch('/api/display-data');
         const dData = await dRes.json();
         if (dData.prayer && dData.prayer.schedule) {
-          const s = dData.prayer.schedule;
-          if (s.subuh) document.getElementById('ptSubuh').innerText = s.subuh;
-          if (s.terbit) document.getElementById('ptSyuruq').innerText = s.terbit;
-          if (s.dzuhur) document.getElementById('ptDzuhur').innerText = s.dzuhur;
-          if (s.ashar) document.getElementById('ptAshar').innerText = s.ashar;
-          if (s.maghrib) document.getElementById('ptMaghrib').innerText = s.maghrib;
-          if (s.isya) document.getElementById('ptIsya').innerText = s.isya;
+          serverPrayerSchedule = dData.prayer.schedule;
         }
       } catch (e) {}
 
-      updateClock();
+      updatePrayerSchedule(new Date());
     }
-    loadSettings();
-    setInterval(loadSettings, 60000); // Sinkronisasi otomatis setiap 1 menit
 
-    // 6. Muat Scan Terkini
+    // 8. Muat Presensi Terkini Hari Ini
     async function loadRecentScans() {
       try {
         const res = await fetch('/api/attendance/recent');
@@ -801,22 +825,22 @@
         list.innerHTML = items.slice(0, 5).map(item => {
           const avatar = item.photo 
             ? `<img src="${item.photo}" class="w-9 h-9 rounded-xl object-cover border border-slate-700">`
-            : `<div class="w-9 h-9 rounded-xl bg-teal-600/30 text-teal-300 font-extrabold flex items-center justify-center">${item.name.charAt(0)}</div>`;
+            : `<div class="w-9 h-9 rounded-xl bg-teal-600/30 text-teal-300 font-extrabold flex items-center justify-center">${item.name ? item.name.charAt(0) : '?'}</div>`;
 
           return `
             <div class="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between text-xs transition">
               <div class="flex items-center gap-3">
                 ${avatar}
                 <div>
-                  <p class="font-bold text-white leading-tight">${item.name}</p>
+                  <p class="font-bold text-white leading-tight">${item.name || '-'}</p>
                   <p class="text-[11px] text-slate-400">${AppTerms.get('classLabel') || 'Kelas'} ${item.class_name || '-'}</p>
                 </div>
               </div>
               <div class="text-right">
-                <span class="font-mono text-xs text-slate-300 font-semibold">${item.time_in}</span>
+                <span class="font-mono text-xs text-slate-300 font-semibold">${item.time_in || '-'}</span>
                 <div>
                   <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
-                    ${item.status}
+                    ${item.status || 'HADIR'}
                   </span>
                 </div>
               </div>
@@ -825,32 +849,22 @@
         }).join('');
       } catch (e) {}
     }
-    loadRecentScans();
 
-    // 7. Penanganan Tap Kartu RFID / Barcode Scanner
-    const rfidInput = document.getElementById('rfidInput');
-    let isProcessing = false;
-    let modalTimer = null;
-    let isManualModalOpen = false;
-
-    // Pastikan kursor selalu fokus di input RFID HANYA JIKA modal manual sedang tidak terbuka
-    window.addEventListener('click', (e) => {
-      if (isManualModalOpen) return;
-      if (document.activeElement && (document.activeElement.id === 'manualInputCode' || document.activeElement.tagName === 'INPUT')) return;
-      rfidInput.focus();
-    });
-
-    rfidInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const code = rfidInput.value.trim();
-        rfidInput.value = '';
-        if (code.length >= 3 && !isProcessing) {
-          processAttendance(code);
+    // 9. Penanganan Input RFID & Presensi Santri
+    if (rfidInput) {
+      rfidInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const code = rfidInput.value.trim();
+          rfidInput.value = '';
+          if (code && !isProcessing) {
+            processAttendance(code);
+          }
         }
-      }
-    });
+      });
+    }
 
-    // 8. Penanganan Presensi Manual dengan Nama atau NIS
+    // 10. Penanganan Presensi Manual (Nama atau NIS)
     function openManualAttendanceModal(e) {
       if (e) e.stopPropagation();
       isManualModalOpen = true;
@@ -858,12 +872,16 @@
       const card = document.getElementById('manualAttendanceCard');
       const input = document.getElementById('manualInputCode');
 
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-      card.classList.remove('scale-95');
-      card.classList.add('scale-100');
+      if (modal && card) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        card.classList.remove('scale-95');
+        card.classList.add('scale-100');
+      }
 
-      input.value = '';
-      setTimeout(() => input.focus(), 150);
+      if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 150);
+      }
       lucide.createIcons();
     }
 
@@ -872,41 +890,74 @@
       const modal = document.getElementById('manualAttendanceModal');
       const card = document.getElementById('manualAttendanceCard');
 
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      card.classList.add('scale-95');
-      card.classList.remove('scale-100');
+      if (modal && card) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        card.classList.add('scale-95');
+        card.classList.remove('scale-100');
+      }
 
-      setTimeout(() => rfidInput.focus(), 200);
+      setTimeout(() => {
+        if (rfidInput) rfidInput.focus();
+      }, 200);
     }
 
-    async function submitManualAttendance(e) {
-      if (e) e.preventDefault();
+    async function submitManualAttendance() {
       const input = document.getElementById('manualInputCode');
-      const val = (input.value || '').trim();
+      const val = (input ? input.value : '').trim();
 
       if (!val) {
-        input.focus();
+        if (input) input.focus();
         return;
       }
 
+      const btn = document.getElementById('btnSubmitManual');
+      const btnText = document.getElementById('btnSubmitManualText');
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.innerText = 'Memproses...';
+
       closeManualAttendanceModal();
       await processAttendance(val);
+
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.innerText = 'Proses Presensi';
     }
 
-    // Bridge fungsi global untuk Android MainActivity dispatchKeyEvent
+    if (manualInput) {
+      manualInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitManualAttendance();
+        }
+      });
+    }
+
+    // Window click: Refocus kursor ke input RFID hanya jika modal manual tidak terbuka
+    window.addEventListener('click', (e) => {
+      if (isManualModalOpen) return;
+      const modal = document.getElementById('manualAttendanceModal');
+      if (modal && modal.contains(e.target)) return;
+      const active = document.activeElement;
+      if (active && (active.id === 'manualInputCode' || active.tagName === 'INPUT')) return;
+      if (rfidInput) rfidInput.focus();
+    });
+
+    // Bridge fungsi global untuk Android WebView dan skrip luar
     window.processAttendance = processAttendance;
     window.handleRfidCard = processAttendance;
     window.openManualAttendanceModal = openManualAttendanceModal;
     window.closeManualAttendanceModal = closeManualAttendanceModal;
     window.submitManualAttendance = submitManualAttendance;
+    window.dismissPrayerAlert = dismissPrayerAlert;
+    window.testPrayerAlertModal = testPrayerAlertModal;
 
     async function processAttendance(code) {
+      if (!code || !code.trim()) return;
       isProcessing = true;
       try {
         const res = await fetch('/api/attendance/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
+          body: JSON.stringify({ code: code.trim() })
         });
         const data = await res.json();
         showResultModal(data);
@@ -920,7 +971,9 @@
       } finally {
         setTimeout(() => {
           isProcessing = false;
-          rfidInput.focus();
+          if (!isManualModalOpen && rfidInput) {
+            rfidInput.focus();
+          }
         }, 1200);
       }
     }
@@ -934,6 +987,7 @@
       const resBadge = document.getElementById('resBadge');
       const resPhoto = document.getElementById('resPhoto');
       const resAvatar = document.getElementById('resAvatar');
+      const resMessage = document.getElementById('resMessage');
       const waNotice = document.getElementById('kioskParentWaNotice');
 
       if (waNotice) {
@@ -951,18 +1005,20 @@
           resPhoto.src = '';
           resPhoto.classList.add('hidden');
           resAvatar.classList.remove('hidden');
-          resAvatar.innerText = data.student.name.charAt(0);
+          resAvatar.innerText = data.student.name ? data.student.name.charAt(0) : '?';
         }
       } else {
         resPhoto.src = '';
         resPhoto.classList.add('hidden');
         resAvatar.classList.remove('hidden');
-        resName.innerText = 'Kartu Tidak Dikenal';
-        resMeta.innerText = `${AppTerms.get('nisLabel') || 'NIS'} / UID Belum Terdaftar`;
+        resName.innerText = 'Data Tidak Ditemukan';
+        resMeta.innerText = 'Nama / NIS / Kartu belum terdaftar';
         resAvatar.innerText = '✕';
       }
 
-      resMessage.innerText = data.message || 'Presensi berhasil dicatat.';
+      if (resMessage) {
+        resMessage.innerText = data.message || 'Presensi berhasil dicatat.';
+      }
 
       if (data.code === 'SUCCESS') {
         if (data.status === 'HADIR') {
@@ -986,7 +1042,6 @@
         playSound('ERROR');
       }
 
-      // Animasi Buka Modal
       modal.classList.remove('opacity-0', 'pointer-events-none');
       card.classList.remove('scale-95');
       card.classList.add('scale-100');
@@ -997,6 +1052,15 @@
         card.classList.remove('scale-100');
       }, 3500);
     }
+
+    // 11. Inisialisasi Lifecycle Halaman
+    lucide.createIcons();
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadSettings();
+    loadRecentScans();
+    setInterval(loadSettings, 30000);
+    setInterval(loadRecentScans, 10000);
 
     window.addEventListener('termsChanged', () => {
       loadRecentScans();
