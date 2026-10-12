@@ -73,6 +73,10 @@ class MainActivity : AppCompatActivity() {
         isCallBannerActive = false
     }
 
+    // Track external scans from Web Kiosk
+    private var lastHandledAttendanceId = -1
+    private var isFirstDisplayLoad = true
+
     // Hardware Keyboard Wedge (USB RFID Reader) Buffer
     private val rfidBuffer = StringBuilder()
     private var lastKeyTimestamp = 0L
@@ -555,20 +559,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Update Jadwal Sholat
-        val prayerSchedule = data.prayer?.schedule
-        if (prayerSchedule != null) {
-            val prayerStr = "Subuh: ${prayerSchedule.subuh ?: "-"}  •  Dzuhur: ${prayerSchedule.dzuhur ?: "-"}  •  Ashar: ${prayerSchedule.ashar ?: "-"}  •  Maghrib: ${prayerSchedule.maghrib ?: "-"}  •  Isya: ${prayerSchedule.isya ?: "-"}"
-            binding.tvPrayerSchedule.text = prayerStr
+        // Update Jadwal Sholat Cards (6 Card Digital Signage TV)
+        updatePrayerCardsUI(data.prayer)
 
-            val nextInfo = data.prayer.nextInfo
-            if (nextInfo?.next != null && !nextInfo.formattedCountdown.isNullOrBlank()) {
-                binding.tvNextPrayerCountdown.text = "Menuju ${nextInfo.next.label ?: ""}: ${nextInfo.formattedCountdown}"
-                binding.tvNextPrayerCountdown.visibility = View.VISIBLE
-            } else {
-                binding.tvNextPrayerCountdown.visibility = View.GONE
+        // Deteksi Presensi Eksternal Baru (dari Web Kiosk / Browser Remote)
+        val latest = data.latestScan
+        if (latest != null && latest.id > 0) {
+            if (isFirstDisplayLoad) {
+                lastHandledAttendanceId = latest.id
+                isFirstDisplayLoad = false
+            } else if (latest.id > lastHandledAttendanceId) {
+                lastHandledAttendanceId = latest.id
+                renderExternalScanResult(latest, baseUrl)
             }
         }
+
+        // Update Feed Presensi Terkini Hari Ini
+        updateRecentAttendancesUI(data.recentAttendances)
 
         // Update Meja Mengaji
         val tables = data.tables
@@ -911,4 +918,230 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    // =========================================================================
+    // 6. UPDATE 6 PRAYER CARDS & LIVE COUNTDOWN (NATIVE DIGITAL SIGNAGE TV)
+    // =========================================================================
+    private fun updatePrayerCardsUI(prayer: com.alijaya.smartschool.data.model.PrayerData?) {
+        val s = prayer?.schedule
+        if (s != null) {
+            binding.tvSubuhTime.text = s.subuh ?: "--:--"
+            binding.tvSyuruqTime.text = s.terbit ?: "--:--"
+            binding.tvDzuhurTime.text = s.dzuhur ?: "--:--"
+            binding.tvAsharTime.text = s.ashar ?: "--:--"
+            binding.tvMaghribTime.text = s.maghrib ?: "--:--"
+            binding.tvIsyaTime.text = s.isya ?: "--:--"
+        }
+
+        val nextInfo = prayer?.nextInfo
+        val activeKey = nextInfo?.next?.key?.lowercase(Locale.ROOT) ?: ""
+
+        // Reset style kartu ke normal
+        binding.cardPrayerSubuh.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+        binding.cardPrayerSyuruq.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+        binding.cardPrayerDzuhur.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+        binding.cardPrayerAshar.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+        binding.cardPrayerMaghrib.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+        binding.cardPrayerIsya.setBackgroundResource(R.drawable.bg_prayer_card_normal)
+
+        // Highlight kartu sholat berikutnya
+        when (activeKey) {
+            "subuh" -> binding.cardPrayerSubuh.setBackgroundResource(R.drawable.bg_prayer_card_active)
+            "syuruq", "terbit" -> binding.cardPrayerSyuruq.setBackgroundResource(R.drawable.bg_prayer_card_active)
+            "dzuhur" -> binding.cardPrayerDzuhur.setBackgroundResource(R.drawable.bg_prayer_card_active)
+            "ashar" -> binding.cardPrayerAshar.setBackgroundResource(R.drawable.bg_prayer_card_active)
+            "maghrib" -> binding.cardPrayerMaghrib.setBackgroundResource(R.drawable.bg_prayer_card_active)
+            "isya" -> binding.cardPrayerIsya.setBackgroundResource(R.drawable.bg_prayer_card_active)
+        }
+
+        if (nextInfo?.next != null && !nextInfo.formattedCountdown.isNullOrBlank()) {
+            binding.tvNextPrayerCountdown.text = "Menuju ${nextInfo.next.label ?: ""}: ${nextInfo.formattedCountdown}"
+            binding.tvNextPrayerCountdown.visibility = View.VISIBLE
+        } else {
+            binding.tvNextPrayerCountdown.visibility = View.GONE
+        }
+    }
+
+    // =========================================================================
+    // 7. SINKRONISASI PRESENSI EKSTERNAL DARI WEB KIOSK / REMOTE BROWSER
+    // =========================================================================
+    private fun renderExternalScanResult(scan: com.alijaya.smartschool.data.model.RecentAttendanceItem, baseUrl: String) {
+        val session = SmartSchoolApplication.sessionManager
+
+        resultDismissHandler.removeCallbacksAndMessages(null)
+        dismissSecondsRemaining = 6
+
+        binding.layoutRfidStandby.visibility = View.GONE
+        binding.layoutRfidResult.visibility = View.VISIBLE
+
+        val statusText = scan.status ?: "HADIR"
+        val isLate = statusText == "TERLAMBAT"
+        binding.tvScanResultBadge.text = "✅ PRESENSI BERHASIL ($statusText)"
+        binding.tvScanResultBadge.setBackgroundResource(if (isLate) R.drawable.bg_badge_warning else R.drawable.bg_badge_success)
+        binding.tvScanResultBadge.setTextColor(Color.parseColor(if (isLate) "#FBBF24" else "#34D399"))
+
+        binding.tvStudentName.text = scan.name ?: "Santri"
+        binding.tvStudentClassNis.text = "NIS: ${scan.nis ?: "-"}  •  ${scan.className ?: "Kelas Santri"}"
+        binding.tvScanTimeStatus.text = "Waktu: ${scan.timeIn ?: "-"} WIB  •  Status: $statusText"
+
+        if (!scan.photo.isNullOrBlank()) {
+            val photoUrl = if (scan.photo.startsWith("http")) scan.photo else "$baseUrl${scan.photo}"
+            ImageLoader.load(photoUrl, binding.ivStudentPhoto, R.drawable.ic_user_avatar, circleCrop = true)
+        } else {
+            binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
+        }
+
+        if (scan.queueNumber != null && scan.queueNumber > 0) {
+            binding.layoutQueueAssigned.visibility = View.VISIBLE
+            binding.tvAssignedQueueNumber.text = "NOMOR ${String.format("%02d", scan.queueNumber)}"
+            val teacherText = if (!scan.teacherName.isNullOrBlank()) "Pengajar: ${scan.teacherName}" else "Nomor Antrian Mengaji"
+            binding.tvAssignedQueueClass.text = teacherText
+        } else {
+            binding.layoutQueueAssigned.visibility = View.GONE
+        }
+
+        val speech = if (scan.queueNumber != null && scan.queueNumber > 0) {
+            val tName = scan.teacherName ?: "Ustadz"
+            "Selamat datang ${scan.name}. Nomor antrian Anda ${scan.queueNumber}, pengajar $tName."
+        } else {
+            "Selamat datang ${scan.name}. Presensi berhasil tercatat."
+        }
+
+        if (session.isTtsEnabled()) {
+            audioHelper.playBeepAndSpeak(speech, isMale = true)
+        } else {
+            audioHelper.playBeepSuccess()
+        }
+
+        if (scan.queueNumber != null && scan.queueNumber > 0) {
+            printQueueTicketIfEnabled(
+                queueNumber = scan.queueNumber,
+                studentName = scan.name ?: "Santri",
+                nis = scan.nis ?: "-",
+                className = scan.className ?: "",
+                teacherName = scan.teacherName ?: "",
+                timeIn = scan.timeIn ?: ""
+            )
+        }
+
+        binding.tvDismissTimer.text = "Kembali ke standby dalam $dismissSecondsRemaining detik..."
+        resultDismissHandler.postDelayed(updateDismissTimerRunnable, 1000L)
+    }
+
+    // =========================================================================
+    // 8. UPDATE FEED PRESENSI TERKINI HARI INI DI KOLOM KIRI STANDBY
+    // =========================================================================
+    private fun updateRecentAttendancesUI(recentList: List<com.alijaya.smartschool.data.model.RecentAttendanceItem>?) {
+        val container = binding.layoutRecentItems
+        val countBadge = binding.tvRecentCountBadge
+        val emptyText = binding.tvEmptyRecentScans
+
+        if (recentList.isNullOrEmpty()) {
+            countBadge.text = "0 Hadir"
+            emptyText.visibility = View.VISIBLE
+            for (i in container.childCount - 1 downTo 0) {
+                val child = container.getChildAt(i)
+                if (child.id != R.id.tvEmptyRecentScans) {
+                    container.removeViewAt(i)
+                }
+            }
+            return
+        }
+
+        countBadge.text = "${recentList.size} Hadir"
+        emptyText.visibility = View.GONE
+
+        // Bersihkan item lama selain empty placeholder
+        for (i in container.childCount - 1 downTo 0) {
+            val child = container.getChildAt(i)
+            if (child.id != R.id.tvEmptyRecentScans) {
+                container.removeViewAt(i)
+            }
+        }
+
+        val displayLimit = minOf(4, recentList.size)
+        for (i in 0 until displayLimit) {
+            val item = recentList[i]
+            val itemView = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(10.dpToPx(), 6.dpToPx(), 10.dpToPx(), 6.dpToPx())
+                val params = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 3.dpToPx(), 0, 3.dpToPx())
+                }
+                layoutParams = params
+                setBackgroundColor(Color.parseColor("#0F172A"))
+            }
+
+            // Avatar initial
+            val tvAvatar = android.widget.TextView(this).apply {
+                val p = android.widget.LinearLayout.LayoutParams(28.dpToPx(), 28.dpToPx())
+                layoutParams = p
+                gravity = android.view.Gravity.CENTER
+                setBackgroundColor(Color.parseColor("#065F46"))
+                setTextColor(Color.parseColor("#34D399"))
+                textSize = 11f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                text = item.name?.take(1) ?: "?"
+            }
+            itemView.addView(tvAvatar)
+
+            // Info Santri
+            val infoLayout = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                val p = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = 8.dpToPx()
+                }
+                layoutParams = p
+            }
+
+            val tvName = android.widget.TextView(this).apply {
+                text = item.name ?: "-"
+                setTextColor(Color.WHITE)
+                textSize = 11f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            }
+            val tvClass = android.widget.TextView(this).apply {
+                val qText = if (item.queueNumber != null && item.queueNumber > 0) " • Antrian #${item.queueNumber}" else ""
+                text = "${item.className ?: "-"}$qText"
+                setTextColor(Color.parseColor("#94A3B8"))
+                textSize = 9.5f
+                maxLines = 1
+            }
+            infoLayout.addView(tvName)
+            infoLayout.addView(tvClass)
+            itemView.addView(infoLayout)
+
+            // Jam & Status
+            val statusLayout = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.END
+            }
+            val tvTime = android.widget.TextView(this).apply {
+                text = item.timeIn ?: ""
+                setTextColor(Color.parseColor("#CBD5E1"))
+                textSize = 9.5f
+                typeface = android.graphics.Typeface.MONOSPACE
+            }
+            val tvStatusBadge = android.widget.TextView(this).apply {
+                val isLate = item.status == "TERLAMBAT"
+                text = item.status ?: "HADIR"
+                setTextColor(if (isLate) Color.parseColor("#FBBF24") else Color.parseColor("#34D399"))
+                textSize = 8.5f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            statusLayout.addView(tvTime)
+            statusLayout.addView(tvStatusBadge)
+            itemView.addView(statusLayout)
+
+            container.addView(itemView)
+        }
+    }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 }

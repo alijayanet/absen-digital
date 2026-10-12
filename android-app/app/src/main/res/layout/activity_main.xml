@@ -111,51 +111,242 @@
 
     </LinearLayout>
 
-    <!-- 2. Prayer Times Strip (Jadwal Sholat 5 Waktu) -->
+    <!-- 2. Prayer Times Bar (Jadwal Sholat 6 Card / Badges Elegan Digital Signage TV) -->
     <LinearLayout
         android:id="@+id/prayerBar"
         android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:background="#131D38"
+        android:layout_height="52dp"
+        android:background="#0B132B"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="20dp">
+        android:paddingHorizontal="16dp">
 
-        <ImageView
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@drawable/ic_mosque"
-            app:tint="#10B981" />
-
-        <TextView
+        <!-- Kiri: Icon Masjid & Info Countdown Sholat Berikutnya -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Jadwal Sholat:"
-            android:textColor="#34D399"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvPrayerSchedule"
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_mosque"
+                app:tint="#10B981" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="JADWAL SHOLAT • KEMENAG"
+                    android:textColor="#94A3B8"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvNextPrayerCountdown"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Menuju Dzuhur: -01:15:20"
+                    android:textColor="#34D399"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Spacer Fleksibel -->
+        <View
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:singleLine="true"
-            android:text="Subuh: 04:13  •  Dzuhur: 11:37  •  Ashar: 14:38  •  Maghrib: 17:43  •  Isya: 18:53"
-            android:textColor="#E2E8F0"
-            android:textSize="12sp" />
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
-        <TextView
-            android:id="@+id/tvNextPrayerCountdown"
+        <!-- Kanan: 6 Card / Badge Sholat (Subuh, Syuruq, Dzuhur, Ashar, Maghrib, Isya) -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Menuju Subuh: 09:12:38"
-            android:textColor="#FBBF24"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Card Subuh -->
+            <LinearLayout
+                android:id="@+id/cardPrayerSubuh"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SUBUH"
+                    android:textColor="#94A3B8"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSubuhTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="@android:color/white"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Card Syuruq -->
+            <LinearLayout
+                android:id="@+id/cardPrayerSyuruq"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SYURUQ"
+                    android:textColor="#F59E0B"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSyuruqTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="#FDE68A"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Card Dzuhur -->
+            <LinearLayout
+                android:id="@+id/cardPrayerDzuhur"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="DZUHUR"
+                    android:textColor="#94A3B8"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDzuhurTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="@android:color/white"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Card Ashar -->
+            <LinearLayout
+                android:id="@+id/cardPrayerAshar"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ASHAR"
+                    android:textColor="#94A3B8"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAsharTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="@android:color/white"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Card Maghrib -->
+            <LinearLayout
+                android:id="@+id/cardPrayerMaghrib"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MAGHRIB"
+                    android:textColor="#94A3B8"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvMaghribTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="@android:color/white"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Card Isya -->
+            <LinearLayout
+                android:id="@+id/cardPrayerIsya"
+                android:layout_width="66dp"
+                android:layout_height="38dp"
+                android:layout_marginHorizontal="2dp"
+                android:background="@drawable/bg_prayer_card_normal"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingVertical="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ISYA"
+                    android:textColor="#94A3B8"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvIsyaTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="@android:color/white"
+                    android:textSize="12.5sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
     </LinearLayout>
 
     <!-- 3. Active Queue Call Banner (Animated / Prominent Notification) -->
@@ -277,59 +468,107 @@
                     android:id="@+id/layoutRfidStandby"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="vertical">
 
-                    <ImageView
-                        android:id="@+id/ivRfidPulse"
-                        android:layout_width="96dp"
-                        android:layout_height="96dp"
-                        android:src="@drawable/ic_rfid_card"
-                        app:tint="#10B981" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="TEMPELKAN KARTU RFID"
-                        android:textColor="@android:color/white"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:text="Dekatkan kartu santri ke reader USB di samping layar"
-                        android:textColor="#94A3B8"
-                        android:textSize="13sp" />
-
+                    <!-- Kartu Standby Reader USB / Kiosk Mini -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
                         android:background="#0F172A"
+                        android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="12dp">
+                        android:paddingVertical="12dp"
+                        android:paddingHorizontal="10dp">
+
+                        <ImageView
+                            android:id="@+id/ivRfidPulse"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:src="@drawable/ic_rfid_card"
+                            app:tint="#10B981" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="💡 Otomatisasi Presensi:"
-                            android:textColor="#FBBF24"
-                            android:textSize="12sp"
+                            android:layout_marginTop="6dp"
+                            android:text="TEMPELKAN KARTU RFID"
+                            android:textColor="@android:color/white"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="• Langsung tercatat Hadir ke sistem sekolah\n• Mendapatkan nomor antrian mengaji otomatis\n• 100% tanpa pop-up keyboard virtual di layar"
-                            android:textColor="#CBD5E1"
+                            android:layout_marginTop="2dp"
+                            android:gravity="center"
+                            android:text="Reader USB Standby • Kiosk &amp; Web Aktif"
+                            android:textColor="#94A3B8"
                             android:textSize="11sp" />
                     </LinearLayout>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="8dp"
+                        android:background="#1E293B" />
+
+                    <!-- Header Presensi Terkini Hari Ini -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="PRESENSI TERKINI HARI INI"
+                            android:textColor="#34D399"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvRecentCountBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_badge_success"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:text="0 Hadir"
+                            android:textColor="#34D399"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Container Feed Presensi Terkini -->
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_weight="1"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/layoutRecentItems"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Empty text placeholder -->
+                            <TextView
+                                android:id="@+id/tvEmptyRecentScans"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:paddingVertical="24dp"
+                                android:text="Belum ada santri yang presensi hari ini"
+                                android:textColor="#64748B"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </ScrollView>
+
                 </LinearLayout>
 
                 <!-- Container 2: Scan Result Mode (Card Pop-up / Overlay) -->

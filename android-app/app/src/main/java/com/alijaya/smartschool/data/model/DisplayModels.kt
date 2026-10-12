@@ -14,7 +14,22 @@ data class DisplayResponse(
     val announcement: String? = null,
     val tables: List<QueueTable>? = null,
     val lastCall: QueueCallItem? = null,
-    val prayer: PrayerData? = null
+    val prayer: PrayerData? = null,
+    val recentAttendances: List<RecentAttendanceItem>? = null,
+    val latestScan: RecentAttendanceItem? = null
+)
+
+data class RecentAttendanceItem(
+    val id: Int = 0,
+    @SerializedName("time_in") val timeIn: String? = null,
+    val status: String? = null,
+    @SerializedName("late_minutes") val lateMinutes: Int = 0,
+    val name: String? = null,
+    @SerializedName("class_name") val className: String? = null,
+    val nis: String? = null,
+    val photo: String? = null,
+    @SerializedName("queue_number") val queueNumber: Int? = null,
+    @SerializedName("teacher_name") val teacherName: String? = null
 )
 
 data class QueueTable(

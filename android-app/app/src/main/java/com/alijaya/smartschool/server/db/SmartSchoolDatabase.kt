@@ -656,10 +656,13 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val arr = JSONArray()
         val query = """
-            SELECT a.id, a.time_in, a.status, a.late_minutes, s.name, c.name as class_name, s.nis, s.photo
+            SELECT a.id, a.time_in, a.status, a.late_minutes, s.name, c.name as class_name, s.nis, s.photo,
+                   q.queue_number, COALESCE(t.name, c.name, 'Ustadz') as teacher_name
             FROM attendances a
             JOIN students s ON a.student_id = s.id
             LEFT JOIN classes c ON s.class_id = c.id
+            LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN daily_queues q ON q.student_id = s.id AND q.date = a.date
             WHERE a.date = ?
             ORDER BY a.id DESC
             LIMIT ?
@@ -674,8 +677,12 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     put("late_minutes", it.getInt(3))
                     put("name", it.getString(4))
                     put("class_name", it.getString(5) ?: "-")
-                    put("nis", it.getString(6))
+                    put("nis", it.getString(6) ?: "-")
                     put("photo", it.getString(7) ?: "")
+                    if (!it.isNull(8)) {
+                        put("queue_number", it.getInt(8))
+                    }
+                    put("teacher_name", it.getString(9) ?: "Ustadz")
                 }
                 arr.put(obj)
             }
@@ -960,6 +967,16 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                 if (it.moveToFirst()) {
                     if (targetClassId <= 0) targetClassId = it.getInt(0)
                     if (!it.isNull(1)) targetTeacherId = it.getInt(1)
+                }
+            }
+        }
+
+        // Jika guru belum ditemukan, hubungkan otomatis ke guru/meja aktif pertama agar selalu muncul di TV
+        if (targetTeacherId == null || targetTeacherId <= 0) {
+            val firstTeacher = readableDatabase.rawQuery("SELECT id FROM teachers WHERE is_active = 1 ORDER BY id ASC LIMIT 1", null)
+            firstTeacher.use {
+                if (it.moveToFirst()) {
+                    targetTeacherId = it.getInt(0)
                 }
             }
         }
@@ -1536,6 +1553,10 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val iht = getSetting("prayer_ihtiyat", "2").toIntOrNull() ?: 2
         val prayerObj = com.alijaya.smartschool.server.prayer.PrayerCalculator.calculateTodayPrayer(lat, lng, tz, iht)
 
+        // 5. Presensi Terkini Hari Ini (Live Display Feed)
+        val recentScansArr = getRecentScans(10)
+        val latestScanObj = if (recentScansArr.length() > 0) recentScansArr.getJSONObject(0) else null
+
         return JSONObject().apply {
             put("success", true)
             put("date", today)
@@ -1549,6 +1570,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             put("tables", tablesArr)
             put("lastCall", lastCallObj ?: JSONObject.NULL)
             put("prayer", prayerObj)
+            put("recentAttendances", recentScansArr)
+            put("latestScan", latestScanObj ?: JSONObject.NULL)
         }
     }
 }
