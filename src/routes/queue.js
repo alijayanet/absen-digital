@@ -199,4 +199,25 @@ router.post('/api/queue/action', isAuthenticated, (req, res) => {
   }
 });
 
+/**
+ * 6. API Publik Remote TV / APK Kiosk (Panggil Langsung via Remote TV / D-Pad Navigasi)
+ */
+router.post(['/api/queue/remote-call', '/api/queue/action-public'], (req, res) => {
+  try {
+    let { action, classId, deskId } = req.body;
+    const targetDesk = parseInt(classId || deskId || 1, 10);
+    const act = (action || 'NEXT').toUpperCase();
+
+    if (act === 'NEXT') {
+      const result = queueService.callNext(targetDesk);
+      return res.json(result);
+    }
+
+    return res.status(400).json({ success: false, message: 'Aksi remote tidak valid' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
+

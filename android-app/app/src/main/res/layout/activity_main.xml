@@ -724,6 +724,19 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/tvRemoteControlHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_badge_primary"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="🎮 Remote TV: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3  •  [▼] Meja 4"
+                        android:textColor="#38BDF8"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:id="@+id/tvTotalTablesCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -741,6 +754,22 @@
                     android:layout_height="1dp"
                     android:layout_marginVertical="10dp"
                     android:background="#1E293B" />
+
+                <!-- Remote Action Visual Feedback Banner / Toast -->
+                <TextView
+                    android:id="@+id/tvRemoteFeedbackToast"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/bg_badge_primary"
+                    android:gravity="center"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="8dp"
+                    android:text="📢 Remote TV: Memanggil antrian santri..."
+                    android:textColor="#38BDF8"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <!-- RecyclerView of Tables -->
                 <androidx.recyclerview.widget.RecyclerView

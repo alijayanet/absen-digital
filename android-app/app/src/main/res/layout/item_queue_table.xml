@@ -52,12 +52,26 @@
                     android:textSize="10.5sp" />
             </LinearLayout>
 
+            <!-- Remote Key Badge -->
+            <TextView
+                android:id="@+id/tvRemoteKeyBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_badge_primary"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2.5dp"
+                android:text="🎮 [◀] Kiri"
+                android:textColor="#38BDF8"
+                android:textSize="9.5sp"
+                android:textStyle="bold" />
+
             <!-- Status Indicator Badge -->
             <TextView
                 android:id="@+id/tvTableStatusBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="2dp"
                 android:background="@drawable/bg_badge_success"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="2.5dp"

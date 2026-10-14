@@ -48,6 +48,15 @@ class QueueTableAdapter : RecyclerView.Adapter<QueueTableAdapter.ViewHolder>() {
             binding.tvTableName.text = tableTitle
             binding.tvTeacherName.text = "Pengajar: ${table.teacherName ?: table.className ?: "Ustadz / Ustadzah"}"
 
+            val remoteKeyLabel = when (index) {
+                0 -> "🎮 [◀] Kiri"
+                1 -> "🎮 [▶] Kanan"
+                2 -> "🎮 [▲] Atas"
+                3 -> "🎮 [▼] Bawah"
+                else -> "🎮 Remote #${index + 1}"
+            }
+            binding.tvRemoteKeyBadge.text = remoteKeyLabel
+
             val current = table.current
             if (current != null) {
                 binding.layoutCurrentServing.visibility = View.VISIBLE

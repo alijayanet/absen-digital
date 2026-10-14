@@ -74,6 +74,14 @@ class MainActivity : AppCompatActivity() {
         isCallBannerActive = false
     }
 
+    // Daftar Meja Antrian Aktif & Kontrol Remote TV Fisik
+    private var activeTables: List<com.alijaya.smartschool.data.model.QueueTable> = emptyList()
+    private var lastRemoteCallTimestamp = 0L
+    private val remoteFeedbackHandler = Handler(Looper.getMainLooper())
+    private val hideRemoteFeedbackRunnable = Runnable {
+        binding.tvRemoteFeedbackToast.visibility = View.GONE
+    }
+
     // Track external scans from Web Kiosk
     private var lastHandledAttendanceId = -1
     private var isFirstDisplayLoad = true
@@ -149,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         bufferResetHandler.removeCallbacks(resetBufferRunnable)
         resultDismissHandler.removeCallbacksAndMessages(null)
         callBannerHandler.removeCallbacksAndMessages(null)
+        remoteFeedbackHandler.removeCallbacksAndMessages(null)
         audioHelper.release()
     }
 
@@ -248,6 +257,52 @@ class MainActivity : AppCompatActivity() {
             if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {
                 showServerSettingsDialog()
                 return true
+            }
+
+            // Remote TV D-Pad Direct Call untuk Memanggil Antrian Meja Mengaji
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    triggerRemoteDeskCall(0) // Meja 1
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    triggerRemoteDeskCall(1) // Meja 2
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    triggerRemoteDeskCall(2) // Meja 3
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    triggerRemoteDeskCall(3) // Meja 4
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER -> {
+                    triggerRemoteAutoCall() // Panggil meja yang antriannya sedang menunggu
+                    return true
+                }
+            }
+
+            // Dukungan tombol angka pada remote TV fisik (hanya aktif jika tidak sedang scan RFID)
+            if (rfidBuffer.isEmpty()) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> {
+                        triggerRemoteDeskCall(0)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> {
+                        triggerRemoteDeskCall(1)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> {
+                        triggerRemoteDeskCall(2)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> {
+                        triggerRemoteDeskCall(3)
+                        return true
+                    }
+                }
             }
 
             // Enter menandakan akhir dari transmisi kartu RFID reader USB
@@ -606,10 +661,20 @@ class MainActivity : AppCompatActivity() {
 
         // Update Meja Mengaji
         val tables = data.tables
+        activeTables = tables ?: emptyList()
         if (!tables.isNullOrEmpty()) {
             binding.tvEmptyTables.visibility = View.GONE
             binding.rvQueueTables.visibility = View.VISIBLE
             binding.tvTotalTablesCount.text = "${tables.size} Meja Terdaftar"
+
+            // Sesuaikan label hint remote TV sesuai jumlah meja yang aktif
+            binding.tvRemoteControlHint.text = when (tables.size) {
+                1 -> "🎮 Remote: [◀ / OK] Panggil Meja 1"
+                2 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2"
+                3 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3"
+                else -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3  •  [▼] Meja 4"
+            }
+            binding.tvRemoteControlHint.visibility = View.VISIBLE
 
             // Tampilkan card meja secara berdampingan (1, 2, 3, 4 meja side-by-side)
             updateTableLayoutManager(tables.size)
@@ -618,6 +683,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.tvEmptyTables.visibility = View.VISIBLE
             binding.rvQueueTables.visibility = View.GONE
+            binding.tvRemoteControlHint.visibility = View.GONE
             binding.tvEmptyTables.text = "Belum ada meja antrian mengaji yang aktif hari ini"
             binding.tvTotalTablesCount.text = "0 Meja"
         }
@@ -1214,6 +1280,131 @@ class MainActivity : AppCompatActivity() {
             itemView.addView(statusLayout)
 
             container.addView(itemView)
+        }
+    }
+
+    // =========================================================================
+    // 9. REMOTE TV DIRECT CALL HANDLER (1-CLICK D-PAD CALLING MEJA MENGAJI)
+    // =========================================================================
+    private fun showRemoteFeedbackToast(message: String, isSuccess: Boolean) {
+        remoteFeedbackHandler.removeCallbacks(hideRemoteFeedbackRunnable)
+        binding.tvRemoteFeedbackToast.text = message
+        val bgRes = if (isSuccess) R.drawable.bg_badge_primary else R.drawable.bg_badge_warning
+        val textColor = if (isSuccess) Color.parseColor("#38BDF8") else Color.parseColor("#FBBF24")
+        binding.tvRemoteFeedbackToast.setBackgroundResource(bgRes)
+        binding.tvRemoteFeedbackToast.setTextColor(textColor)
+        binding.tvRemoteFeedbackToast.visibility = View.VISIBLE
+        remoteFeedbackHandler.postDelayed(hideRemoteFeedbackRunnable, 4000L)
+    }
+
+    private fun triggerRemoteAutoCall() {
+        if (activeTables.isEmpty()) {
+            showRemoteFeedbackToast("⚠️ Belum ada meja mengaji yang aktif saat ini.", isSuccess = false)
+            return
+        }
+        // Cari meja pertama yang antriannya sedang menunggu (waiting > 0)
+        val targetIndex = activeTables.indexOfFirst { table ->
+            (table.stats?.waiting ?: 0) > 0 || !table.nextWaiting.isNullOrEmpty()
+        }
+        if (targetIndex >= 0) {
+            triggerRemoteDeskCall(targetIndex)
+        } else {
+            // Default panggil Meja 1 jika semua meja berstatus kosong
+            triggerRemoteDeskCall(0)
+        }
+    }
+
+    private fun triggerRemoteDeskCall(tableIndex: Int) {
+        val now = System.currentTimeMillis()
+        if (now - lastRemoteCallTimestamp < 1800L) {
+            return // Debounce tombol remote TV agar tidak tertekan ganda tanpa sengaja
+        }
+        lastRemoteCallTimestamp = now
+
+        if (activeTables.isEmpty()) {
+            showRemoteFeedbackToast("⚠️ Belum ada meja antrian mengaji yang aktif saat ini.", isSuccess = false)
+            return
+        }
+
+        // Validasi ketersediaan meja sesuai nomor index
+        if (tableIndex >= activeTables.size) {
+            showRemoteFeedbackToast("⚠️ Meja ${tableIndex + 1} belum terdaftar (Hanya ada ${activeTables.size} meja aktif).", isSuccess = false)
+            return
+        }
+
+        val targetTable = activeTables[tableIndex]
+        val deskId = targetTable.teacherId ?: targetTable.classId ?: (tableIndex + 1)
+        val deskName = targetTable.tableName ?: if (!targetTable.teacherName.isNullOrBlank()) "Meja ${targetTable.teacherName}" else "Meja ${tableIndex + 1}"
+
+        showRemoteFeedbackToast("📢 [Remote TV] Memanggil antrian santri untuk $deskName...", isSuccess = true)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            var handledLocally = false
+            try {
+                // 1. Eksekusi lokal database jika aplikasi berjalan Standalone (KioskHttpServer aktif)
+                val db = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this@MainActivity)
+                val localResult = db.callNextQueue(deskId)
+                if (localResult.optBoolean("success", false)) {
+                    handledLocally = true
+                    withContext(Dispatchers.Main) {
+                        SmartSchoolApplication.notifyQueueChanged()
+                    }
+                }
+            } catch (_: Exception) {}
+
+            try {
+                // 2. Eksekusi ke Server Node.js / Server Base URL Kiosk
+                val session = SmartSchoolApplication.sessionManager
+                val baseUrl = session.getServerBaseUrl().trimEnd('/')
+                val jsonPayload = org.json.JSONObject().apply {
+                    put("action", "NEXT")
+                    put("classId", deskId)
+                    put("deskId", deskId)
+                }.toString()
+
+                val requestBody = jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType())
+
+                val primaryRequest = Request.Builder()
+                    .url("$baseUrl/api/queue/remote-call")
+                    .post(requestBody)
+                    .header("User-Agent", "SmartSchool-NativeTV/1.1.0")
+                    .build()
+
+                val response = try {
+                    httpClient.newCall(primaryRequest).execute()
+                } catch (_: Exception) {
+                    val fallbackRequest = Request.Builder()
+                        .url("$baseUrl/api/queue/action")
+                        .post(jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                        .header("User-Agent", "SmartSchool-NativeTV/1.1.0")
+                        .build()
+                    httpClient.newCall(fallbackRequest).execute()
+                }
+
+                val bodyStr = response.body?.string() ?: ""
+                val jsonRes = try { org.json.JSONObject(bodyStr) } catch (_: Exception) { org.json.JSONObject() }
+                val isSuccess = jsonRes.optBoolean("success", handledLocally)
+                val serverMsg = jsonRes.optString("message", "")
+
+                withContext(Dispatchers.Main) {
+                    if (isSuccess) {
+                        showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
+                        fetchDisplayData()
+                    } else {
+                        val msg = if (serverMsg.isNotBlank()) serverMsg else "Semua antrian santri di $deskName sudah dipanggil."
+                        showRemoteFeedbackToast("ℹ️ $msg", isSuccess = false)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    if (handledLocally) {
+                        showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
+                        fetchDisplayData()
+                    } else {
+                        showRemoteFeedbackToast("⚠️ Gagal memanggil antrian: ${e.message ?: "Koneksi terputus"}", isSuccess = false)
+                    }
+                }
+            }
         }
     }
 

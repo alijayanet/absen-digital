@@ -61,7 +61,7 @@ class KioskHttpServer(
                 uri == "/api/dashboard/stats" && method == Method.GET -> handleDashboardStats()
                 (uri == "/api/display-data" || uri == "/api/queue/display-data") && method == Method.GET -> handleGetDisplayData()
                 uri == "/api/queue/desk-data" && method == Method.GET -> handleGetQueueDeskData(session)
-                uri == "/api/queue/action" && method == Method.POST -> handleQueueAction(session)
+                (uri == "/api/queue/action" || uri == "/api/queue/remote-call" || uri == "/api/queue/action-public") && method == Method.POST -> handleQueueAction(session)
 
                 // 3. API Data Santri / Siswa (CRUD + Import/Export)
                 uri == "/api/students" && method == Method.GET -> handleGetStudents()
@@ -277,8 +277,8 @@ class KioskHttpServer(
 
     private fun handleQueueAction(session: IHTTPSession): Response {
         val body = parseRequestBody(session)
-        val action = body.optString("action", "").uppercase()
-        val classId = body.optInt("classId", 1)
+        val action = body.optString("action", "NEXT").uppercase()
+        val classId = if (body.has("classId")) body.optInt("classId", 1) else body.optInt("deskId", 1)
         val queueId = body.optInt("queueId", 0)
 
         val result = when (action) {
