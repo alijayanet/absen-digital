@@ -1380,68 +1380,77 @@ class MainActivity : AppCompatActivity() {
         showRemoteFeedbackToast("📢 [Remote TV] Memanggil antrian santri untuk $deskName...", isSuccess = true)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            var handledLocally = false
-            try {
-                // 1. Eksekusi lokal database jika aplikasi berjalan Standalone (KioskHttpServer aktif)
-                val db = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this@MainActivity)
-                val localResult = db.callNextQueue(deskId)
-                if (localResult.optBoolean("success", false)) {
-                    handledLocally = true
+            val session = SmartSchoolApplication.sessionManager
+            val baseUrl = session.getServerBaseUrl().trimEnd('/')
+            val isStandalone = session.isStandaloneMode() || baseUrl.contains("127.0.0.1") || baseUrl.contains("localhost")
+
+            if (isStandalone) {
+                // 1. Mode Standalone: Eksekusi LANGSUNG ke database SQLite lokal (TIDAK kirim HTTP loopback agar tidak double call)
+                try {
+                    val db = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this@MainActivity)
+                    val result = db.callNextQueue(deskId)
+                    val isSuccess = result.optBoolean("success", false)
+                    val serverMsg = result.optString("message", "")
+
                     withContext(Dispatchers.Main) {
-                        SmartSchoolApplication.notifyQueueChanged()
+                        if (isSuccess) {
+                            showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
+                            SmartSchoolApplication.notifyQueueChanged()
+                            fetchDisplayData()
+                        } else {
+                            val msg = if (serverMsg.isNotBlank()) serverMsg else "Semua antrian santri di $deskName sudah dipanggil."
+                            showRemoteFeedbackToast("ℹ️ $msg", isSuccess = false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        showRemoteFeedbackToast("⚠️ Gagal memanggil antrian: ${e.message}", isSuccess = false)
                     }
                 }
-            } catch (_: Exception) {}
+            } else {
+                // 2. Mode Client-Server: Kirim HTTP POST ke server Node.js eksternal
+                try {
+                    val jsonPayload = org.json.JSONObject().apply {
+                        put("action", "NEXT")
+                        put("classId", deskId)
+                        put("deskId", deskId)
+                    }.toString()
 
-            try {
-                // 2. Eksekusi ke Server Node.js / Server Base URL Kiosk
-                val session = SmartSchoolApplication.sessionManager
-                val baseUrl = session.getServerBaseUrl().trimEnd('/')
-                val jsonPayload = org.json.JSONObject().apply {
-                    put("action", "NEXT")
-                    put("classId", deskId)
-                    put("deskId", deskId)
-                }.toString()
+                    val requestBody = jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType())
 
-                val requestBody = jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType())
-
-                val primaryRequest = Request.Builder()
-                    .url("$baseUrl/api/queue/remote-call")
-                    .post(requestBody)
-                    .header("User-Agent", "SmartSchool-NativeTV/1.1.0")
-                    .build()
-
-                val response = try {
-                    httpClient.newCall(primaryRequest).execute()
-                } catch (_: Exception) {
-                    val fallbackRequest = Request.Builder()
-                        .url("$baseUrl/api/queue/action")
-                        .post(jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                    val primaryRequest = Request.Builder()
+                        .url("$baseUrl/api/queue/remote-call")
+                        .post(requestBody)
                         .header("User-Agent", "SmartSchool-NativeTV/1.1.0")
                         .build()
-                    httpClient.newCall(fallbackRequest).execute()
-                }
 
-                val bodyStr = response.body?.string() ?: ""
-                val jsonRes = try { org.json.JSONObject(bodyStr) } catch (_: Exception) { org.json.JSONObject() }
-                val isSuccess = jsonRes.optBoolean("success", handledLocally)
-                val serverMsg = jsonRes.optString("message", "")
-
-                withContext(Dispatchers.Main) {
-                    if (isSuccess) {
-                        showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
-                        fetchDisplayData()
-                    } else {
-                        val msg = if (serverMsg.isNotBlank()) serverMsg else "Semua antrian santri di $deskName sudah dipanggil."
-                        showRemoteFeedbackToast("ℹ️ $msg", isSuccess = false)
+                    val response = try {
+                        httpClient.newCall(primaryRequest).execute()
+                    } catch (_: Exception) {
+                        val fallbackRequest = Request.Builder()
+                            .url("$baseUrl/api/queue/action")
+                            .post(jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                            .header("User-Agent", "SmartSchool-NativeTV/1.1.0")
+                            .build()
+                        httpClient.newCall(fallbackRequest).execute()
                     }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    if (handledLocally) {
-                        showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
-                        fetchDisplayData()
-                    } else {
+
+                    val bodyStr = response.body?.string() ?: ""
+                    val jsonRes = try { org.json.JSONObject(bodyStr) } catch (_: Exception) { org.json.JSONObject() }
+                    val isSuccess = jsonRes.optBoolean("success", false)
+                    val serverMsg = jsonRes.optString("message", "")
+
+                    withContext(Dispatchers.Main) {
+                        if (isSuccess) {
+                            showRemoteFeedbackToast("📢 Berhasil memanggil antrian $deskName", isSuccess = true)
+                            fetchDisplayData()
+                        } else {
+                            val msg = if (serverMsg.isNotBlank()) serverMsg else "Semua antrian santri di $deskName sudah dipanggil."
+                            showRemoteFeedbackToast("ℹ️ $msg", isSuccess = false)
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
                         showRemoteFeedbackToast("⚠️ Gagal memanggil antrian: ${e.message ?: "Koneksi terputus"}", isSuccess = false)
                     }
                 }

@@ -1285,20 +1285,46 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         """
         writableDatabase.execSQL(finishSql, arrayOf(timeNow, tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
 
-        // Cari antrian urutan teratas yang WAITING
-        val nextSql = """
-            SELECT id, queue_number, student_id 
-            FROM daily_queues 
-            WHERE ((teacher_id = ? AND ? > 0) OR (teacher_id IS NULL AND class_id = ?))
-              AND date = ? 
-              AND status = 'WAITING'
-            ORDER BY queue_number ASC
-            LIMIT 1
-        """
+        val isPerTeacher = getSetting("queue_per_teacher", "1") == "1"
+
         var nextId = 0
-        val nextCursor = readableDatabase.rawQuery(nextSql, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
-        nextCursor.use {
-            if (it.moveToFirst()) nextId = it.getInt(0)
+        if (isPerTeacher && tIdVal > 0) {
+            // 1. Cari santri urutan teratas yang WAITING di meja ustadz ini
+            val nextSql = """
+                SELECT id, queue_number, student_id 
+                FROM daily_queues 
+                WHERE ((teacher_id = ? AND ? > 0) OR (teacher_id IS NULL AND class_id = ?))
+                  AND date = ? 
+                  AND status = 'WAITING'
+                ORDER BY queue_number ASC
+                LIMIT 1
+            """
+            val nextCursor = readableDatabase.rawQuery(nextSql, arrayOf(tIdVal.toString(), tIdVal.toString(), targetClassId.toString(), date))
+            nextCursor.use {
+                if (it.moveToFirst()) nextId = it.getInt(0)
+            }
+        }
+
+        // 2. Fallback: jika mode gabungan ATAU jika antrian khusus ustadz ini kosong namun masih ada santri yang menunggu hari ini
+        if (nextId <= 0) {
+            val fallbackSql = """
+                SELECT id, queue_number, student_id 
+                FROM daily_queues 
+                WHERE date = ? AND status = 'WAITING'
+                ORDER BY queue_number ASC
+                LIMIT 1
+            """
+            val fbCursor = readableDatabase.rawQuery(fallbackSql, arrayOf(date))
+            fbCursor.use {
+                if (it.moveToFirst()) nextId = it.getInt(0)
+            }
+            if (nextId > 0 && tIdVal > 0) {
+                // Hubungkan santri ini ke ustadz yang memanggilnya
+                writableDatabase.execSQL(
+                    "UPDATE daily_queues SET teacher_id = ? WHERE id = ?",
+                    arrayOf(tIdVal.toString(), nextId.toString())
+                )
+            }
         }
 
         if (nextId <= 0) {

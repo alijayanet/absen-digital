@@ -449,15 +449,35 @@ class QueueService {
         AND status IN ('CALLING', 'SERVING')
     `).run(teacherId, teacherId, classId, date);
 
-    // Cari santri urutan teratas yang sedang WAITING
-    const nextStudent = db.prepare(`
-      SELECT * FROM daily_queues 
-      WHERE ((teacher_id = ? AND ? IS NOT NULL) OR (teacher_id IS NULL AND class_id = ?))
-        AND date = ? 
-        AND status = 'WAITING'
-      ORDER BY queue_number ASC
-      LIMIT 1
-    `).get(teacherId, teacherId, classId, date);
+    const isPerTeacher = (db.prepare("SELECT value FROM settings WHERE key = 'queue_per_teacher'").get()?.value || '1') === '1';
+
+    let nextStudent = null;
+    if (isPerTeacher && teacherId) {
+      // 1. Cari santri urutan teratas yang sedang WAITING di meja ustadz ini
+      nextStudent = db.prepare(`
+        SELECT * FROM daily_queues 
+        WHERE ((teacher_id = ? AND ? IS NOT NULL) OR (teacher_id IS NULL AND class_id = ?))
+          AND date = ? 
+          AND status = 'WAITING'
+        ORDER BY queue_number ASC
+        LIMIT 1
+      `).get(teacherId, teacherId, classId, date);
+    }
+
+    // 2. Fallback: jika mode gabungan ATAU jika antrian ustadz ini kosong namun masih ada santri lain yang WAITING
+    if (!nextStudent) {
+      nextStudent = db.prepare(`
+        SELECT * FROM daily_queues 
+        WHERE date = ? AND status = 'WAITING'
+        ORDER BY queue_number ASC
+        LIMIT 1
+      `).get(date);
+
+      if (nextStudent && teacherId) {
+        db.prepare('UPDATE daily_queues SET teacher_id = ? WHERE id = ?').run(teacherId, nextStudent.id);
+        nextStudent.teacher_id = teacherId;
+      }
+    }
 
     if (!nextStudent) {
       return { success: false, message: 'Semua antrian santri yang menunggu sudah dipanggil.' };
