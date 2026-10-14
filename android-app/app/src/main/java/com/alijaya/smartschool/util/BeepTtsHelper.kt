@@ -526,8 +526,19 @@ class BeepTtsHelper(
                 }
             }
 
+            // Validasi file audio: pastikan bukan halaman captcha HTML dari Google
+            if (audioFile.exists() && audioFile.length() >= 4L) {
+                val firstByte = try { audioFile.inputStream().use { it.read() } } catch (_: Throwable) { -1 }
+                if (firstByte == '<'.code) {
+                    Log.w(TAG, "Downloaded file is HTML captcha/error from Google, deleting...")
+                    try { audioFile.delete() } catch (_: Throwable) {}
+                    return@withContext false
+                }
+            }
+
             if (isAudioCancelled) return@withContext false
 
+            var isPlayError = false
             mp = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -545,7 +556,9 @@ class BeepTtsHelper(
             mp.setOnCompletionListener {
                 finished.complete(Unit)
             }
-            mp.setOnErrorListener { _, _, _ ->
+            mp.setOnErrorListener { _, what, extra ->
+                Log.w(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                isPlayError = true
                 finished.complete(Unit)
                 true
             }
@@ -561,6 +574,11 @@ class BeepTtsHelper(
             } catch (_: Throwable) {}
             if (activeMediaPlayer == mp) {
                 activeMediaPlayer = null
+            }
+
+            if (isPlayError) {
+                try { audioFile.delete() } catch (_: Throwable) {}
+                return@withContext false
             }
 
             !isAudioCancelled

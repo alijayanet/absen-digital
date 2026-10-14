@@ -157,6 +157,16 @@ class MainActivity : AppCompatActivity() {
 
         // Aktifkan Marquee Running Text di baris bawah
         binding.tvMarqueeAnnouncement.isSelected = true
+
+        // Sinkronisasi status TTS dari database lokal SQLite (Default AKTIF jika belum diatur)
+        try {
+            val session = SmartSchoolApplication.sessionManager
+            val standaloneDb = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this)
+            val dbTts = standaloneDb.getSetting("tts_enabled", "1")
+            session.setTtsEnabled(dbTts == "1" || dbTts.equals("true", ignoreCase = true))
+            val dbPrayerTts = standaloneDb.getSetting("prayer_tts_enabled", "0")
+            session.setPrayerTtsEnabled(dbPrayerTts == "1" || dbPrayerTts.equals("true", ignoreCase = true))
+        } catch (_: Exception) {}
     }
 
     override fun onResume() {
@@ -685,6 +695,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Sinkronisasi Pengaturan TTS Suara dari Server Database
+        val session = SmartSchoolApplication.sessionManager
+        if (!data.ttsEnabled.isNullOrBlank()) {
+            val isTts = data.ttsEnabled == "1" || data.ttsEnabled.equals("true", ignoreCase = true)
+            session.setTtsEnabled(isTts)
+        }
+        if (!data.prayerTtsEnabled.isNullOrBlank()) {
+            val isPrayerTts = data.prayerTtsEnabled == "1" || data.prayerTtsEnabled.equals("true", ignoreCase = true)
+            session.setPrayerTtsEnabled(isPrayerTts)
+        }
+
         // Update Jadwal Sholat Cards (6 Card Digital Signage TV)
         updatePrayerCardsUI(data.prayer)
 
@@ -1009,10 +1030,12 @@ class MainActivity : AppCompatActivity() {
             // Simpan Pengaturan TTS Voice
             val isTtsOn = dialogBinding.switchTts.isChecked
             session.setTtsEnabled(isTtsOn)
+            standaloneDb.setSetting("tts_enabled", if (isTtsOn) "1" else "0")
 
             // Simpan Pengaturan TTS Waktu Sholat Opsional
             val isPrayerTtsOn = dialogBinding.switchPrayerTts.isChecked
             session.setPrayerTtsEnabled(isPrayerTtsOn)
+            standaloneDb.setSetting("prayer_tts_enabled", if (isPrayerTtsOn) "1" else "0")
 
             // Simpan Running Text
             val newRunningText = dialogBinding.etRunningText.text.toString().trim()

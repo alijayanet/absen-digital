@@ -1625,6 +1625,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             put("prayer", prayerObj)
             put("recentAttendances", recentScansArr)
             put("latestScan", latestScanObj ?: JSONObject.NULL)
+            put("tts_enabled", getSetting("tts_enabled", "1"))
+            put("prayer_tts_enabled", getSetting("prayer_tts_enabled", "0"))
         }
     }
 }

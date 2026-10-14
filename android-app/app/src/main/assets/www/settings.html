@@ -325,6 +325,42 @@
             <input type="text" id="queue_calling_prefix" value="Nomor antrian" placeholder="Contoh: Nomor antrian" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:border-teal-500">
             <p class="text-[10px] text-slate-400 mt-1">Kata awalan saat TV memanggil: "Nomor antrian 5, Ahmad, silakan menuju..."</p>
           </div>
+      <!-- Kartu 4b: Pengaturan Suara Speaker TV & Text-to-Speech (TTS) -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+          <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            <i data-lucide="volume-2" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Pengaturan Suara Speaker TV &amp; TTS</h3>
+            <p class="text-[11px] text-slate-400">Atur suara sambutan absensi santri, panggilan nomor antrian, dan pengumuman waktu sholat.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Toggle Suara Sambutan Absensi & Panggilan Meja -->
+          <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 flex flex-col justify-between gap-3">
+            <div>
+              <label for="tts_enabled" class="text-xs font-bold text-slate-800 block mb-0.5">Suara Sambutan &amp; Antrian (TTS)</label>
+              <p class="text-[11px] text-slate-500 leading-relaxed">Sebutkan nama santri &amp; nomor antrian saat tap kartu RFID, serta saat ustadz memanggil meja via remote.</p>
+            </div>
+            <select id="tts_enabled" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-500">
+              <option value="1">🔊 Aktif (Bersuara Normal)</option>
+              <option value="0">🔇 Nonaktif (Hening / Bip Saja)</option>
+            </select>
+          </div>
+
+          <!-- Toggle Suara Himbauan Waktu Sholat -->
+          <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 flex flex-col justify-between gap-3">
+            <div>
+              <label for="prayer_tts_enabled" class="text-xs font-bold text-slate-800 block mb-0.5">Suara Pengingat Sholat (TTS)</label>
+              <p class="text-[11px] text-slate-500 leading-relaxed">Suara himbauan ajakan sholat saat waktu sholat tiba (Jika mati, hanya muncul popup visual 20 detik secara hening).</p>
+            </div>
+            <select id="prayer_tts_enabled" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold focus:outline-none focus:border-purple-500">
+              <option value="1">🔊 Aktif (Suara Himbauan Adzan)</option>
+              <option value="0">🔇 Nonaktif (Popup Visual Saja)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -514,6 +550,8 @@
       'queue_enabled',
       'queue_per_teacher',
       'queue_calling_prefix',
+      'tts_enabled',
+      'prayer_tts_enabled',
       'running_text',
       'telegram_enabled',
       'telegram_bot_token',
@@ -732,6 +770,12 @@
             const el = document.getElementById(f);
             if (el) el.value = data[f];
           }
+        }
+        if (data.tts_enabled === undefined && document.getElementById('tts_enabled')) {
+          document.getElementById('tts_enabled').value = '1';
+        }
+        if (data.prayer_tts_enabled === undefined && document.getElementById('prayer_tts_enabled')) {
+          document.getElementById('prayer_tts_enabled').value = '0';
         }
         if (data.entity_type) {
           selectEntityType(data.entity_type);

@@ -16,7 +16,9 @@ data class DisplayResponse(
     val lastCall: QueueCallItem? = null,
     val prayer: PrayerData? = null,
     val recentAttendances: List<RecentAttendanceItem>? = null,
-    val latestScan: RecentAttendanceItem? = null
+    val latestScan: RecentAttendanceItem? = null,
+    @SerializedName("tts_enabled") val ttsEnabled: String? = null,
+    @SerializedName("prayer_tts_enabled") val prayerTtsEnabled: String? = null
 )
 
 data class RecentAttendanceItem(

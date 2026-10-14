@@ -311,6 +311,11 @@ class QueueService {
     parts.push('Mohon tertib, tenang, dan jaga kebersihan selama kegiatan belajar mengajar');
     const announcement = parts.join('   •••   ');
 
+    const ttsRow = db.prepare("SELECT value FROM settings WHERE key = 'tts_enabled'").get();
+    const prayerTtsRow = db.prepare("SELECT value FROM settings WHERE key = 'prayer_tts_enabled'").get();
+    const tts_enabled = (ttsRow && ttsRow.value !== undefined) ? ttsRow.value : '1';
+    const prayer_tts_enabled = (prayerTtsRow && prayerTtsRow.value !== undefined) ? prayerTtsRow.value : '0';
+
     return {
       date,
       schoolName,
@@ -322,7 +327,9 @@ class QueueService {
       announcement,
       tables,
       lastCall: lastCall || null,
-      prayer: prayerService.getTodaySchedule()
+      prayer: prayerService.getTodaySchedule(),
+      tts_enabled,
+      prayer_tts_enabled
     };
   }
 

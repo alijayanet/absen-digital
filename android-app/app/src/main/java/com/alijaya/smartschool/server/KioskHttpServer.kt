@@ -580,6 +580,16 @@ class KioskHttpServer(
             db.setSetting(k, body.getString(k))
         }
 
+        // Sinkronkan pengaturan TTS Suara langsung ke SessionManager aplikasi TV
+        if (body.has("tts_enabled")) {
+            val ttsVal = body.optString("tts_enabled", "1")
+            com.alijaya.smartschool.SmartSchoolApplication.sessionManager.setTtsEnabled(ttsVal == "1" || ttsVal.equals("true", ignoreCase = true))
+        }
+        if (body.has("prayer_tts_enabled")) {
+            val prayerTtsVal = body.optString("prayer_tts_enabled", "0")
+            com.alijaya.smartschool.SmartSchoolApplication.sessionManager.setPrayerTtsEnabled(prayerTtsVal == "1" || prayerTtsVal.equals("true", ignoreCase = true))
+        }
+
         // Reload Telegram config jika token atau status berubah
         try {
             com.alijaya.smartschool.SmartSchoolApplication.initTelegramManager(context)
