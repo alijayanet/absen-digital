@@ -137,7 +137,7 @@ class QueueService {
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
       WHERE u.role = 'guru'
-      ORDER BY u.name ASC
+      ORDER BY u.id ASC
     `).all();
 
     let tables = [];
@@ -471,8 +471,8 @@ class QueueService {
       `).get(teacherId, teacherId, classId, date);
     }
 
-    // 2. Fallback: jika mode gabungan ATAU jika antrian ustadz ini kosong namun masih ada santri lain yang WAITING
-    if (!nextStudent) {
+    // 2. Fallback: HANYA jika mode antrian gabungan (!isPerTeacher)
+    if (!nextStudent && !isPerTeacher) {
       nextStudent = db.prepare(`
         SELECT * FROM daily_queues 
         WHERE date = ? AND status = 'WAITING'
@@ -487,7 +487,8 @@ class QueueService {
     }
 
     if (!nextStudent) {
-      return { success: false, message: 'Semua antrian santri yang menunggu sudah dipanggil.' };
+      const deskLabel = teacherInfo ? `di Meja ${teacherInfo.name}` : 'yang menunggu';
+      return { success: false, message: `Semua antrian santri ${deskLabel} sudah selesai dipanggil.` };
     }
 
     // Ubah status santri ini menjadi CALLING dan beri waktu panggil

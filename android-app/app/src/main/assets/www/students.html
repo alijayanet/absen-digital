@@ -242,6 +242,15 @@
         </div>
 
         <div>
+          <label class="block font-semibold text-slate-700 mb-1">Pilih Ustadz / Meja Mengaji:</label>
+          <select id="studentTeacher" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 font-semibold">
+            <option value="0">-- Otomatis Mengikuti Ustadz Kelas --</option>
+            <!-- Populated via JS -->
+          </select>
+          <p class="text-[10px] text-slate-500 mt-1">Santri akan otomatis diarahkan ke meja antrian ustadz ini saat tap kartu absensi.</p>
+        </div>
+
+        <div>
           <label class="block font-semibold text-slate-700 mb-1">UID Kartu RFID USB (Opsional):</label>
           <input type="text" id="studentRfid" placeholder="Tempel kartu di reader atau samakan dengan nomor induk" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono focus:outline-none focus:border-teal-500">
           <p class="text-[10px] text-slate-500 mt-1">Jika dikosongkan, kartu RFID akan otomatis disamakan dengan nomor induk.</p>
@@ -330,6 +339,7 @@
 
     let allStudents = [];
     let allClasses = [];
+    let allTeachers = [];
     let parsedImportData = [];
 
     function updateGenderSelectLabels() {
@@ -346,18 +356,30 @@
 
     async function loadInitialData() {
       try {
-        const [studentsRes, classesRes] = await Promise.all([
+        const [studentsRes, classesRes, teachersRes] = await Promise.all([
           fetch('/api/students'),
-          fetch('/api/classes')
+          fetch('/api/classes'),
+          fetch('/api/teachers')
         ]);
         allStudents = await studentsRes.json();
         allClasses = await classesRes.json();
+        allTeachers = await teachersRes.json();
 
         // Populate dropdown kelas
         const classSelect = document.getElementById('studentClass');
         classSelect.innerHTML = allClasses.map(c => `
           <option value="${c.id}">${c.name}</option>
         `).join('');
+
+        // Populate dropdown ustadz / meja mengaji
+        const teacherSelect = document.getElementById('studentTeacher');
+        if (teacherSelect) {
+          let tOptions = '<option value="0">-- Otomatis Mengikuti Ustadz Kelas --</option>';
+          tOptions += allTeachers.map(t => `
+            <option value="${t.id}">Meja ${t.name}</option>
+          `).join('');
+          teacherSelect.innerHTML = tOptions;
+        }
 
         updateGenderSelectLabels();
         renderStudents(allStudents);
@@ -503,6 +525,8 @@
       document.getElementById('studentName').value = '';
       document.getElementById('studentPob').value = '';
       document.getElementById('studentDob').value = '';
+      const teacherEl = document.getElementById('studentTeacher');
+      if (teacherEl) teacherEl.value = '0';
       document.getElementById('studentRfid').value = '';
       document.getElementById('studentParentName').value = '';
       document.getElementById('studentPhone').value = '';
@@ -522,6 +546,8 @@
       document.getElementById('studentPob').value = s.pob || '';
       document.getElementById('studentDob').value = s.dob || '';
       document.getElementById('studentClass').value = s.class_id;
+      const teacherEl = document.getElementById('studentTeacher');
+      if (teacherEl) teacherEl.value = s.teacher_id || '0';
       document.getElementById('studentRfid').value = s.rfid_uid || '';
       document.getElementById('studentParentName').value = s.parent_name || '';
       document.getElementById('studentPhone').value = s.parent_phone || '';
@@ -542,6 +568,8 @@
       const pob = document.getElementById('studentPob').value.trim();
       const dob = document.getElementById('studentDob').value.trim();
       const classId = document.getElementById('studentClass').value;
+      const teacherEl = document.getElementById('studentTeacher');
+      const teacherId = teacherEl ? parseInt(teacherEl.value) || 0 : 0;
       const rfid = document.getElementById('studentRfid').value.trim();
       const parentName = document.getElementById('studentParentName').value.trim();
       const phone = document.getElementById('studentPhone').value.trim();
@@ -555,6 +583,7 @@
           body: JSON.stringify({
             id: id ? parseInt(id) : null,
             nis, name, pob, dob, class_id: parseInt(classId),
+            teacher_id: teacherId,
             rfid_uid: rfid, parent_name: parentName, parent_phone: phone,
             gender, photo
           })

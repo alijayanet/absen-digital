@@ -225,6 +225,9 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             db.execSQL("ALTER TABLE students ADD COLUMN dob TEXT;")
         } catch (_: Exception) {}
         try {
+            db.execSQL("ALTER TABLE students ADD COLUMN teacher_id INTEGER;")
+        } catch (_: Exception) {}
+        try {
             db.execSQL("ALTER TABLE classes ADD COLUMN teacher_id INTEGER;")
         } catch (_: Exception) {}
         try {
@@ -473,10 +476,12 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val query = """
             SELECT s.id, s.nis, s.name, s.gender, s.pob, s.dob, s.class_id, c.name as class_name, 
                    s.rfid_uid, s.parent_name, s.parent_phone, s.photo, s.is_active,
-                   t.name as teacher_name
+                   COALESCE(st.name, t.name, '-') as teacher_name,
+                   COALESCE(s.teacher_id, c.teacher_id, 0) as teacher_id
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN teachers st ON s.teacher_id = st.id
             ORDER BY s.name ASC
         """
         val cursor = readableDatabase.rawQuery(query, null)
@@ -497,6 +502,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     put("photo", it.getString(11) ?: "")
                     put("is_active", it.getInt(12))
                     put("teacher_name", it.getString(13) ?: "-")
+                    put("teacher_id", it.getInt(14))
                 }
                 arr.put(obj)
             }
@@ -512,10 +518,12 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val exactQuery = """
             SELECT s.id, s.nis, s.name, s.gender, s.pob, s.dob, s.class_id, c.name as class_name, 
                    s.rfid_uid, s.parent_name, s.parent_phone, s.photo,
-                   t.name as teacher_name
+                   COALESCE(st.name, t.name, '-') as teacher_name,
+                   COALESCE(s.teacher_id, c.teacher_id, 0) as teacher_id
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN teachers st ON s.teacher_id = st.id
             WHERE s.rfid_uid = ? OR s.nis = ? OR s.qr_code_token = ?
             LIMIT 1
         """
@@ -536,6 +544,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     put("parent_phone", it.getString(10) ?: "")
                     put("photo", it.getString(11) ?: "")
                     put("teacher_name", it.getString(12) ?: "-")
+                    put("teacher_id", it.getInt(13))
                 }
             }
         }
@@ -544,10 +553,12 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val nameQuery = """
             SELECT s.id, s.nis, s.name, s.gender, s.pob, s.dob, s.class_id, c.name as class_name, 
                    s.rfid_uid, s.parent_name, s.parent_phone, s.photo,
-                   t.name as teacher_name
+                   COALESCE(st.name, t.name, '-') as teacher_name,
+                   COALESCE(s.teacher_id, c.teacher_id, 0) as teacher_id
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN teachers st ON s.teacher_id = st.id
             WHERE LOWER(TRIM(s.name)) = LOWER(?) 
                OR LOWER(s.name) LIKE LOWER(? || '%')
                OR LOWER(s.name) LIKE LOWER('%' || ? || '%')
@@ -576,6 +587,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     put("parent_phone", it.getString(10) ?: "")
                     put("photo", it.getString(11) ?: "")
                     put("teacher_name", it.getString(12) ?: "-")
+                    put("teacher_id", it.getInt(13))
                 }
             }
         }
@@ -594,7 +606,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         gender: String = "L",
         photo: String = "",
         pob: String = "",
-        dob: String = ""
+        dob: String = "",
+        teacherId: Int? = null
     ): Long {
         val cv = ContentValues().apply {
             put("nis", nis)
@@ -608,6 +621,11 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             put("pob", pob)
             put("dob", dob)
             put("photo", photo)
+            if (teacherId != null && teacherId > 0) {
+                put("teacher_id", teacherId)
+            } else {
+                putNull("teacher_id")
+            }
         }
 
         return if (id != null && id > 0) {
@@ -852,6 +870,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                 val dob = s.optString("dob", "").trim()
                 val parentName = s.optString("parent_name", "").trim()
                 val parentPhone = s.optString("parent_phone", "").trim()
+                val teacherId = if (s.has("teacher_id")) s.optInt("teacher_id", 0).let { if (it > 0) it else null } else null
 
                 // Cek apakah NIS sudah ada
                 val checkCursor = readableDatabase.rawQuery(
@@ -874,6 +893,9 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
                     put("parent_phone", parentPhone)
                     put("qr_code_token", "QR-$nis")
                     put("is_active", 1)
+                    if (teacherId != null) {
+                        put("teacher_id", teacherId)
+                    }
                 }
 
                 if (existingId != null) {
@@ -964,13 +986,14 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         // Cari relasi kelas / guru jika belum disediakan
         if (targetTeacherId == null || targetTeacherId <= 0) {
             val studentCursor = readableDatabase.rawQuery(
-                "SELECT s.class_id, c.teacher_id FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE s.id = ?",
+                "SELECT s.class_id, COALESCE(s.teacher_id, c.teacher_id, 0) as teacher_id FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE s.id = ?",
                 arrayOf(studentId.toString())
             )
             studentCursor.use {
                 if (it.moveToFirst()) {
                     if (targetClassId <= 0) targetClassId = it.getInt(0)
-                    if (!it.isNull(1)) targetTeacherId = it.getInt(1)
+                    val tId = it.getInt(1)
+                    if (tId > 0) targetTeacherId = tId
                 }
             }
         }
@@ -1305,8 +1328,8 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
             }
         }
 
-        // 2. Fallback: jika mode gabungan ATAU jika antrian khusus ustadz ini kosong namun masih ada santri yang menunggu hari ini
-        if (nextId <= 0) {
+        // 2. Fallback: HANYA jika mode gabungan (!isPerTeacher)
+        if (nextId <= 0 && !isPerTeacher) {
             val fallbackSql = """
                 SELECT id, queue_number, student_id 
                 FROM daily_queues 
@@ -1330,7 +1353,7 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         if (nextId <= 0) {
             return JSONObject().apply {
                 put("success", false)
-                put("message", "Semua antrian santri yang menunggu sudah dipanggil.")
+                put("message", "Semua antrian santri yang menunggu di meja ini sudah dipanggil.")
             }
         }
 
@@ -1475,14 +1498,15 @@ class SmartSchoolDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE
         val schoolLogo = getSetting("school_logo", "")
         val prefix = getSetting("queue_calling_prefix", "Nomor antrian")
 
-        // 1. Ambil seluruh meja (berdasarkan guru atau kelas)
+        // 1. Ambil seluruh meja (berdasarkan guru yang aktif, terurut id meja ASC)
         val teachers = JSONArray()
         val tQuery = """
-            SELECT t.id, t.name, c.id as class_id, c.name as class_name
+            SELECT t.id, t.name, MIN(c.id) as class_id, MIN(c.name) as class_name
             FROM teachers t
             LEFT JOIN classes c ON c.teacher_id = t.id
             WHERE t.is_active = 1
-            ORDER BY t.name ASC
+            GROUP BY t.id, t.name
+            ORDER BY t.id ASC
         """
         val tCursor = readableDatabase.rawQuery(tQuery, null)
         val tablesArr = JSONArray()

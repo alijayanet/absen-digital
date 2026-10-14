@@ -384,6 +384,7 @@ class KioskHttpServer(
         val photo = body.optString("photo", "").trim()
         val pob = body.optString("pob", "").trim()
         val dob = body.optString("dob", "").trim()
+        val teacherId = body.optInt("teacher_id", 0).let { if (it > 0) it else null }
 
         if (nis.isEmpty() || name.isEmpty()) {
             val err = JSONObject().apply {
@@ -394,7 +395,7 @@ class KioskHttpServer(
         }
 
         try {
-            val resultId = db.addOrUpdateStudent(id, nis, name, classId, rfidUid, parentPhone, parentName, gender, photo, pob, dob)
+            val resultId = db.addOrUpdateStudent(id, nis, name, classId, rfidUid, parentPhone, parentName, gender, photo, pob, dob, teacherId)
             val res = JSONObject().apply {
                 put("success", resultId >= 0)
                 put("message", if (resultId >= 0) "Data berhasil disimpan" else "Gagal menyimpan data")
