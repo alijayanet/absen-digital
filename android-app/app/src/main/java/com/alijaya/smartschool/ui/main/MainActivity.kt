@@ -316,28 +316,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Dukungan tombol angka pada remote TV fisik (hanya aktif jika tidak sedang scan RFID)
-            if (rfidBuffer.isEmpty()) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> {
-                        triggerRemoteDeskCall(0)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> {
-                        triggerRemoteDeskCall(1)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> {
-                        triggerRemoteDeskCall(2)
-                        return true
-                    }
-                    KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> {
-                        triggerRemoteDeskCall(3)
-                        return true
-                    }
-                }
-            }
-
             // Enter menandakan akhir dari transmisi kartu RFID reader USB
             if (keyCode == KeyEvent.KEYCODE_ENTER) {
                 val cardCode = rfidBuffer.toString().trim()
@@ -360,8 +338,32 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 val unicodeChar = event.unicodeChar
-                if (unicodeChar > 0 && (Character.isLetterOrDigit(unicodeChar) || unicodeChar == '-'.code)) {
-                    rfidBuffer.append(unicodeChar.toChar())
+                val charFromKey = if (unicodeChar > 0) {
+                    unicodeChar.toChar()
+                } else {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_0, KeyEvent.KEYCODE_NUMPAD_0 -> '0'
+                        KeyEvent.KEYCODE_1, KeyEvent.KEYCODE_NUMPAD_1 -> '1'
+                        KeyEvent.KEYCODE_2, KeyEvent.KEYCODE_NUMPAD_2 -> '2'
+                        KeyEvent.KEYCODE_3, KeyEvent.KEYCODE_NUMPAD_3 -> '3'
+                        KeyEvent.KEYCODE_4, KeyEvent.KEYCODE_NUMPAD_4 -> '4'
+                        KeyEvent.KEYCODE_5, KeyEvent.KEYCODE_NUMPAD_5 -> '5'
+                        KeyEvent.KEYCODE_6, KeyEvent.KEYCODE_NUMPAD_6 -> '6'
+                        KeyEvent.KEYCODE_7, KeyEvent.KEYCODE_NUMPAD_7 -> '7'
+                        KeyEvent.KEYCODE_8, KeyEvent.KEYCODE_NUMPAD_8 -> '8'
+                        KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_NUMPAD_9 -> '9'
+                        KeyEvent.KEYCODE_A -> 'A'
+                        KeyEvent.KEYCODE_B -> 'B'
+                        KeyEvent.KEYCODE_C -> 'C'
+                        KeyEvent.KEYCODE_D -> 'D'
+                        KeyEvent.KEYCODE_E -> 'E'
+                        KeyEvent.KEYCODE_F -> 'F'
+                        else -> null
+                    }
+                }
+
+                if (charFromKey != null && (Character.isLetterOrDigit(charFromKey) || charFromKey == '-')) {
+                    rfidBuffer.append(charFromKey)
                     return true // Telah disimpan di buffer, jangan ubah fokus UI
                 }
             }
