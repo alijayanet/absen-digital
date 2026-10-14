@@ -19,6 +19,7 @@ class SessionManager(context: Context) {
         private const val KEY_PRINTER_MAC = "printer_mac"
         private const val KEY_PRINTER_NAME = "printer_name"
         private const val KEY_TTS_ENABLED = "tts_enabled"
+        private const val KEY_PRAYER_TTS_ENABLED = "prayer_tts_enabled"
 
         const val MODE_STANDALONE = "standalone" // STB All-in-One: Server mandiri di STB
         const val MODE_CLIENT = "client"         // Client mode: Hubungkan ke server Node.js eksternal
@@ -134,5 +135,13 @@ class SessionManager(context: Context) {
 
     fun setTtsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_TTS_ENABLED, enabled).apply()
+    }
+
+    fun isPrayerTtsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_PRAYER_TTS_ENABLED, false) // Default OPSIONAL / NONAKTIF (false)
+    }
+
+    fun setPrayerTtsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PRAYER_TTS_ENABLED, enabled).apply()
     }
 }

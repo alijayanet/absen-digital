@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#0A1128"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
+
+    <!-- Konten Layar TV Utama -->
+    <LinearLayout
+        android:id="@+id/layoutMainScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#0A1128"
+        android:orientation="vertical">
 
     <!-- 1. Top Header Bar -->
     <LinearLayout
@@ -836,4 +842,138 @@
 
     </LinearLayout>
 
-</LinearLayout>
+    </LinearLayout>
+
+    <!-- ========================================================================= -->
+    <!-- 6. POPUP OVERLAY WAKTU SHOLAT TIBA & HIMBAUAN SHOLAT (20 DETIK)          -->
+    <!-- ========================================================================= -->
+    <FrameLayout
+        android:id="@+id/layoutPrayerAlertOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E6050B1B"
+        android:clickable="true"
+        android:elevation="20dp"
+        android:focusable="true"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="32dp"
+            app:cardBackgroundColor="#131E3D"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="10dp"
+            app:strokeColor="#F59E0B"
+            app:strokeWidth="2.5dp">
+
+            <LinearLayout
+                android:layout_width="660dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingHorizontal="28dp"
+                android:paddingVertical="26dp">
+
+                <!-- Ikon Kubah Masjid -->
+                <TextView
+                    android:id="@+id/tvPrayerAlertMosqueIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🕌"
+                    android:textSize="50sp" />
+
+                <!-- Badge Kategori -->
+                <TextView
+                    android:id="@+id/tvPrayerAlertBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_badge_warning"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="4dp"
+                    android:text="WAKTU SHOLAT TELAH MASUK"
+                    android:textColor="#FBBF24"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <!-- Judul Utama Waktu Sholat -->
+                <TextView
+                    android:id="@+id/tvPrayerAlertTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="WAKTU SHOLAT DZUHUR TELAH TIBA"
+                    android:textColor="@android:color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <!-- Jam Masuk Sholat -->
+                <TextView
+                    android:id="@+id/tvPrayerAlertTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Pukul 11:58 WIB"
+                    android:textColor="#38BDF8"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Box Himbauan & Ayat Al-Quran -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_prayer_ayah_box"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tvPrayerAlertAdvice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:lineSpacingExtra="3dp"
+                        android:text="Mari sejenak menghentikan aktivitas mengaji, menjawab panggilan adzan, mengambil air wudhu, dan bersiap melaksanakan sholat berjamaah."
+                        android:textColor="#F1F5F9"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="10dp"
+                        android:background="#065F46" />
+
+                    <TextView
+                        android:id="@+id/tvPrayerAlertAyah"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="“Sesungguhnya sholat itu adalah kewajiban yang ditentukan waktunya atas orang-orang yang beriman.” (QS. An-Nisa: 103)"
+                        android:textColor="#6EE7B7"
+                        android:textSize="12.5sp"
+                        android:textStyle="italic" />
+                </LinearLayout>
+
+                <!-- Footer Countdown & Panduan Remote TV -->
+                <TextView
+                    android:id="@+id/tvPrayerAlertCountdown"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center"
+                    android:text="Kembali ke layar antrian dalam 20 detik... (Tekan OK / BACK di Remote untuk menutup)"
+                    android:textColor="#94A3B8"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </FrameLayout>
+
+</FrameLayout>

@@ -363,6 +363,37 @@
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
 
+    <!-- Opsi Suara Pengingat Sholat (TTS / Chime) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="📢 Suara Pengingat Sholat (TTS)"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchPrayerTts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Aktifkan pengumuman suara TTS saat masuk waktu sholat (Jika mati, hanya menampilkan popup visual 20 detik secara hening)"
+        android:textColor="#94A3B8"
+        android:textSize="12sp" />
+
     <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"

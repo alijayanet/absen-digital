@@ -82,6 +82,24 @@ class MainActivity : AppCompatActivity() {
         binding.tvRemoteFeedbackToast.visibility = View.GONE
     }
 
+    // Prayer Time Alert Popup State & Countdown (20 Detik)
+    private var isPrayerAlertActive = false
+    private var prayerAlertSecondsRemaining = 20
+    private var lastTriggeredPrayerKey = ""
+    private var activePrayerSchedule: com.alijaya.smartschool.data.model.PrayerSchedule? = null
+    private val prayerAlertHandler = Handler(Looper.getMainLooper())
+    private val updatePrayerAlertRunnable = object : Runnable {
+        override fun run() {
+            prayerAlertSecondsRemaining--
+            if (prayerAlertSecondsRemaining <= 0) {
+                hidePrayerAlertPopup()
+            } else {
+                binding.tvPrayerAlertCountdown.text = "Kembali ke layar antrian dalam $prayerAlertSecondsRemaining detik... (Tekan OK / BACK di Remote untuk menutup)"
+                prayerAlertHandler.postDelayed(this, 1000L)
+            }
+        }
+    }
+
     // Track external scans from Web Kiosk
     private var lastHandledAttendanceId = -1
     private var isFirstDisplayLoad = true
@@ -158,6 +176,7 @@ class MainActivity : AppCompatActivity() {
         resultDismissHandler.removeCallbacksAndMessages(null)
         callBannerHandler.removeCallbacksAndMessages(null)
         remoteFeedbackHandler.removeCallbacksAndMessages(null)
+        prayerAlertHandler.removeCallbacksAndMessages(null)
         audioHelper.release()
     }
 
@@ -228,6 +247,7 @@ class MainActivity : AppCompatActivity() {
                 val now = Date()
                 binding.tvLiveClock.text = timeFormat.format(now)
                 binding.tvLiveDate.text = dateFormat.format(now)
+                checkPrayerTimeTrigger(now)
                 delay(1000L)
             }
         }
@@ -252,6 +272,19 @@ class MainActivity : AppCompatActivity() {
             bufferResetHandler.postDelayed(resetBufferRunnable, SCAN_TIMEOUT_MS)
 
             val keyCode = event.keyCode
+
+            // Jika popup pengingat sholat sedang aktif, tombol remote TV menutup popup secara instan
+            if (isPrayerAlertActive) {
+                if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                    keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_ESCAPE) {
+                    hidePrayerAlertPopup()
+                    return true
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+                    keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    hidePrayerAlertPopup()
+                }
+            }
 
             // Shortcut Remote TV: Tekan MENU atau SETTINGS untuk membuka pengaturan server
             if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {
@@ -962,6 +995,10 @@ class MainActivity : AppCompatActivity() {
             val isTtsOn = dialogBinding.switchTts.isChecked
             session.setTtsEnabled(isTtsOn)
 
+            // Simpan Pengaturan TTS Waktu Sholat Opsional
+            val isPrayerTtsOn = dialogBinding.switchPrayerTts.isChecked
+            session.setPrayerTtsEnabled(isPrayerTtsOn)
+
             // Simpan Running Text
             val newRunningText = dialogBinding.etRunningText.text.toString().trim()
             if (newRunningText.isNotBlank()) {
@@ -985,8 +1022,9 @@ class MainActivity : AppCompatActivity() {
             startDisplayPolling()
         }
 
-        // Inisialisasi status Switch TTS Voice
+        // Inisialisasi status Switch TTS Voice & Pengingat Sholat
         dialogBinding.switchTts.isChecked = session.isTtsEnabled()
+        dialogBinding.switchPrayerTts.isChecked = session.isPrayerTtsEnabled()
 
         dialog.show()
     }
@@ -1032,6 +1070,7 @@ class MainActivity : AppCompatActivity() {
     // 6. UPDATE 6 PRAYER CARDS & LIVE COUNTDOWN (NATIVE DIGITAL SIGNAGE TV)
     // =========================================================================
     private fun updatePrayerCardsUI(prayer: com.alijaya.smartschool.data.model.PrayerData?) {
+        activePrayerSchedule = prayer?.schedule
         val s = prayer?.schedule
         if (s != null) {
             binding.tvSubuhTime.text = s.subuh ?: "--:--"
@@ -1406,6 +1445,72 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    // =========================================================================
+    // 10. POPUP OVERLAY WAKTU SHOLAT TIBA & HIMBAUAN (20 DETIK)
+    // =========================================================================
+    private fun checkPrayerTimeTrigger(now: Date) {
+        val schedule = activePrayerSchedule ?: return
+        val timeNow = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now)
+
+        val prayerList = listOf(
+            Triple("Subuh", schedule.subuh, "subuh"),
+            Triple("Dzuhur", schedule.dzuhur, "dzuhur"),
+            Triple("Ashar", schedule.ashar, "ashar"),
+            Triple("Maghrib", schedule.maghrib, "maghrib"),
+            Triple("Isya", schedule.isya, "isya")
+        )
+
+        for ((name, pTime, key) in prayerList) {
+            if (!pTime.isNullOrBlank() && pTime == timeNow) {
+                val triggerKey = "${todayStr}_${key}"
+                if (lastTriggeredPrayerKey != triggerKey) {
+                    lastTriggeredPrayerKey = triggerKey
+                    showPrayerAlertPopup(name, pTime)
+                }
+                break
+            }
+        }
+    }
+
+    private fun showPrayerAlertPopup(prayerName: String, prayerTime: String) {
+        isPrayerAlertActive = true
+        prayerAlertSecondsRemaining = 20
+        prayerAlertHandler.removeCallbacksAndMessages(null)
+
+        binding.tvPrayerAlertTitle.text = "WAKTU SHOLAT ${prayerName.uppercase()} TELAH TIBA"
+        binding.tvPrayerAlertTime.text = "Pukul $prayerTime WIB"
+        binding.tvPrayerAlertCountdown.text = "Kembali ke layar antrian dalam $prayerAlertSecondsRemaining detik... (Tekan OK / BACK di Remote untuk menutup)"
+        binding.layoutPrayerAlertOverlay.visibility = View.VISIBLE
+
+        // Klik layar overlay untuk menutup instan
+        binding.layoutPrayerAlertOverlay.setOnClickListener {
+            hidePrayerAlertPopup()
+        }
+
+        // Suara Notifikasi Waktu Sholat (Opsional berdasarkan SessionManager)
+        val session = SmartSchoolApplication.sessionManager
+        if (session.isPrayerTtsEnabled()) {
+            // Jika opsi TTS suara pengingat sholat diaktifkan
+            val speech = "Waktu sholat $prayerName telah tiba. Mari mengambil air wudhu dan bersiap melaksanakan sholat berjamaah."
+            audioHelper.playChimeAndSpeak(speech, isMale = true)
+        } else {
+            // Jika TTS sholat dinonaktifkan: hanya bunyikan nada chime lembut tanpa suara bicara (atau senyap jika TTS global nonaktif)
+            if (session.isTtsEnabled()) {
+                audioHelper.playChime()
+            }
+        }
+
+        // Mulai countdown otomatis 20 detik
+        prayerAlertHandler.postDelayed(updatePrayerAlertRunnable, 1000L)
+    }
+
+    private fun hidePrayerAlertPopup() {
+        prayerAlertHandler.removeCallbacksAndMessages(null)
+        isPrayerAlertActive = false
+        binding.layoutPrayerAlertOverlay.visibility = View.GONE
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
