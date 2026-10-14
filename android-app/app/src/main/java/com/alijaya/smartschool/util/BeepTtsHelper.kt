@@ -47,7 +47,9 @@ class BeepTtsHelper(
     private data class SpeechTask(
         val text: String,
         val isMale: Boolean,
-        val playChime: Boolean = false
+        val playChime: Boolean = false,
+        val playBeep: Boolean = false,
+        val isWarningBeep: Boolean = false
     )
 
     private var toneGen: ToneGenerator? = null
@@ -55,6 +57,8 @@ class BeepTtsHelper(
     private var isOfflineTtsInitialized = false
 
     private val queue = mutableListOf<SpeechTask>()
+    private var queueJob: Job? = null
+    @Volatile
     private var isProcessingQueue = false
 
     var voiceMode: String = MODE_ONLINE_NATURAL
@@ -84,6 +88,17 @@ class BeepTtsHelper(
                 } else {
                     isOfflineTtsInitialized = false
                     Log.w(TAG, "Offline TTS onInit failed with status $status")
+                    if (hasGoogleTts) {
+                        try {
+                            tts = TextToSpeech(context.applicationContext) { s2 ->
+                                if (s2 == TextToSpeech.SUCCESS) {
+                                    isOfflineTtsInitialized = true
+                                    applyOfflineVoiceSettings()
+                                    Log.i(TAG, "Fallback default System TTS Engine ready.")
+                                }
+                            }
+                        } catch (_: Throwable) {}
+                    }
                 }
             }
 
@@ -121,6 +136,12 @@ class BeepTtsHelper(
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                t.setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
                 val voices = t.voices
                 if (!voices.isNullOrEmpty()) {
                     for (v in voices) {
@@ -144,18 +165,81 @@ class BeepTtsHelper(
     }
 
     // =========================================================================
-    // NADA BIP DAN AIRPORT CHIME (SINTESIS HARMONIK PCM D5 -> A4)
+    // NADA BIP DAN AIRPORT CHIME (SINTESIS HARMONIK PCM D5 -> A4 & BIP 880Hz / 440Hz)
     // =========================================================================
-    fun playBeepSuccess() {
+
+    /**
+     * Bip PCM Murni (AudioTrack 16-bit 44.1kHz USAGE_MEDIA / STREAM_MUSIC)
+     * Tidak konflik dengan ALSA audio driver ataupun MediaPlayer
+     */
+    fun playPcmBeep(isWarning: Boolean = false) {
         try {
-            toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
-        } catch (_: Throwable) {}
+            val sampleRate = 44100
+            val freq = if (isWarning) 440.0 else 880.0
+            val duration = if (isWarning) 0.22 else 0.14
+            val numSamples = (sampleRate * duration).toInt()
+            val buffer = ShortArray(numSamples)
+
+            for (i in 0 until numSamples) {
+                val t = i.toDouble() / sampleRate
+                val decay = exp(-2.5 * (i.toDouble() / numSamples))
+                val sample = sin(2.0 * Math.PI * freq * t) * decay
+                buffer[i] = (sample * 24000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+
+            val minBuf = AudioTrack.getMinBufferSize(
+                sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT
+            )
+            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val attr = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .build()
+                val format = AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build()
+                AudioTrack(
+                    attr,
+                    format,
+                    (buffer.size * 2).coerceAtLeast(minBuf),
+                    AudioTrack.MODE_STATIC,
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    sampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    (buffer.size * 2).coerceAtLeast(minBuf),
+                    AudioTrack.MODE_STATIC
+                )
+            }
+            track.write(buffer, 0, buffer.size)
+            track.play()
+            Thread.sleep((duration * 1000).toLong() + 25L)
+            track.stop()
+            track.release()
+        } catch (_: Throwable) {
+            playFallbackTone()
+        }
+    }
+
+    fun playBeepSuccess() {
+        scope.launch(Dispatchers.IO) {
+            playPcmBeep(false)
+        }
     }
 
     fun playBeepWarning() {
-        try {
-            toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP2, 250)
-        } catch (_: Throwable) {}
+        scope.launch(Dispatchers.IO) {
+            playPcmBeep(true)
+        }
     }
 
     fun playChime() {
@@ -165,8 +249,7 @@ class BeepTtsHelper(
     }
 
     /**
-     * Airport Chime 2-Nada (D5 587.33Hz -> A4 440.0Hz) murni AudioTrack 16-bit PCM
-     * Diadopsi persis dari TtsVoiceManager kolam-pancing
+     * Airport Chime 2-Nada (D5 587.33Hz -> A4 440.0Hz) murni AudioTrack 16-bit PCM USAGE_MEDIA
      */
     private fun playAirportChime() {
         try {
@@ -199,14 +282,34 @@ class BeepTtsHelper(
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            val track = AudioTrack(
-                AudioManager.STREAM_MUSIC,
-                sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                (buffer.size * 2).coerceAtLeast(minBuf),
-                AudioTrack.MODE_STATIC
-            )
+            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val attr = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .build()
+                val format = AudioFormat.Builder()
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build()
+                AudioTrack(
+                    attr,
+                    format,
+                    (buffer.size * 2).coerceAtLeast(minBuf),
+                    AudioTrack.MODE_STATIC,
+                    AudioManager.AUDIO_SESSION_ID_GENERATE
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    sampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    (buffer.size * 2).coerceAtLeast(minBuf),
+                    AudioTrack.MODE_STATIC
+                )
+            }
             track.write(buffer, 0, buffer.size)
             track.play()
             Thread.sleep(600)
@@ -246,7 +349,7 @@ class BeepTtsHelper(
 
     /**
      * Mainkan Chime Bel Bandara lalu ucapkan kalimat (Queue).
-     * Panggilan antrian meja ustadz harus langsung menghentikan suara sebelumnya
+     * Panggilan antrian meja ustadz langsung menghentikan suara sebelumnya
      * agar tidak terjadi penumpukan atau pengucapan double berulang-ulang.
      */
     @Synchronized
@@ -266,6 +369,9 @@ class BeepTtsHelper(
     fun clearQueueAndStop() {
         isAudioCancelled = true
         queue.clear()
+        queueJob?.cancel()
+        queueJob = null
+        isProcessingQueue = false
         try {
             activeMediaPlayer?.let {
                 if (it.isPlaying) {
@@ -281,18 +387,31 @@ class BeepTtsHelper(
     }
 
     /**
-     * Mainkan Beep Singkat lalu ucapkan kalimat
+     * Mainkan Beep Singkat lalu ucapkan kalimat secara sekuensial
      */
     @Synchronized
-    fun playBeepAndSpeak(text: String, isMale: Boolean = true, delayMs: Long = 250L) {
+    fun playBeepAndSpeak(text: String, isMale: Boolean = true, isWarning: Boolean = false, delayMs: Long = 150L) {
+        if (text.isBlank()) return
         clearQueueAndStop()
-        playBeepSuccess()
-        speak(text, isMale)
+        isAudioCancelled = false
+        val clean = formatIndonesianSpokenText(text)
+        queue.add(
+            SpeechTask(
+                text = clean,
+                isMale = isMale,
+                playChime = false,
+                playBeep = true,
+                isWarningBeep = isWarning
+            )
+        )
+        triggerQueueProcessing()
     }
 
+    @Synchronized
     private fun triggerQueueProcessing() {
-        if (isProcessingQueue) return
-        scope.launch(Dispatchers.IO) {
+        if (queueJob?.isActive == true) return
+        isAudioCancelled = false
+        queueJob = scope.launch(Dispatchers.IO) {
             processQueueLoop()
         }
     }
@@ -300,35 +419,42 @@ class BeepTtsHelper(
     private suspend fun processQueueLoop() {
         isProcessingQueue = true
         try {
-            while (true) {
-                if (isAudioCancelled) break
+            while (scope.isActive && !isAudioCancelled) {
                 val task = synchronized(queue) {
                     if (queue.isEmpty()) null else queue.removeAt(0)
                 } ?: break
 
-                // Bunyikan bel airport chime jika diinstruksikan
-                if (task.playChime && !isAudioCancelled) {
+                // Bunyikan bel airport chime atau bip PCM jika diinstruksikan
+                if (task.playBeep && !isAudioCancelled && scope.isActive) {
+                    playPcmBeep(task.isWarningBeep)
+                    delay(100)
+                } else if (task.playChime && !isAudioCancelled && scope.isActive) {
                     playAirportChime()
                     delay(150)
                 }
 
-                if (isAudioCancelled) break
+                if (!scope.isActive || isAudioCancelled) break
 
                 // Coba Online Natural Human TTS (Google Translate Neural Audio)
                 var spoken = false
-                if (voiceMode == MODE_ONLINE_NATURAL && !isAudioCancelled) {
+                if (voiceMode == MODE_ONLINE_NATURAL && !isAudioCancelled && scope.isActive) {
                     spoken = speakOnlineNatural(task.text, task.isMale)
                 }
 
                 // Fallback ke Offline System TTS HANYA jika online gagal dan tidak dibatalkan
-                if (!spoken && !isAudioCancelled) {
+                if (!spoken && !isAudioCancelled && scope.isActive) {
                     speakOfflineTts(task.text, task.isMale)
                 }
 
-                delay(250)
+                delay(200)
             }
         } finally {
             isProcessingQueue = false
+            synchronized(queue) {
+                if (queue.isNotEmpty() && !isAudioCancelled && scope.isActive) {
+                    triggerQueueProcessing()
+                }
+            }
         }
     }
 
@@ -386,8 +512,8 @@ class BeepTtsHelper(
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-                    connectTimeout = 6000
-                    readTimeout = 8000
+                    connectTimeout = 2500
+                    readTimeout = 3500
                 }
                 if (conn.responseCode == 200) {
                     conn.inputStream.use { input ->
@@ -406,7 +532,7 @@ class BeepTtsHelper(
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
                 setDataSource(audioFile.absolutePath)
@@ -425,7 +551,7 @@ class BeepTtsHelper(
             }
 
             mp.start()
-            withTimeoutOrNull(25000L) {
+            withTimeoutOrNull(20000L) {
                 finished.await()
             }
 
@@ -457,16 +583,28 @@ class BeepTtsHelper(
         val t = tts
         if (!isOfflineTtsInitialized || t == null) return@withContext false
 
+        // Pastikan Audio Attributes selalu dialirkan ke USAGE_MEDIA
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                t.setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+            } catch (_: Throwable) {}
+        }
+
         // Atur Voice & Pitch Pria / Wanita
         if (isMale) {
             if (maleVoice != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                t.voice = maleVoice
+                try { t.voice = maleVoice } catch (_: Throwable) {}
             }
             t.setPitch(0.88f)
             t.setSpeechRate(0.96f)
         } else {
             if (femaleVoice != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                t.voice = femaleVoice
+                try { t.voice = femaleVoice } catch (_: Throwable) {}
             }
             t.setPitch(1.15f)
             t.setSpeechRate(0.98f)
@@ -487,10 +625,11 @@ class BeepTtsHelper(
 
         val params = Bundle().apply {
             putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+            putString(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC.toString())
         }
         val res = t.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
         if (res == TextToSpeech.SUCCESS) {
-            withTimeoutOrNull(30000L) {
+            withTimeoutOrNull(20000L) {
                 deferred.await()
             }
             true

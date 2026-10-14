@@ -866,14 +866,29 @@
           resBadge.innerText = `⚠ TERLAMBAT (${data.lateMinutes || 0} MENIT)`;
           playKioskBeep('WARNING');
         }
+        if (data.student && typeof speakCallFallback === 'function') {
+          const qNum = data.queue ? data.queue.queue_number : null;
+          const tName = data.queue ? data.queue.teacher_name : (data.student.teacher_name || 'Ustadz');
+          const speech = qNum ? `Selamat datang ${data.student.name}. Nomor antrian Anda ${qNum}, pengajar ${tName}.` : `Selamat datang ${data.student.name}. Presensi berhasil tercatat.`;
+          speakCallFallback(speech);
+        }
       } else if (data.code === 'ALREADY_ATTENDED') {
         resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-blue-500/20 text-blue-400 border border-blue-500/40';
         resBadge.innerText = 'ℹ SUDAH ABSEN HARI INI';
         playKioskBeep('WARNING');
+        if (data.student && typeof speakCallFallback === 'function') {
+          const qNum = data.queue ? data.queue.queue_number : null;
+          const tName = data.queue ? data.queue.teacher_name : (data.student.teacher_name || 'Ustadz');
+          const speech = qNum ? `Santri ${data.student.name} sudah absen hari ini. Nomor antrian Anda ${qNum}, pengajar ${tName}.` : `Santri ${data.student.name} sudah melakukan presensi hari ini.`;
+          speakCallFallback(speech);
+        }
       } else {
         resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-2 bg-rose-500/20 text-rose-400 border border-rose-500/40';
         resBadge.innerText = '✕ TIDAK TERDAFTAR';
         playKioskBeep('ERROR');
+        if (typeof speakCallFallback === 'function') {
+          speakCallFallback('Kartu tidak terdaftar di sistem.');
+        }
       }
 
       // Animasi Tampil Modal

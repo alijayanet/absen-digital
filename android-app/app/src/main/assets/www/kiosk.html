@@ -443,9 +443,17 @@
         let text = '';
         if (queueNumber) {
           const tName = teacherName || 'Ustadz';
-          text = `Selamat datang, ${name}. Nomor antrian Anda ${queueNumber}, pengajar ${tName}.`;
+          if (status === 'SUDAH_ABSEN') {
+            text = `Santri ${name} sudah absen hari ini. Nomor antrian Anda ${queueNumber}, pengajar ${tName}.`;
+          } else {
+            text = `Selamat datang, ${name}. Nomor antrian Anda ${queueNumber}, pengajar ${tName}.`;
+          }
         } else {
-          text = status === 'HADIR' ? `Selamat datang, ${name}. Presensi berhasil tercatat.` : `Perhatian, ${name}, terlambat. Presensi tercatat.`;
+          if (status === 'SUDAH_ABSEN') {
+            text = `Santri ${name} sudah melakukan presensi hari ini.`;
+          } else {
+            text = status === 'HADIR' ? `Selamat datang, ${name}. Presensi berhasil tercatat.` : `Perhatian, ${name}, terlambat. Presensi tercatat.`;
+          }
         }
         const ut = new SpeechSynthesisUtterance(text);
         ut.lang = 'id-ID';

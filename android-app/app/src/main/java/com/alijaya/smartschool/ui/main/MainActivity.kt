@@ -535,9 +535,21 @@ class MainActivity : AppCompatActivity() {
             renderStudentPhoto(student.photo, baseUrl)
 
             val isMale = isStudentMale(student.gender, student.className, student.name)
-            audioHelper.playBeepWarning()
+            val targetTeacher = queue?.teacherName ?: student.teacherName
+            val alreadySpeech = if (queue?.queueNumber != null && queue.queueNumber > 0) {
+                if (!targetTeacher.isNullOrBlank()) {
+                    "Santri ${student.name} sudah absen hari ini. Nomor antrian Anda ${queue.queueNumber}, pengajar $targetTeacher."
+                } else {
+                    "Santri ${student.name} sudah absen hari ini. Nomor antrian Anda ${queue.queueNumber}."
+                }
+            } else {
+                "Santri ${student.name} sudah melakukan presensi hari ini."
+            }
+
             if (session.isTtsEnabled()) {
-                audioHelper.speak("Santri ${student.name} sudah melakukan presensi hari ini.", isMale = isMale)
+                audioHelper.playBeepAndSpeak(alreadySpeech, isMale = isMale, isWarning = true)
+            } else {
+                audioHelper.playBeepWarning()
             }
 
         } else {
@@ -552,9 +564,10 @@ class MainActivity : AppCompatActivity() {
             binding.layoutQueueAssigned.visibility = View.GONE
             binding.ivStudentPhoto.setImageResource(R.drawable.ic_user_avatar)
 
-            audioHelper.playBeepWarning()
             if (session.isTtsEnabled()) {
-                audioHelper.speak("Kartu tidak terdaftar.")
+                audioHelper.playBeepAndSpeak("Kartu tidak terdaftar di sistem.", isMale = true, isWarning = true)
+            } else {
+                audioHelper.playBeepWarning()
             }
         }
 
