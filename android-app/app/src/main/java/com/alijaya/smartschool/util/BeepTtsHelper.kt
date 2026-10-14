@@ -169,7 +169,7 @@ class BeepTtsHelper(
     // =========================================================================
 
     /**
-     * Bip PCM Murni (AudioTrack 16-bit 44.1kHz USAGE_MEDIA / STREAM_MUSIC)
+     * Bip PCM Murni (AudioTrack 16-bit 44.1kHz STREAM_MUSIC)
      * Tidak konflik dengan ALSA audio driver ataupun MediaPlayer
      */
     fun playPcmBeep(isWarning: Boolean = false) {
@@ -184,7 +184,7 @@ class BeepTtsHelper(
                 val t = i.toDouble() / sampleRate
                 val decay = exp(-2.5 * (i.toDouble() / numSamples))
                 val sample = sin(2.0 * Math.PI * freq * t) * decay
-                buffer[i] = (sample * 24000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                buffer[i] = (sample * 28000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
             }
 
             val minBuf = AudioTrack.getMinBufferSize(
@@ -192,39 +192,26 @@ class BeepTtsHelper(
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val attr = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .build()
-                val format = AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build()
-                AudioTrack(
-                    attr,
-                    format,
-                    (buffer.size * 2).coerceAtLeast(minBuf),
-                    AudioTrack.MODE_STATIC,
-                    AudioManager.AUDIO_SESSION_ID_GENERATE
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    sampleRate,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    (buffer.size * 2).coerceAtLeast(minBuf),
-                    AudioTrack.MODE_STATIC
-                )
-            }
+            val bufferSize = (buffer.size * 2).coerceAtLeast(minBuf)
+
+            @Suppress("DEPRECATION")
+            val track = AudioTrack(
+                AudioManager.STREAM_MUSIC,
+                sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize,
+                AudioTrack.MODE_STATIC
+            )
+            @Suppress("DEPRECATION")
+            track.setStereoVolume(1.0f, 1.0f)
             track.write(buffer, 0, buffer.size)
             track.play()
-            Thread.sleep((duration * 1000).toLong() + 25L)
-            track.stop()
-            track.release()
+            Thread.sleep((duration * 1000).toLong() + 150L)
+            try {
+                track.stop()
+                track.release()
+            } catch (_: Throwable) {}
         } catch (_: Throwable) {
             playFallbackTone()
         }
@@ -249,13 +236,20 @@ class BeepTtsHelper(
     }
 
     /**
-     * Airport Chime 2-Nada (D5 587.33Hz -> A4 440.0Hz) murni AudioTrack 16-bit PCM USAGE_MEDIA
+     * Uji coba bel airport chime dan suara TTS sambutan
+     */
+    fun testAudioOutput() {
+        playChimeAndSpeak("Tes audio sistem absensi dan antrian santri berhasil. Pengeras suara berfungsi normal.", isMale = false)
+    }
+
+    /**
+     * Airport Chime 2-Nada (D5 587.33Hz -> A4 440.0Hz) murni AudioTrack 16-bit PCM STREAM_MUSIC
      */
     private fun playAirportChime() {
         try {
             val sampleRate = 44100
-            val duration1 = 0.22 // Tone D5 (587.33 Hz)
-            val duration2 = 0.35 // Tone A4 (440.00 Hz)
+            val duration1 = 0.25 // Tone D5 (587.33 Hz)
+            val duration2 = 0.38 // Tone A4 (440.00 Hz)
             val n1 = (sampleRate * duration1).toInt()
             val n2 = (sampleRate * duration2).toInt()
             val total = n1 + n2
@@ -264,17 +258,17 @@ class BeepTtsHelper(
             // Ding: 587.33 Hz with smooth exponential decay and harmonic warmth
             for (i in 0 until n1) {
                 val t = i.toDouble() / sampleRate
-                val decay = exp(-3.2 * (i.toDouble() / n1))
+                val decay = exp(-3.0 * (i.toDouble() / n1))
                 val sample = (sin(2.0 * Math.PI * 587.33 * t) + 0.25 * sin(4.0 * Math.PI * 587.33 * t)) * decay
-                buffer[i] = (sample * 24000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                buffer[i] = (sample * 28000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
             }
 
             // Dong: 440.0 Hz with gentle lingering decay
             for (i in 0 until n2) {
                 val t = i.toDouble() / sampleRate
-                val decay = exp(-2.6 * (i.toDouble() / n2))
+                val decay = exp(-2.4 * (i.toDouble() / n2))
                 val sample = (sin(2.0 * Math.PI * 440.0 * t) + 0.25 * sin(4.0 * Math.PI * 440.0 * t)) * decay
-                buffer[n1 + i] = (sample * 24000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                buffer[n1 + i] = (sample * 28000.0).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
             }
 
             val minBuf = AudioTrack.getMinBufferSize(
@@ -282,39 +276,26 @@ class BeepTtsHelper(
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val attr = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .build()
-                val format = AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build()
-                AudioTrack(
-                    attr,
-                    format,
-                    (buffer.size * 2).coerceAtLeast(minBuf),
-                    AudioTrack.MODE_STATIC,
-                    AudioManager.AUDIO_SESSION_ID_GENERATE
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    sampleRate,
-                    AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    (buffer.size * 2).coerceAtLeast(minBuf),
-                    AudioTrack.MODE_STATIC
-                )
-            }
+            val bufferSize = (buffer.size * 2).coerceAtLeast(minBuf)
+
+            @Suppress("DEPRECATION")
+            val track = AudioTrack(
+                AudioManager.STREAM_MUSIC,
+                sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize,
+                AudioTrack.MODE_STATIC
+            )
+            @Suppress("DEPRECATION")
+            track.setStereoVolume(1.0f, 1.0f)
             track.write(buffer, 0, buffer.size)
             track.play()
-            Thread.sleep(600)
-            track.stop()
-            track.release()
+            Thread.sleep(750)
+            try {
+                track.stop()
+                track.release()
+            } catch (_: Throwable) {}
         } catch (_: Throwable) {
             playFallbackTone()
         }
@@ -322,6 +303,9 @@ class BeepTtsHelper(
 
     private fun playFallbackTone() {
         try {
+            if (toneGen == null) {
+                toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+            }
             toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP2, 300)
             Thread.sleep(350)
         } catch (_: Throwable) {}
@@ -540,13 +524,10 @@ class BeepTtsHelper(
 
             var isPlayError = false
             mp = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
+                @Suppress("DEPRECATION")
+                setAudioStreamType(AudioManager.STREAM_MUSIC)
                 setDataSource(audioFile.absolutePath)
+                setVolume(1.0f, 1.0f)
                 prepare()
             }
 

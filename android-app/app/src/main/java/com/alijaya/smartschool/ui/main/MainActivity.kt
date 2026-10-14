@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity() {
             val session = SmartSchoolApplication.sessionManager
             val standaloneDb = com.alijaya.smartschool.server.db.SmartSchoolDatabase.getInstance(this)
             val dbTts = standaloneDb.getSetting("tts_enabled", "1")
-            session.setTtsEnabled(dbTts == "1" || dbTts.equals("true", ignoreCase = true))
+            session.setTtsEnabled(dbTts != "0")
             val dbPrayerTts = standaloneDb.getSetting("prayer_tts_enabled", "0")
             session.setPrayerTtsEnabled(dbPrayerTts == "1" || dbPrayerTts.equals("true", ignoreCase = true))
         } catch (_: Exception) {}
@@ -321,13 +321,14 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER -> {
-                    triggerRemoteAutoCall() // Panggil meja yang antriannya sedang menunggu
+                    // Tombol OK / Tengah Remote TV: Buka Pengaturan Server / IP:8080
+                    showServerSettingsDialog()
                     return true
                 }
             }
 
-            // Enter menandakan akhir dari transmisi kartu RFID reader USB
-            if (keyCode == KeyEvent.KEYCODE_ENTER) {
+            // Enter menandakan akhir dari transmisi kartu RFID reader USB atau tombol OK/Enter Remote TV
+            if (keyCode == KeyEvent.KEYCODE_ENTER || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) {
                 val cardCode = rfidBuffer.toString().trim()
                 rfidBuffer.clear()
                 bufferResetHandler.removeCallbacks(resetBufferRunnable)
@@ -345,6 +346,10 @@ class MainActivity : AppCompatActivity() {
                     lastCardScanTimestamp = currentTime
                     processAttendanceScan(cardCode)
                     return true // Telah ditangani, jangan teruskan event enter
+                } else {
+                    // Tombol OK / Enter remote TV ditekan (bukan transmisi kartu RFID)
+                    showServerSettingsDialog()
+                    return true
                 }
             } else {
                 val unicodeChar = event.unicodeChar
@@ -557,7 +562,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (session.isTtsEnabled()) {
-                audioHelper.playBeepAndSpeak(alreadySpeech, isMale = isMale, isWarning = true)
+                audioHelper.playBeepAndSpeak(alreadySpeech, isMale = isMale, isWarning = false)
             } else {
                 audioHelper.playBeepWarning()
             }
@@ -698,7 +703,7 @@ class MainActivity : AppCompatActivity() {
         // Sinkronisasi Pengaturan TTS Suara dari Server Database
         val session = SmartSchoolApplication.sessionManager
         if (!data.ttsEnabled.isNullOrBlank()) {
-            val isTts = data.ttsEnabled == "1" || data.ttsEnabled.equals("true", ignoreCase = true)
+            val isTts = data.ttsEnabled != "0"
             session.setTtsEnabled(isTts)
         }
         if (!data.prayerTtsEnabled.isNullOrBlank()) {
@@ -738,10 +743,10 @@ class MainActivity : AppCompatActivity() {
 
             // Sesuaikan label hint remote TV sesuai jumlah meja yang aktif
             binding.tvRemoteControlHint.text = when (tables.size) {
-                1 -> "🎮 Remote: [◀ / OK] Panggil Meja 1"
-                2 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2"
-                3 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3"
-                else -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3  •  [▼] Meja 4"
+                1 -> "🎮 Remote: [◀] Meja 1  •  [OK] Pengaturan IP"
+                2 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [OK] Pengaturan IP"
+                3 -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3  •  [OK] Pengaturan IP"
+                else -> "🎮 Remote: [◀] Meja 1  •  [▶] Meja 2  •  [▲] Meja 3  •  [▼] Meja 4  •  [OK] Pengaturan IP"
             }
             binding.tvRemoteControlHint.visibility = View.VISIBLE
 
@@ -1060,9 +1065,20 @@ class MainActivity : AppCompatActivity() {
             startDisplayPolling()
         }
 
+        // Tampilkan IP Web Admin Remote Port 8080
+        val localIp = com.alijaya.smartschool.util.NetworkUtils.getLocalIpAddress(this)
+        val adminUrl = if (localIp != "127.0.0.1") "http://$localIp:8080/settings.html" else "http://127.0.0.1:8080/settings.html"
+        dialogBinding.tvWebAdminIpUrl.text = "🌐 Web Admin Remote: $adminUrl"
+
         // Inisialisasi status Switch TTS Voice & Pengingat Sholat
         dialogBinding.switchTts.isChecked = session.isTtsEnabled()
         dialogBinding.switchPrayerTts.isChecked = session.isPrayerTtsEnabled()
+
+        // Tombol Tes Suara Bel & TTS
+        dialogBinding.btnTestAudio.setOnClickListener {
+            Toast.makeText(this, "Memutar uji coba bel bandara dan TTS sambutan...", Toast.LENGTH_SHORT).show()
+            audioHelper.testAudioOutput()
+        }
 
         dialog.show()
     }

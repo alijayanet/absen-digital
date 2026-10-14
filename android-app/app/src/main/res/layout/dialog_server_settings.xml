@@ -16,10 +16,37 @@
         android:textSize="20sp"
         android:textStyle="bold" />
 
+    <!-- Info Web Admin Remote Port 8080 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="#0F172A"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvWebAdminIpUrl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌐 Web Admin Remote: http://192.168.x.x:8080/settings.html"
+            android:textColor="#38BDF8"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="Buka alamat di atas lewat browser HP / Laptop pada WiFi yang sama untuk mengelola santri, ustadz, dan pengaturan suara."
+            android:textColor="#94A3B8"
+            android:textSize="11sp" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="12dp"
         android:text="Masukkan alamat server Node.js absensi (Domain online atau IP lokal LAN):"
         android:textColor="#94A3B8"
         android:textSize="13sp" />
@@ -95,7 +122,8 @@
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchPrinter"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="false" />
     </LinearLayout>
 
     <TextView
@@ -229,7 +257,8 @@
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchTts"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="false" />
     </LinearLayout>
 
     <TextView
@@ -239,6 +268,16 @@
         android:text="Aktifkan suara sambutan tap kartu, nomor antrian, dan panggilan meja ustadz/guru (Matikan jika digunakan di sekolah formal yang ingin tenang)"
         android:textColor="#94A3B8"
         android:textSize="12sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnTestAudio"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="🔔 Tes Suara Bel &amp; TTS"
+        android:textColor="#34D399"
+        app:strokeColor="#34D399" />
 
     <!-- Divider -->
     <View
@@ -383,7 +422,8 @@
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchPrayerTts"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:focusable="false" />
     </LinearLayout>
 
     <TextView
