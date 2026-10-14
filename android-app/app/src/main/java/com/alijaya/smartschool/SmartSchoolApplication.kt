@@ -76,17 +76,26 @@ class SmartSchoolApplication : Application() {
             startHttpServer(context, port)
         }
 
+        fun getAudioHelper(context: Context): BeepTtsHelper {
+            if (globalAudioHelper == null) {
+                synchronized(this) {
+                    if (globalAudioHelper == null) {
+                        globalAudioHelper = BeepTtsHelper(context.applicationContext, appScope)
+                    }
+                }
+            }
+            return globalAudioHelper!!
+        }
+
         fun initTelegramManager(context: Context) {
             try {
-                if (globalAudioHelper == null) {
-                    globalAudioHelper = BeepTtsHelper(context.applicationContext)
-                }
+                val audio = getAudioHelper(context)
                 val db = SmartSchoolDatabase.getInstance(context.applicationContext)
                 if (telegramManager == null) {
                     telegramManager = SmartSchoolTelegramManager(
                         context.applicationContext,
                         db,
-                        globalAudioHelper!!,
+                        audio,
                         appScope
                     )
                 } else {
@@ -103,6 +112,9 @@ class SmartSchoolApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         sessionManager = SessionManager(applicationContext)
+
+        // Inisialisasi Audio Engine Singleton di tingkat Aplikasi sejak awal
+        getAudioHelper(this)
 
         // Otomatis jalankan server mandiri lokal di STB jika mode Standalone
         if (sessionManager.isStandaloneMode()) {

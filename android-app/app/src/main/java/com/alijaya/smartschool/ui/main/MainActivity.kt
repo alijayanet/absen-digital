@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        audioHelper = SmartSchoolApplication.globalAudioHelper ?: BeepTtsHelper(this)
+        audioHelper = SmartSchoolApplication.getAudioHelper(this)
 
         // Daftarkan listener agar panggilan antrian dari Telegram & Web langsung direspon instan oleh TV
         SmartSchoolApplication.onQueueChangedListener = {
@@ -187,7 +187,6 @@ class MainActivity : AppCompatActivity() {
         callBannerHandler.removeCallbacksAndMessages(null)
         remoteFeedbackHandler.removeCallbacksAndMessages(null)
         prayerAlertHandler.removeCallbacksAndMessages(null)
-        audioHelper.release()
     }
 
     private fun setupRecyclerView() {
@@ -1076,8 +1075,9 @@ class MainActivity : AppCompatActivity() {
 
         // Tombol Tes Suara Bel & TTS
         dialogBinding.btnTestAudio.setOnClickListener {
-            Toast.makeText(this, "Memutar uji coba bel bandara dan TTS sambutan...", Toast.LENGTH_SHORT).show()
-            audioHelper.testAudioOutput()
+            Toast.makeText(this, "Memutar bel dan suara TTS...", Toast.LENGTH_SHORT).show()
+            audioHelper.playDingDong()
+            audioHelper.speak("Tes audio sistem absensi dan antrian santri berhasil. Pengeras suara berfungsi normal.")
         }
 
         dialog.show()
